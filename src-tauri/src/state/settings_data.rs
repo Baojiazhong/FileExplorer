@@ -35,7 +35,11 @@ pub enum FontSize {
 /// Controls whether items are sorted in ascending or descending order.
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub enum SortDirection {
-    Acscending,
+    /// Ascending order.
+    ///
+    /// Backwards-compatible with the previously misspelled value "Acscending".
+    #[serde(alias = "Acscending")]
+    Ascending,
     Descending,
 }
 
@@ -46,6 +50,11 @@ pub enum SortDirection {
 pub enum SortBy {
     Name,
     Size,
+    /// Sort by last modified date/time.
+    ///
+    /// Serialized as "Modified" to match the frontend setting value.
+    /// Also accepts the legacy value "Date".
+    #[serde(rename = "Modified", alias = "Date")]
     Date,
     Type,
 }
@@ -132,7 +141,7 @@ impl Default for Settings {
             accent_color: "#000000".to_string(),
             confirm_delete: true,
             auto_refresh_dir: true,
-            sort_direction: SortDirection::Acscending,
+            sort_direction: SortDirection::Ascending,
             sort_by: SortBy::Name,
             double_click: DoubleClick::OpenFilesAndFolders,
             show_file_extensions: true,
@@ -824,6 +833,42 @@ mod tests_settings {
         let result = state.update_setting_field("default_theme", json!("ocean"));
         assert!(result.is_ok());
         assert_eq!(result.unwrap().default_theme, "ocean");
+    }
+
+    #[test]
+    fn test_update_sort_direction_accepts_new_and_legacy_values() {
+        let state = SettingsState::new_with_path(
+            tempfile::NamedTempFile::new().unwrap().path().to_path_buf(),
+        );
+
+        let result_new = state.update_setting_field("sort_direction", json!("Ascending"));
+        assert!(result_new.is_ok(), "Should accept Ascending");
+        assert!(matches!(
+            result_new.unwrap().sort_direction,
+            SortDirection::Ascending
+        ));
+
+        let result_legacy = state.update_setting_field("sort_direction", json!("Acscending"));
+        assert!(result_legacy.is_ok(), "Should accept legacy Acscending");
+        assert!(matches!(
+            result_legacy.unwrap().sort_direction,
+            SortDirection::Ascending
+        ));
+    }
+
+    #[test]
+    fn test_update_sort_by_accepts_modified_and_legacy_date() {
+        let state = SettingsState::new_with_path(
+            tempfile::NamedTempFile::new().unwrap().path().to_path_buf(),
+        );
+
+        let result_modified = state.update_setting_field("sort_by", json!("Modified"));
+        assert!(result_modified.is_ok(), "Should accept Modified");
+        assert!(matches!(result_modified.unwrap().sort_by, SortBy::Date));
+
+        let result_legacy = state.update_setting_field("sort_by", json!("Date"));
+        assert!(result_legacy.is_ok(), "Should accept legacy Date");
+        assert!(matches!(result_legacy.unwrap().sort_by, SortBy::Date));
     }
 
     /// Tests updating the default_checksum_hash setting field.

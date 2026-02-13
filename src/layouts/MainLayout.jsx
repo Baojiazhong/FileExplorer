@@ -7,6 +7,7 @@ import { useSettings } from '../providers/SettingsProvider';
 import { useSftp } from '../providers/SftpProvider';
 import { invoke } from '@tauri-apps/api/core';
 import { showError, showConfirm, showSuccess } from '../utils/NotificationSystem';
+import { getFileType } from '../utils/formatters';
 
 // Core Components
 import Sidebar from '../components/sidebar/Sidebar';
@@ -100,33 +101,71 @@ const MainLayout = () => {
     // Get terminal height for padding calculations
     const terminalHeight = settings.terminal_height || 240;
 
-    // Get sorted data the same way FileList does
+    // Get sorted data the same way FileList does (folders first + default sort from settings)
     const getSortedData = useCallback(() => {
         const data = searchResults || currentDirData;
         if (!data || (!data.directories?.length && !data.files?.length)) {
             return [];
         }
 
-        // Combine directories and files for sorting (same as FileList)
+        // Combine directories and files for sorting (same shape as FileList)
         const combinedItems = [
             ...(data.directories || []).map(dir => ({ ...dir, isDirectory: true })),
             ...(data.files || []).map(file => ({ ...file, isDirectory: false }))
         ];
 
-        // Sort by name with directories first (same as FileList default)
-        const sortedItems = [...combinedItems].sort((a, b) => {
-            // Directories always come before files
+        const sortBy = settings?.sort_by;
+        const sortDirection = settings?.sort_direction;
+        const direction = sortDirection === 'Descending' ? 'desc' : 'asc';
+
+        const key = (() => {
+            switch (sortBy) {
+                case 'Size':
+                    return 'size_in_bytes';
+                case 'Modified':
+                case 'Date':
+                    return 'last_modified';
+                case 'Type':
+                    return 'type';
+                case 'Name':
+                default:
+                    return 'name';
+            }
+        })();
+
+        // Always put directories first.
+        return [...combinedItems].sort((a, b) => {
             if (a.isDirectory && !b.isDirectory) return -1;
             if (!a.isDirectory && b.isDirectory) return 1;
 
-            // Sort by name
-            const aName = a.name.toLowerCase();
-            const bName = b.name.toLowerCase();
-            return aName.localeCompare(bName);
-        });
+            let aValue;
+            let bValue;
 
-        return sortedItems;
-    }, [searchResults, currentDirData]);
+            if (key === 'size_in_bytes') {
+                aValue = a.isDirectory ? -1 : a.size_in_bytes || 0;
+                bValue = b.isDirectory ? -1 : b.size_in_bytes || 0;
+            } else if (key === 'type') {
+                aValue = a.isDirectory ? 'Folder' : (a.name ? getFileType(a.name) : '');
+                bValue = b.isDirectory ? 'Folder' : (b.name ? getFileType(b.name) : '');
+                aValue = aValue.toLowerCase();
+                bValue = bValue.toLowerCase();
+            } else if (key === 'created' || key === 'last_modified' || key === 'accessed') {
+                aValue = new Date(a[key]).getTime();
+                bValue = new Date(b[key]).getTime();
+            } else {
+                aValue = a[key];
+                bValue = b[key];
+                if (typeof aValue === 'string' && typeof bValue === 'string') {
+                    aValue = aValue.toLowerCase();
+                    bValue = bValue.toLowerCase();
+                }
+            }
+
+            if (aValue < bValue) return direction === 'asc' ? -1 : 1;
+            if (aValue > bValue) return direction === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }, [searchResults, currentDirData, settings?.sort_by, settings?.sort_direction]);
 
     // Initialize preview functionality
     const getFocusedItem = () => {

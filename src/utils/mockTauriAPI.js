@@ -101,14 +101,41 @@ const MOCK_DIRECTORIES = {
 };
 
 // Mock settings
+// Keep keys aligned with backend JSON so the UI behaves consistently in dev mode.
 const MOCK_SETTINGS = {
-    theme: 'light',
-    defaultView: 'grid',
-    showHiddenFiles: false,
-    sortBy: 'name',
-    sortDirection: 'asc',
-    showDetailsPanel: false,
-    terminalHeight: 240,
+    darkmode: false,
+    custom_themes: [],
+    default_theme: "",
+    default_themes_path: "",
+    default_folder_path_on_opening: "",
+    default_view: "grid",
+    font_size: "Medium",
+    show_hidden_files_and_folders: false,
+    show_details_panel: false,
+    accent_color: "#0672ef",
+    confirm_delete: true,
+    auto_refresh_dir: true,
+    sort_direction: "Ascending",
+    sort_by: "Name",
+    double_click: "OpenFilesAndFolders",
+    show_file_extensions: true,
+    terminal_height: 240,
+    enable_animations_and_transitions: true,
+    enable_virtual_scroll_for_large_directories: false,
+    enable_suggestions: true,
+    highlight_matches: true,
+    backend_settings: {
+        default_checksum_hash: "SHA256",
+        search_engine_config: {
+            search_engine_enabled: true,
+            case_sensitive_search: false,
+            index_hidden_files: false,
+            fuzzy_search_enabled: true,
+        },
+        logging_config: {
+            logging_level: "Full",
+        },
+    },
 };
 
 // Mock templates
@@ -135,6 +162,39 @@ const MOCK_TEMPLATES = [
  * @param {Object} params - The parameters for the command
  * @returns {Promise<any>} - The result of the command
  */
+const getByDottedPath = (obj, dottedPath) => {
+    if (!dottedPath) return undefined;
+
+    const parts = dottedPath.split('.');
+    let current = obj;
+    for (const part of parts) {
+        if (!current || typeof current !== 'object') return undefined;
+        current = current[part];
+    }
+    return current;
+};
+
+const setByDottedPath = (obj, dottedPath, value) => {
+    if (!dottedPath) return;
+
+    const parts = dottedPath.split('.');
+    let current = obj;
+
+    for (let i = 0; i < parts.length; i++) {
+        const part = parts[i];
+
+        if (i === parts.length - 1) {
+            current[part] = value;
+            return;
+        }
+
+        if (!current[part] || typeof current[part] !== 'object') {
+            current[part] = {};
+        }
+        current = current[part];
+    }
+};
+
 export const mockInvoke = async (command, params) => {
     console.log(`Mock Tauri invoke: ${command}`, params);
 
@@ -165,30 +225,62 @@ export const mockInvoke = async (command, params) => {
             return JSON.stringify(MOCK_SETTINGS);
 
         case 'get_setting_field':
-            return MOCK_SETTINGS[params.key] || null;
+            return getByDottedPath(MOCK_SETTINGS, params.key) ?? null;
 
         case 'update_settings_field':
-            // Update mock settings
-            MOCK_SETTINGS[params.key] = params.value;
+            // Update mock settings (supports dot-path)
+            setByDottedPath(MOCK_SETTINGS, params.key, params.value);
             return JSON.stringify(MOCK_SETTINGS);
 
         case 'update_multiple_settings_command':
-            // Update multiple settings
-            Object.assign(MOCK_SETTINGS, params.updates);
+            // Update multiple settings (supports dot-path)
+            for (const [key, value] of Object.entries(params.updates || {})) {
+                setByDottedPath(MOCK_SETTINGS, key, value);
+            }
+            return JSON.stringify(MOCK_SETTINGS);
+
+        case 'reset_settings_command':
+            // Reset to default (backend expected keys)
+            Object.assign(MOCK_SETTINGS, {
+                darkmode: false,
+                custom_themes: [],
+                default_theme: "",
+                default_themes_path: "",
+                default_folder_path_on_opening: "",
+                default_view: "grid",
+                font_size: "Medium",
+                show_hidden_files_and_folders: false,
+                show_details_panel: false,
+                accent_color: "#0672ef",
+                confirm_delete: true,
+                auto_refresh_dir: true,
+                sort_direction: "Ascending",
+                sort_by: "Name",
+                double_click: "OpenFilesAndFolders",
+                show_file_extensions: true,
+                terminal_height: 240,
+                enable_animations_and_transitions: true,
+                enable_virtual_scroll_for_large_directories: false,
+                enable_suggestions: true,
+                highlight_matches: true,
+                backend_settings: {
+                    default_checksum_hash: "SHA256",
+                    search_engine_config: {
+                        search_engine_enabled: true,
+                        case_sensitive_search: false,
+                        index_hidden_files: false,
+                        fuzzy_search_enabled: true,
+                    },
+                    logging_config: {
+                        logging_level: "Full",
+                    },
+                },
+            });
             return JSON.stringify(MOCK_SETTINGS);
 
         case 'reset_settings':
-            // Reset to default
-            Object.assign(MOCK_SETTINGS, {
-                theme: 'light',
-                defaultView: 'grid',
-                showHiddenFiles: false,
-                sortBy: 'name',
-                sortDirection: 'asc',
-                showDetailsPanel: false,
-                terminalHeight: 240,
-            });
-            return;
+            // Back-compat: some callers may use the wrong command name
+            return await mockInvoke('reset_settings_command', params);
 
         case 'get_template_paths_as_json':
             return JSON.stringify(MOCK_TEMPLATES);

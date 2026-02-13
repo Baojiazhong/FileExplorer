@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { getFileType } from '../../utils/formatters';
 import { useFileSystem } from '../../providers/FileSystemProvider';
 import { useContextMenu } from '../../providers/ContextMenuProvider';
+import { useSettings } from '../../providers/SettingsProvider';
 import { showError } from '../../utils/NotificationSystem';
 import FileItem from './FileItem';
 import EmptyState from './EmptyState';
@@ -21,8 +22,29 @@ import './fileList.css';
  */
 const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, searchTerm = '', disableArrowKeys = false, onColumnsChange }) => {
     const { selectedItems, selectItem, loadDirectory, clearSelection, focusedItem, setFocusedItem, openFile } = useFileSystem();
+    const { settings } = useSettings();
     const { openContextMenu } = useContextMenu();
-    const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
+    const [sortConfig, setSortConfig] = useState(() => {
+        const sortBy = settings?.sort_by;
+        const sortDirection = settings?.sort_direction;
+
+        const direction = sortDirection === 'Descending' ? 'desc' : 'asc';
+
+        // Map backend/frontend setting values to FileList column keys.
+        // Keep folders-first behavior unchanged.
+        switch (sortBy) {
+            case 'Size':
+                return { key: 'size_in_bytes', direction };
+            case 'Modified':
+            case 'Date':
+                return { key: 'last_modified', direction };
+            case 'Type':
+                return { key: 'type', direction };
+            case 'Name':
+            default:
+                return { key: 'name', direction };
+        }
+    });
     const [isShiftKeyPressed, setIsShiftKeyPressed] = useState(false);
     const [isCtrlKeyPressed, setIsCtrlKeyPressed] = useState(false);
     const [columnsPerRow, setColumnsPerRow] = useState(4); // Dynamic column calculation

@@ -21,10 +21,10 @@ const useViewMode = (initialMode = VIEW_MODES.GRID) => {
 
     // Initialize from settings
     useEffect(() => {
-        if (settings.defaultView) {
-            setViewMode(settings.defaultView);
+        if (settings.default_view) {
+            setViewMode(settings.default_view);
         }
-    }, [settings.defaultView]);
+    }, [settings.default_view]);
 
     // Update view mode
     const changeViewMode = useCallback(
@@ -37,7 +37,7 @@ const useViewMode = (initialMode = VIEW_MODES.GRID) => {
             setViewMode(newMode);
 
             // Save as default if user changes it
-            updateSetting('defaultView', newMode);
+            updateSetting('default_view', newMode);
         },
         [updateSetting]
     );

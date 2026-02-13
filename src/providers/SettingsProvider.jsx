@@ -9,7 +9,7 @@ const defaultSettings = {
     default_theme: "",
     default_themes_path: "",
     default_folder_path_on_opening: "",
-    default_view: "grid", // Grid, List, Details
+    default_view: "grid", // grid, list, details
     font_size: "Medium", // Small, Medium, Large
     show_hidden_files_and_folders: false,
     show_details_panel: false,
@@ -40,8 +40,58 @@ const defaultSettings = {
     default_checksum_hash: "SHA256",
 };
 
+// Normalize backend settings object into the flattened shape the UI expects.
+const normalizeSettings = (loadedSettings) => {
+    if (!loadedSettings || typeof loadedSettings !== 'object') {
+        return { ...defaultSettings };
+    }
+
+    // Extract nested backend settings for easier access
+    const flattenedSettings = {
+        ...loadedSettings,
+        // Extract search engine settings from nested structure
+        ...(loadedSettings.backend_settings?.search_engine_config && {
+            search_engine_enabled: loadedSettings.backend_settings.search_engine_config.search_engine_enabled,
+            case_sensitive_search: loadedSettings.backend_settings.search_engine_config.case_sensitive_search,
+            index_hidden_files: loadedSettings.backend_settings.search_engine_config.index_hidden_files,
+            fuzzy_search_enabled: loadedSettings.backend_settings.search_engine_config.fuzzy_search_enabled,
+        }),
+        // Extract other backend settings
+        ...(loadedSettings.backend_settings && {
+            default_checksum_hash: loadedSettings.backend_settings.default_checksum_hash,
+        }),
+    };
+
+    // Merge with default settings to ensure all fields exist
+    return {
+        ...defaultSettings,
+        ...flattenedSettings,
+    };
+};
+
+// Some settings are displayed as flattened UI fields but stored nested in the backend JSON.
+const UI_TO_BACKEND_KEY_MAP = {
+    default_checksum_hash: 'backend_settings.default_checksum_hash',
+    search_engine_enabled: 'backend_settings.search_engine_config.search_engine_enabled',
+    case_sensitive_search: 'backend_settings.search_engine_config.case_sensitive_search',
+    index_hidden_files: 'backend_settings.search_engine_config.index_hidden_files',
+    fuzzy_search_enabled: 'backend_settings.search_engine_config.fuzzy_search_enabled',
+};
+
+const toBackendKey = (key) => UI_TO_BACKEND_KEY_MAP[key] || key;
+
+const mapUpdatesToBackendKeys = (updates) => {
+    if (!updates || typeof updates !== 'object') return {};
+
+    const mapped = {};
+    for (const [key, value] of Object.entries(updates)) {
+        mapped[toBackendKey(key)] = value;
+    }
+    return mapped;
+};
+
 // Create context
-const SettingsContext = createContext({
+export const SettingsContext = createContext({
     settings: defaultSettings,
     isLoading: true,
     error: null,
@@ -69,43 +119,27 @@ export default function SettingsProvider({ children }) {
 
             console.log('Loaded settings:', loadedSettings);
 
-            // Extract nested backend settings for easier access
-            const flattenedSettings = {
-                ...loadedSettings,
-                // Extract search engine settings from nested structure
-                ...(loadedSettings.backend_settings?.search_engine_config && {
-                    search_engine_enabled: loadedSettings.backend_settings.search_engine_config.search_engine_enabled,
-                    case_sensitive_search: loadedSettings.backend_settings.search_engine_config.case_sensitive_search,
-                    index_hidden_files: loadedSettings.backend_settings.search_engine_config.index_hidden_files,
-                    fuzzy_search_enabled: loadedSettings.backend_settings.search_engine_config.fuzzy_search_enabled,
-                }),
-                // Extract other backend settings
-                ...(loadedSettings.backend_settings && {
-                    default_checksum_hash: loadedSettings.backend_settings.default_checksum_hash,
-                }),
-            };
-
-            // Merge with default settings to ensure all fields exist
-            const mergedSettings = {
-                ...defaultSettings,
-                ...flattenedSettings,
-            };
-
-            setSettings(mergedSettings);
+            setSettings(normalizeSettings(loadedSettings));
             console.log('Settings loaded successfully');
         } catch (error) {
             console.error('Failed to load settings:', error);
             setError('Failed to load settings from backend');
 
             // Use default settings if loading fails
-            setSettings(defaultSettings);
+            setSettings({ ...defaultSettings });
 
             // Try to save default settings to backend
             try {
                 console.log('Saving default settings to backend...');
-                await invoke('update_multiple_settings_command', {
-                    updates: defaultSettings,
+                const updatedSettingsJson = await invoke('update_multiple_settings_command', {
+                    updates: mapUpdatesToBackendKeys(defaultSettings),
                 });
+
+                if (updatedSettingsJson) {
+                    const updatedSettings = JSON.parse(updatedSettingsJson);
+                    setSettings(normalizeSettings(updatedSettings));
+                }
+
                 console.log('Default settings saved successfully');
             } catch (saveError) {
                 console.error('Failed to save default settings:', saveError);
@@ -128,14 +162,14 @@ export default function SettingsProvider({ children }) {
         try {
             // Update in backend
             const updatedSettingsJson = await invoke('update_settings_field', {
-                key,
+                key: toBackendKey(key),
                 value
             });
 
             // Parse the response to get the updated settings
             if (updatedSettingsJson) {
                 const updatedSettings = JSON.parse(updatedSettingsJson);
-                setSettings(updatedSettings);
+                setSettings(normalizeSettings(updatedSettings));
             } else {
                 // Fallback: just update the local state
                 setSettings(prev => ({
@@ -167,13 +201,13 @@ export default function SettingsProvider({ children }) {
         try {
             // Update in backend
             const updatedSettingsJson = await invoke('update_multiple_settings_command', {
-                updates
+                updates: mapUpdatesToBackendKeys(updates)
             });
 
             // Parse the response to get the updated settings
             if (updatedSettingsJson) {
                 const updatedSettings = JSON.parse(updatedSettingsJson);
-                setSettings(updatedSettings);
+                setSettings(normalizeSettings(updatedSettings));
             } else {
                 // Fallback: just update the local state
                 setSettings(prev => ({
@@ -204,10 +238,15 @@ export default function SettingsProvider({ children }) {
 
         try {
             // Reset in backend
-            await invoke('reset_settings');
+            const updatedSettingsJson = await invoke('reset_settings_command');
 
-            // Update local state
-            setSettings(defaultSettings);
+            // Update local state from backend response (preserves nested defaults)
+            if (updatedSettingsJson) {
+                const updatedSettings = JSON.parse(updatedSettingsJson);
+                setSettings(normalizeSettings(updatedSettings));
+            } else {
+                setSettings({ ...defaultSettings });
+            }
 
             console.log('Settings reset successfully');
         } catch (error) {
@@ -215,7 +254,7 @@ export default function SettingsProvider({ children }) {
             setError(`Failed to reset settings: ${error.message || error}`);
 
             // Update local state anyway for better UX, but show the error
-            setSettings(defaultSettings);
+            setSettings({ ...defaultSettings });
 
             // Clear error after a few seconds
             setTimeout(() => setError(null), 5000);
@@ -280,3 +319,5 @@ export default function SettingsProvider({ children }) {
 
 // Custom hook for using the settings context
 export const useSettings = () => useContext(SettingsContext);
+
+export { defaultSettings, normalizeSettings };
