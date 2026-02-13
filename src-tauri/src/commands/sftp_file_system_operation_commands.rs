@@ -653,9 +653,10 @@ pub fn cleanup_sftp_temp_files() -> Result<String, String> {
                             // Delete files older than 24 hours
                             if let Ok(elapsed) = modified.elapsed() {
                                 if elapsed.as_secs() > 24 * 60 * 60
-                                    && fs::remove_file(entry.path()).is_ok() {
-                                        cleaned_count += 1;
-                                    }
+                                    && fs::remove_file(entry.path()).is_ok()
+                                {
+                                    cleaned_count += 1;
+                                }
                             }
                         }
                     }

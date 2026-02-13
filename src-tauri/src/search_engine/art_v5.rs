@@ -123,7 +123,7 @@ impl ARTNode {
                             return false;
                         }
                     }
-                    
+
                     self.add_child(key, child.take())
                 } else {
                     n.add_child(key, child.take())
@@ -141,7 +141,7 @@ impl ARTNode {
                             return false;
                         }
                     }
-                    
+
                     self.add_child(key, child.take())
                 } else {
                     n.add_child(key, child.take())
@@ -159,7 +159,7 @@ impl ARTNode {
                             return false;
                         }
                     }
-                    
+
                     self.add_child(key, child.take())
                 } else {
                     n.add_child(key, child.take())
@@ -1850,8 +1850,7 @@ impl ART {
         // Sort by score in descending order (highest scores first)
         results.sort_by(|a, b| {
             // Use partial_cmp with a fallback to ensure stable sorting
-            b.1.partial_cmp(&a.1)
-                .unwrap_or(cmp::Ordering::Equal)
+            b.1.partial_cmp(&a.1).unwrap_or(cmp::Ordering::Equal)
         });
 
         // Deduplicate results if needed

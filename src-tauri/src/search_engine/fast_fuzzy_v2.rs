@@ -336,7 +336,6 @@ impl PathMatcher {
 
         // Sigmoid function: 1 - MIN_FACTOR/(1 + e^(-STEEPNESS * (x - MIDPOINT)))
         let length_f32 = path_length as f32;
-        
 
         1.0 - (1.0 - MIN_FACTOR) / (1.0 + (-STEEPNESS * (length_f32 - MIDPOINT)).exp())
     }

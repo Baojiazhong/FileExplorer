@@ -206,8 +206,7 @@ impl MetaDataState {
     /// ```
     pub fn write_meta_data_to_file(&self, meta_data: &MetaData) -> io::Result<()> {
         let user_config_file_path = &meta_data.abs_file_path_buf;
-        let serialized = serde_json::to_string_pretty(&meta_data)
-            .map_err(io::Error::other)?;
+        let serialized = serde_json::to_string_pretty(&meta_data).map_err(io::Error::other)?;
 
         // Makes sure the parent directory exists
         if let Some(parent) = user_config_file_path.parent() {

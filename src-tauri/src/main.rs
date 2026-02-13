@@ -121,9 +121,11 @@ async fn main() {
 
     log_info!("Starting Tauri application...");
 
-    app.run(tauri::generate_context!()).unwrap_or_else(|_| panic!("{}", {
-        let error_msg = "error while running tauri application";
-        log_critical!(error_msg);
-        error_msg
-    }));
+    app.run(tauri::generate_context!()).unwrap_or_else(|_| {
+        panic!("{}", {
+            let error_msg = "error while running tauri application";
+            log_critical!(error_msg);
+            error_msg
+        })
+    });
 }

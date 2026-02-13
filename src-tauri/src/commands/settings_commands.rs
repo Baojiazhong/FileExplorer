@@ -148,9 +148,7 @@ pub fn update_settings_field_impl(
     })?;
     settings_state
         .update_setting_field(&key, value)
-        .and_then(|updated| {
-            to_string(&updated).map_err(io::Error::other)
-        })
+        .and_then(|updated| to_string(&updated).map_err(io::Error::other))
         .map_err(|e| {
             Error::new(
                 ErrorCode::InternalError,
@@ -208,9 +206,7 @@ pub fn update_multiple_settings_impl(
     })?;
     settings_state
         .update_multiple_settings(&updates)
-        .and_then(|updated| {
-            to_string(&updated).map_err(io::Error::other)
-        })
+        .and_then(|updated| to_string(&updated).map_err(io::Error::other))
         .map_err(|e| {
             Error::new(
                 ErrorCode::InternalError,
@@ -257,9 +253,7 @@ pub fn reset_settings_impl(state: Arc<Mutex<SettingsState>>) -> Result<String, S
     })?;
     settings_state
         .reset_settings()
-        .and_then(|updated| {
-            to_string(&updated).map_err(io::Error::other)
-        })
+        .and_then(|updated| to_string(&updated).map_err(io::Error::other))
         .map_err(|e| {
             Error::new(
                 ErrorCode::InternalError,

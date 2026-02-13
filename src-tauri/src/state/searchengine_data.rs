@@ -54,8 +54,7 @@ impl Default for IndexingProgress {
 ///
 /// Collects statistics about search engine performance to help users
 /// understand system behavior and identify potential optimizations.
-#[derive(Debug, Deserialize, Serialize, Clone)]
-#[derive(Default)]
+#[derive(Debug, Deserialize, Serialize, Clone, Default)]
 pub struct SearchEngineMetrics {
     pub last_indexing_duration_ms: Option<u64>,
     pub average_search_time_ms: Option<f32>,
@@ -64,18 +63,15 @@ pub struct SearchEngineMetrics {
     pub cache_hits: usize,
 }
 
-
 /// User activity data related to search operations.
 ///
 /// Tracks recent user interactions with the search system to provide
 /// history features and improve result relevance through usage patterns.
-#[derive(Debug, Deserialize, Serialize, Clone)]
-#[derive(Default)]
+#[derive(Debug, Deserialize, Serialize, Clone, Default)]
 pub struct RecentActivity {
     pub recent_searches: Vec<String>,
     pub most_accessed_paths: Vec<String>,
 }
-
 
 /// Serializable version of engine statistics.
 ///

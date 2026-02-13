@@ -205,8 +205,7 @@ impl SettingsState {
     pub fn settings_to_json_map(
         settings: &Settings,
     ) -> Result<serde_json::Map<String, Value>, Error> {
-        let settings_value =
-            serde_json::to_value(settings).map_err(Error::other)?;
+        let settings_value = serde_json::to_value(settings).map_err(Error::other)?;
 
         settings_value
             .as_object()
@@ -376,8 +375,7 @@ impl SettingsState {
             .0
             .lock()
             .map_err(|_| io::Error::other("Failed to acquire settings lock"))?;
-        let settings_value =
-            serde_json::to_value(&*settings).map_err(Error::other)?;
+        let settings_value = serde_json::to_value(&*settings).map_err(Error::other)?;
 
         if let Some(obj) = settings_value.as_object() {
             // Handle nested fields with dot notation
@@ -574,8 +572,7 @@ impl SettingsState {
     /// ```
     fn write_settings_to_file(&self, settings: &Settings) -> io::Result<()> {
         let user_config_file_path = &settings.abs_file_path_buf;
-        let serialized = serde_json::to_string_pretty(&settings)
-            .map_err(Error::other)?;
+        let serialized = serde_json::to_string_pretty(&settings).map_err(Error::other)?;
 
         // Makes sure the parent directory exists
         if let Some(parent) = user_config_file_path.parent() {

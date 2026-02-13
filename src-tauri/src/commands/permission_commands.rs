@@ -1,4 +1,3 @@
-
 #[tauri::command]
 pub fn request_full_disk_access() -> Result<(), String> {
     // Check if we're on macOS
