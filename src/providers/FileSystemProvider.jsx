@@ -415,8 +415,12 @@ export default function FileSystemProvider({ children }) {
                 }
             } else {
                 await invoke('move_to_trash', { path });
-                const dirPath = path.substring(0, path.lastIndexOf('/'));
-                await loadDirectory(dirPath);
+
+                // Reload the parent directory of the deleted item.
+                // Use cross-platform path utils (Windows uses "\\", Unix uses "/").
+                const dirPath = getDirectoryPath(path);
+                await loadDirectory(dirPath || currentPath);
+
                 // Clear selection if the deleted item was selected
                 setSelectedItems(prev => prev.filter(item => !item.path.startsWith(path)));
             }

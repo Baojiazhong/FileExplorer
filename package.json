@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "test": "node --test",
     "tauri": "tauri",
     "tauri:build:macos": "cargo tauri build --target aarch64-apple-darwin && cd src-tauri/scripts && ./post-build.sh",
     "tauri:build:intel": "cargo tauri build --target x86_64-apple-darwin && cd src-tauri/scripts && ./post-build.sh",
@@ -26,3 +27,4 @@
     "vite": "^6.0.3"
   }
 }
+
