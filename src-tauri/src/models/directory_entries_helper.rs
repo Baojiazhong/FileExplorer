@@ -1,5 +1,5 @@
 use crate::models;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Local};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::fs::Permissions;
@@ -179,7 +179,10 @@ pub fn access_rights_to_string_unix(permissions: Permissions) -> String {
 }
 
 /// This function formats a SystemTime object into a human-readable string.
-/// It converts the SystemTime into a DateTime<Utc> object and then formats it into a string.
+/// It converts the SystemTime into a DateTime<Local> object and then formats it into a string.
+///
+/// Note: File timestamps from the OS do not inherently include a timezone; we display them
+/// in the user's local timezone for UI friendliness.
 ///
 /// # Parameters
 /// - `system_time`: The SystemTime object to be formatted.
@@ -198,7 +201,7 @@ pub fn access_rights_to_string_unix(permissions: Permissions) -> String {
 ///  println!("Formatted time: {}", formatted_time);
 /// }
 pub fn format_system_time(system_time: SystemTime) -> String {
-    let datetime: DateTime<Utc> = system_time.into();
+    let datetime: DateTime<Local> = system_time.into();
     datetime.format("%Y-%m-%d %H:%M:%S").to_string()
 }
 
