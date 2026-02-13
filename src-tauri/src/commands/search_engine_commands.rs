@@ -2,8 +2,10 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use tauri::State;
 
+use crate::state::searchengine_data::{
+    IndexingProgress, SearchEngineInfo, SearchEngineState, SearchEngineStatus,
+};
 use crate::{log_error, log_info};
-use crate::state::searchengine_data::{IndexingProgress, SearchEngineInfo, SearchEngineState, SearchEngineStatus};
 
 // Type alias for the search result type returned by the engine
 type SearchResult = Vec<(String, f32)>;
@@ -42,10 +44,7 @@ pub fn search_impl(
     query: String,
     state: Arc<Mutex<SearchEngineState>>,
 ) -> Result<SearchResult, String> {
-    log_info!(
-        "Search implementation called with query: {}",
-        query
-    );
+    log_info!("Search implementation called with query: {}", query);
     let engine = state.lock().map_err(|_| "lock poisoned")?;
     engine.search(&query)
 }
@@ -94,9 +93,12 @@ pub fn search_with_extension_impl(
 ) -> Result<SearchResult, String> {
     log_info!(
         "Search with extension called: query='{}', extensions={:?}",
-        query, extensions
+        query,
+        extensions
     );
-    let engine = state.lock().map_err(|_| "Failed to acquire lock on search engine state")?;
+    let engine = state
+        .lock()
+        .map_err(|_| "Failed to acquire lock on search engine state")?;
     engine.search_by_extension(&query, extensions)
 }
 
@@ -135,19 +137,18 @@ pub async fn add_paths_recursive_async(
     search_engine_state: State<'_, Arc<Mutex<SearchEngineState>>>,
 ) -> Result<(), String> {
     let state = search_engine_state.inner().clone();
-    
+
     // Use a more conservative approach for async operations
     // Spawn on a separate thread with explicit stack size to prevent overflow
     let handle = std::thread::Builder::new()
         .name("indexing-thread".to_string())
         .stack_size(8 * 1024 * 1024) // 8MB stack size (generous but safe)
-        .spawn(move || {
-            add_paths_recursive_impl(folder, state)
-        })
+        .spawn(move || add_paths_recursive_impl(folder, state))
         .map_err(|e| format!("Failed to spawn indexing thread: {:?}", e))?;
-    
+
     // Wait for completion
-    handle.join()
+    handle
+        .join()
         .map_err(|e| format!("Indexing thread panicked: {:?}", e))?
 }
 
@@ -159,7 +160,7 @@ pub fn add_paths_recursive_impl(
         "Add paths recursive called with folder: {} (using optimized chunked indexing)",
         folder
     );
-    
+
     // Use smaller chunk size to reduce memory pressure and prevent stack overflow
     let default_chunk_size = 150; // Reduced from 350 to prevent memory issues
     let path = PathBuf::from(&folder);
@@ -171,13 +172,22 @@ pub fn add_paths_recursive_impl(
         return Err(error_msg);
     }
 
-    log_info!("Starting optimized chunked indexing for path: {} with chunk size: {}", folder, default_chunk_size);
+    log_info!(
+        "Starting optimized chunked indexing for path: {} with chunk size: {}",
+        folder,
+        default_chunk_size
+    );
 
-    let engine_state = state.lock().map_err(|_| "Failed to acquire lock on search engine state")?;
+    let engine_state = state
+        .lock()
+        .map_err(|_| "Failed to acquire lock on search engine state")?;
     let result = engine_state.start_chunked_indexing(path, default_chunk_size);
 
     match &result {
-        Ok(_) => log_info!("Optimized chunked indexing started successfully for: {}", folder),
+        Ok(_) => log_info!(
+            "Optimized chunked indexing started successfully for: {}",
+            folder
+        ),
         Err(e) => log_error!("Optimized chunked indexing failed for {}: {}", folder, e),
     }
 
@@ -212,7 +222,9 @@ pub fn add_path(
 
 pub fn add_path_impl(path: String, state: Arc<Mutex<SearchEngineState>>) -> Result<(), String> {
     log_info!("Add path called with: {}", path);
-    let engine = state.lock().map_err(|_| "Failed to acquire lock on search engine state")?;
+    let engine = state
+        .lock()
+        .map_err(|_| "Failed to acquire lock on search engine state")?;
     engine.add_path(&path)
 }
 
@@ -246,11 +258,10 @@ pub fn remove_paths_recursive_impl(
     folder: String,
     state: Arc<Mutex<SearchEngineState>>,
 ) -> Result<(), String> {
-    log_info!(
-        "Remove paths recursive called with folder: {}",
-        folder
-    );
-    let engine = state.lock().map_err(|_| "Failed to acquire lock on search engine state")?;
+    log_info!("Remove paths recursive called with folder: {}", folder);
+    let engine = state
+        .lock()
+        .map_err(|_| "Failed to acquire lock on search engine state")?;
     engine.remove_paths_recursive(&folder)
 }
 
@@ -282,7 +293,9 @@ pub fn remove_path(
 
 pub fn remove_path_impl(path: String, state: Arc<Mutex<SearchEngineState>>) -> Result<(), String> {
     log_info!("Remove path called with: {}", path);
-    let engine = state.lock().map_err(|_| "Failed to acquire lock on search engine state")?;
+    let engine = state
+        .lock()
+        .map_err(|_| "Failed to acquire lock on search engine state")?;
     engine.remove_path(&path)
 }
 
@@ -313,12 +326,20 @@ pub fn clear_search_engine(
 pub fn clear_search_engine_impl(state: Arc<Mutex<SearchEngineState>>) -> Result<(), String> {
     log_info!("Clear search engine called");
 
-    let state = state.lock().map_err(|_| "Failed to acquire lock on search engine state")?;
-    let mut engine = state.engine.write().map_err(|_| "Failed to acquire write lock on search engine")?;
+    let state = state
+        .lock()
+        .map_err(|_| "Failed to acquire lock on search engine state")?;
+    let mut engine = state
+        .engine
+        .write()
+        .map_err(|_| "Failed to acquire write lock on search engine")?;
     engine.clear();
 
     // Update state
-    let mut data = state.data.lock().map_err(|_| "Failed to acquire lock on search engine data")?;
+    let mut data = state
+        .data
+        .lock()
+        .map_err(|_| "Failed to acquire lock on search engine data")?;
     data.last_updated = chrono::Utc::now().timestamp_millis() as u64;
 
     Ok(())
@@ -376,7 +397,9 @@ pub fn get_search_engine_info_impl(
     state: Arc<Mutex<SearchEngineState>>,
 ) -> Result<SearchEngineInfo, String> {
     log_info!("Get search engine info called");
-    let engine = state.lock().map_err(|_| "Failed to acquire lock on search engine state")?;
+    let engine = state
+        .lock()
+        .map_err(|_| "Failed to acquire lock on search engine state")?;
     Ok(engine.get_search_engine_info())
 }
 
@@ -445,10 +468,10 @@ pub async fn stop_indexing(
 mod tests_autocomplete_commands {
     use super::*;
     use crate::state::searchengine_data::SearchEngineStatus;
+    use crate::state::SettingsState;
     use std::fs::File;
     use std::io::Write;
     use tempfile::TempDir;
-    use crate::state::SettingsState;
 
     // Helper function to create a test SearchEngineState
     fn create_test_search_engine_state() -> Arc<Mutex<SearchEngineState>> {
@@ -645,17 +668,23 @@ mod tests_autocomplete_commands {
         let subdir = temp_dir.path().join("subdir");
         std::fs::create_dir_all(&subdir).unwrap();
 
-        let _file1 = create_temp_file(&temp_dir, "chunked_test1.txt", "This is chunked test document one");
+        let _file1 = create_temp_file(
+            &temp_dir,
+            "chunked_test1.txt",
+            "This is chunked test document one",
+        );
         let file2_dir = TempDir::new_in(&subdir).unwrap();
-        let _file2 = create_temp_file(&file2_dir, "chunked_test2.txt", "This is chunked test document two");
+        let _file2 = create_temp_file(
+            &file2_dir,
+            "chunked_test2.txt",
+            "This is chunked test document two",
+        );
 
         let state = create_test_search_engine_state();
 
         // The updated add_paths_recursive should use chunked indexing internally
-        let add_result = add_paths_recursive_impl(
-            temp_dir.path().to_string_lossy().to_string(),
-            state.clone(),
-        );
+        let add_result =
+            add_paths_recursive_impl(temp_dir.path().to_string_lossy().to_string(), state.clone());
         assert!(add_result.is_ok());
 
         // Allow time for chunked indexing to complete
@@ -742,7 +771,11 @@ pub fn get_suggestions(
     limit: Option<usize>,
     search_engine_state: State<Arc<Mutex<SearchEngineState>>>,
 ) -> Result<Vec<String>, String> {
-    get_suggestions_impl(prefix, limit.unwrap_or(10), search_engine_state.inner().clone())
+    get_suggestions_impl(
+        prefix,
+        limit.unwrap_or(10),
+        search_engine_state.inner().clone(),
+    )
 }
 
 pub fn get_suggestions_impl(
@@ -750,75 +783,89 @@ pub fn get_suggestions_impl(
     limit: usize,
     state: Arc<Mutex<SearchEngineState>>,
 ) -> Result<Vec<String>, String> {
-    log_info!("Getting suggestions for prefix: {} (limit: {})", prefix, limit);
-    
+    log_info!(
+        "Getting suggestions for prefix: {} (limit: {})",
+        prefix,
+        limit
+    );
+
     if prefix.is_empty() {
         return Ok(Vec::new());
     }
 
-    let search_engine_state = state.lock().map_err(|_| "Failed to acquire lock on search engine state")?;
-    
+    let search_engine_state = state
+        .lock()
+        .map_err(|_| "Failed to acquire lock on search engine state")?;
+
     // Check if search engine is enabled
     {
-        let data = search_engine_state.data.lock().map_err(|_| "Failed to acquire lock on search engine data")?;
+        let data = search_engine_state
+            .data
+            .lock()
+            .map_err(|_| "Failed to acquire lock on search engine data")?;
         if !data.config.search_engine_enabled {
             log_error!("Search engine is disabled in configuration.");
             return Err("Search engine is disabled in configuration".to_string());
         }
-        
+
         // Check if engine is busy indexing
         if matches!(data.status, SearchEngineStatus::Indexing) {
             return Err("Engine is currently indexing".to_string());
         }
     }
-    
+
     // Use the existing search functionality but limit results for suggestions
     match search_engine_state.search(&prefix) {
         Ok(search_results) => {
             let mut suggestions = Vec::new();
             let mut seen_suggestions = std::collections::HashSet::new();
-            
+
             // Process search results to extract meaningful suggestions
-            for (path, _score) in search_results.into_iter().take(limit * 3) { // Get more results to filter from
-                
+            for (path, _score) in search_results.into_iter().take(limit * 3) {
+                // Get more results to filter from
+
                 // Extract filename suggestions
-                if let Some(filename) = path.split('/').last() {
+                if let Some(filename) = path.split('/').next_back() {
                     // Only suggest if filename starts with prefix (case-insensitive)
-                    if filename.to_lowercase().starts_with(&prefix.to_lowercase()) && 
-                       !seen_suggestions.contains(filename) &&
-                       filename.len() > prefix.len() { // Only suggest if it adds something
+                    if filename.to_lowercase().starts_with(&prefix.to_lowercase())
+                        && !seen_suggestions.contains(filename)
+                        && filename.len() > prefix.len()
+                    {
+                        // Only suggest if it adds something
                         suggestions.push(filename.to_string());
                         seen_suggestions.insert(filename.to_string());
                     }
                 }
-                
+
                 // Extract directory name suggestions from path components
                 let path_components: Vec<&str> = path.split('/').collect();
                 for component in path_components {
-                    if component.to_lowercase().starts_with(&prefix.to_lowercase()) && 
-                       !seen_suggestions.contains(component) &&
-                       !component.is_empty() &&
-                       component.len() > prefix.len() { // Only suggest if it adds something
+                    if component.to_lowercase().starts_with(&prefix.to_lowercase())
+                        && !seen_suggestions.contains(component)
+                        && !component.is_empty()
+                        && component.len() > prefix.len()
+                    {
+                        // Only suggest if it adds something
                         suggestions.push(component.to_string());
                         seen_suggestions.insert(component.to_string());
                     }
                 }
-                
+
                 // Stop if we have enough suggestions
                 if suggestions.len() >= limit {
                     break;
                 }
             }
-            
+
             // Sort suggestions by relevance (exact prefix match first, then alphabetical)
             suggestions.sort_by(|a, b| {
                 let a_lower = a.to_lowercase();
                 let b_lower = b.to_lowercase();
                 let prefix_lower = prefix.to_lowercase();
-                
+
                 let a_starts = a_lower.starts_with(&prefix_lower);
                 let b_starts = b_lower.starts_with(&prefix_lower);
-                
+
                 match (a_starts, b_starts) {
                     (true, false) => std::cmp::Ordering::Less,
                     (false, true) => std::cmp::Ordering::Greater,
@@ -826,18 +873,22 @@ pub fn get_suggestions_impl(
                         // Both start with prefix or neither does, sort by length then alphabetically
                         match a.len().cmp(&b.len()) {
                             std::cmp::Ordering::Equal => a.cmp(b),
-                            other => other
+                            other => other,
                         }
                     }
                 }
             });
-            
+
             // Limit final results
             suggestions.truncate(limit);
-            
-            log_info!("Found {} suggestions for prefix '{}'", suggestions.len(), prefix);
+
+            log_info!(
+                "Found {} suggestions for prefix '{}'",
+                suggestions.len(),
+                prefix
+            );
             Ok(suggestions)
-        },
+        }
         Err(e) => {
             log_error!("Search failed for suggestions: {}", e);
             Err(format!("Search failed: {}", e))

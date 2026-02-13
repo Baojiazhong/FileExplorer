@@ -178,14 +178,24 @@ pub async fn open_directory(path: String) -> Result<String, String> {
 
         if file_type.is_dir() {
             directories.push(models::Directory {
-                name: entry.file_name().to_str().unwrap_or("[invalid name]").to_string(),
-                path: path_of_entry.to_str().unwrap_or("[invalid path]").to_string(),
+                name: entry
+                    .file_name()
+                    .to_str()
+                    .unwrap_or("[invalid name]")
+                    .to_string(),
+                path: path_of_entry
+                    .to_str()
+                    .unwrap_or("[invalid path]")
+                    .to_string(),
                 is_symlink: path_of_entry.is_symlink(),
                 access_rights_as_string: get_access_permission_string(metadata.permissions(), true),
                 access_rights_as_number: get_access_permission_number(metadata.permissions(), true),
                 size_in_bytes: 0,
                 sub_file_count: path_of_entry.to_str().map(count_subfiles).unwrap_or(0),
-                sub_dir_count: path_of_entry.to_str().map(count_subdirectories).unwrap_or(0),
+                sub_dir_count: path_of_entry
+                    .to_str()
+                    .map(count_subdirectories)
+                    .unwrap_or(0),
                 created: metadata
                     .created()
                     .map_or("1970-01-01 00:00:00".to_string(), |time| {
@@ -204,8 +214,15 @@ pub async fn open_directory(path: String) -> Result<String, String> {
             });
         } else if file_type.is_file() {
             files.push(models::File {
-                name: entry.file_name().to_str().unwrap_or("[invalid name]").to_string(),
-                path: path_of_entry.to_str().unwrap_or("[invalid path]").to_string(),
+                name: entry
+                    .file_name()
+                    .to_str()
+                    .unwrap_or("[invalid name]")
+                    .to_string(),
+                path: path_of_entry
+                    .to_str()
+                    .unwrap_or("[invalid path]")
+                    .to_string(),
                 is_symlink: path_of_entry.is_symlink(),
                 access_rights_as_string: get_access_permission_string(
                     metadata.permissions(),
@@ -298,7 +315,8 @@ pub async fn create_file(folder_path_abs: &str, file_name: &str) -> Result<(), S
         Err(err) => {
             log_error!(
                 "File could not be created: {} error: {}",
-                folder_path_abs, err
+                folder_path_abs,
+                err
             );
             Err(Error::new(
                 ErrorCode::InternalError,
@@ -361,7 +379,8 @@ pub async fn create_directory(folder_path_abs: &str, folder_name: &str) -> Resul
         Err(err) => {
             log_error!(
                 "Failed to create directory: {} err: {}",
-                folder_path_abs, err
+                folder_path_abs,
+                err
             );
             Err(Error::new(
                 ErrorCode::InternalError,
@@ -470,24 +489,30 @@ pub async fn move_to_trash(path: &str) -> Result<(), String> {
 /// For directories: "folder" -> "folder (1)" -> "folder (2)"
 fn generate_unique_path(original_path: &str) -> String {
     let path = Path::new(original_path);
-    
+
     if !path.exists() {
         return original_path.to_string();
     }
-    
+
     let parent = path.parent().unwrap_or_else(|| Path::new("."));
-    let file_name = path.file_name().map(|n| n.to_string_lossy()).unwrap_or_else(|| "[invalid_name]".into());
-    
+    let file_name = path
+        .file_name()
+        .map(|n| n.to_string_lossy())
+        .unwrap_or_else(|| "[invalid_name]".into());
+
     // Check if it's a file with extension or a directory
     if let Some(extension) = path.extension() {
         // It's a file with extension
-        let stem = path.file_stem().map(|s| s.to_string_lossy()).unwrap_or_else(|| "[invalid_stem]".into());
+        let stem = path
+            .file_stem()
+            .map(|s| s.to_string_lossy())
+            .unwrap_or_else(|| "[invalid_stem]".into());
         let ext = extension.to_string_lossy();
-        
+
         for i in 1..=9999 {
             let new_name = format!("{} ({}).{}", stem, i, ext);
             let new_path = parent.join(&new_name);
-            
+
             if !new_path.exists() {
                 return new_path.to_string_lossy().to_string();
             }
@@ -497,13 +522,13 @@ fn generate_unique_path(original_path: &str) -> String {
         for i in 1..=9999 {
             let new_name = format!("{} ({})", file_name, i);
             let new_path = parent.join(&new_name);
-            
+
             if !new_path.exists() {
                 return new_path.to_string_lossy().to_string();
             }
         }
     }
-    
+
     // Fallback - this should rarely happen
     original_path.to_string()
 }
@@ -929,7 +954,8 @@ pub async fn unzip(zip_paths: Vec<String>, destination_path: Option<String>) -> 
         } else {
             // For multiple files or directories, create subdirectory
             let extract_path_initial = dest_path.join(zip_name);
-            let unique_extract_path_string = generate_unique_path(&extract_path_initial.to_string_lossy());
+            let unique_extract_path_string =
+                generate_unique_path(&extract_path_initial.to_string_lossy());
             Path::new(&unique_extract_path_string).to_path_buf()
         };
 
@@ -970,7 +996,8 @@ pub async fn unzip(zip_paths: Vec<String>, destination_path: Option<String>) -> 
                 // For files, determine the output path based on extraction type
                 let outpath = if is_single_file {
                     // For single file, extract directly to destination with original filename
-                    let original_filename = Path::new(file.name()).file_name()
+                    let original_filename = Path::new(file.name())
+                        .file_name()
                         .unwrap_or_else(|| std::ffi::OsStr::new("extracted_file"));
                     extract_path.join(original_filename)
                 } else {
@@ -981,7 +1008,7 @@ pub async fn unzip(zip_paths: Vec<String>, destination_path: Option<String>) -> 
                 // Generate a unique path if the file already exists
                 let unique_outpath_string = generate_unique_path(&outpath.to_string_lossy());
                 let unique_outpath = Path::new(&unique_outpath_string);
-                
+
                 if let Some(parent) = unique_outpath.parent() {
                     if !parent.exists() {
                         fs::create_dir_all(parent).map_err(|e| {
@@ -998,7 +1025,7 @@ pub async fn unzip(zip_paths: Vec<String>, destination_path: Option<String>) -> 
                         })?;
                     }
                 }
-                let mut outfile = fs::File::create(&unique_outpath).map_err(|e| {
+                let mut outfile = fs::File::create(unique_outpath).map_err(|e| {
                     log_error!("Failed to create file: {}", e);
                     Error::new(
                         ErrorCode::InternalError,

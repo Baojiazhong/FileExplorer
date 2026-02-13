@@ -123,8 +123,8 @@ impl ARTNode {
                             return false;
                         }
                     }
-                    let added = self.add_child(key, child.take());
-                    added
+                    
+                    self.add_child(key, child.take())
                 } else {
                     n.add_child(key, child.take())
                 }
@@ -141,8 +141,8 @@ impl ARTNode {
                             return false;
                         }
                     }
-                    let added = self.add_child(key, child.take());
-                    added
+                    
+                    self.add_child(key, child.take())
                 } else {
                     n.add_child(key, child.take())
                 }
@@ -159,8 +159,8 @@ impl ARTNode {
                             return false;
                         }
                     }
-                    let added = self.add_child(key, child.take());
-                    added
+                    
+                    self.add_child(key, child.take())
                 } else {
                     n.add_child(key, child.take())
                 }
@@ -617,7 +617,7 @@ impl Node48 {
 
         if let Some(idx) = self.child_index[key_idx] {
             let idx = idx as usize;
-            let removed = mem::replace(&mut self.children[idx], None);
+            let removed = self.children[idx].take();
 
             self.child_index[key_idx] = None;
 
@@ -689,7 +689,7 @@ impl Node256 {
         let key_idx = key as usize;
 
         if self.children[key_idx].is_some() {
-            let removed = mem::replace(&mut self.children[key_idx], None);
+            let removed = self.children[key_idx].take();
             self.size -= 1;
             removed
         } else {
@@ -1575,7 +1575,7 @@ impl ART {
                 let rem = normalized_bytes.len() - depth;
                 // Case A: the search prefix ends inside this node's prefix
                 if rem < prefix_len {
-                    if &node_prefix[..rem] != &normalized_bytes[depth..] {
+                    if node_prefix[..rem] != normalized_bytes[depth..] {
                         return Vec::new();
                     }
                     // Build base string so far: path_acc + full node_prefix
@@ -1589,7 +1589,7 @@ impl ART {
                     return results;
                 }
                 // Case B: need to match the entire node_prefix
-                if &node_prefix[..] != &normalized_bytes[depth..depth + prefix_len] {
+                if node_prefix != &normalized_bytes[depth..depth + prefix_len] {
                     return Vec::new();
                 }
                 // Full match: append node_prefix to path_acc and advance depth
@@ -1851,7 +1851,7 @@ impl ART {
         results.sort_by(|a, b| {
             // Use partial_cmp with a fallback to ensure stable sorting
             b.1.partial_cmp(&a.1)
-                .unwrap_or_else(|| cmp::Ordering::Equal)
+                .unwrap_or(cmp::Ordering::Equal)
         });
 
         // Deduplicate results if needed

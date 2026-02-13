@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 /// Configuration for path ranking algorithm with adjustable weights.
 ///
 /// This struct allows fine-tuning the relative importance of different
-/// ranking factors like frequency, recency, directory context, and 
+/// ranking factors like frequency, recency, directory context, and
 /// file extension preferences.
 ///
 /// # Example

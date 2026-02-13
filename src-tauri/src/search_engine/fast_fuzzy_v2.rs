@@ -230,17 +230,21 @@ impl PathMatcher {
         // Use stack allocation for small paths, heap for larger ones
         const MAX_STACK_PATH: usize = 512;
         let mut trigram_bytes = [0u8; 3];
-        
+
         if bytes.len() <= MAX_STACK_PATH {
             // Use stack-allocated buffer for small paths
             let mut stack_buffer = [b' '; MAX_STACK_PATH + 4];
             stack_buffer[0] = b' ';
             stack_buffer[1] = b' ';
-            stack_buffer[2..2+bytes.len()].copy_from_slice(bytes);
-            stack_buffer[2+bytes.len()] = b' ';
-            stack_buffer[3+bytes.len()] = b' ';
-            
-            self.process_trigrams(&stack_buffer[..bytes.len() + 4], path_idx, &mut trigram_bytes);
+            stack_buffer[2..2 + bytes.len()].copy_from_slice(bytes);
+            stack_buffer[2 + bytes.len()] = b' ';
+            stack_buffer[3 + bytes.len()] = b' ';
+
+            self.process_trigrams(
+                &stack_buffer[..bytes.len() + 4],
+                path_idx,
+                &mut trigram_bytes,
+            );
         } else {
             // Use reusable buffer for larger paths
             self.extraction_buffer.clear();
@@ -250,7 +254,7 @@ impl PathMatcher {
             self.extraction_buffer.extend_from_slice(bytes);
             self.extraction_buffer.push(b' ');
             self.extraction_buffer.push(b' ');
-            
+
             // Clone buffer to avoid borrowing issues
             let buffer_copy = self.extraction_buffer.clone();
             self.process_trigrams(&buffer_copy, path_idx, &mut trigram_bytes);
@@ -259,7 +263,8 @@ impl PathMatcher {
 
     /// Helper function to process trigrams from a padded byte array
     fn process_trigrams(&mut self, padded: &[u8], path_idx: u32, trigram_bytes: &mut [u8; 3]) {
-        let mut seen_trigrams = FxHashSet::with_capacity_and_hasher(padded.len(), Default::default());
+        let mut seen_trigrams =
+            FxHashSet::with_capacity_and_hasher(padded.len(), Default::default());
 
         for i in 0..padded.len() - 2 {
             trigram_bytes[0] = Self::fast_lowercase(padded[i]);
@@ -331,10 +336,9 @@ impl PathMatcher {
 
         // Sigmoid function: 1 - MIN_FACTOR/(1 + e^(-STEEPNESS * (x - MIDPOINT)))
         let length_f32 = path_length as f32;
-        let sigmoid =
-            1.0 - (1.0 - MIN_FACTOR) / (1.0 + (-STEEPNESS * (length_f32 - MIDPOINT)).exp());
+        
 
-        sigmoid
+        1.0 - (1.0 - MIN_FACTOR) / (1.0 + (-STEEPNESS * (length_f32 - MIDPOINT)).exp())
     }
 
     /// Searches for paths matching the given query string, supporting fuzzy matching.
@@ -387,7 +391,7 @@ impl PathMatcher {
         }
 
         // 32-bit words can track 32 paths each
-        let bitmap_size = (self.paths.len() + 31) / 32;
+        let bitmap_size = self.paths.len().div_ceil(32);
         let mut path_bitmap = vec![0u32; bitmap_size];
         let mut hit_counts = vec![0u16; self.paths.len()];
         let mut total_hits = 0;
@@ -572,7 +576,7 @@ impl PathMatcher {
         let variations = self.generate_efficient_variations(&query_lower);
 
         // === Step 1: Fast Variation-based Fallback ===
-        let mut path_bitmap = vec![0u32; (self.paths.len() + 31) / 32];
+        let mut path_bitmap = vec![0u32; self.paths.len().div_ceil(32)];
         let mut variation_hits =
             FxHashMap::with_capacity_and_hasher(variations.len(), Default::default());
         let mut seen_paths =
@@ -584,9 +588,7 @@ impl PathMatcher {
             if trigrams.is_empty() {
                 continue;
             }
-            for word in &mut path_bitmap {
-                *word = 0;
-            }
+            path_bitmap.fill(0);
             for &trigram in &trigrams {
                 if let Some(path_indices) = self.trigram_index.get(&trigram) {
                     for &path_idx in path_indices {
@@ -609,13 +611,14 @@ impl PathMatcher {
                     if path_idx < self.paths.len() && !seen_paths.contains(&path_idx) {
                         seen_paths.insert(path_idx);
                         let path = &self.paths[path_idx];
-                        let filename = path.split('/').last().unwrap_or(path);
+                        let filename = path.split('/').next_back().unwrap_or(path);
                         let filename_lower = filename.to_lowercase();
                         let variation_index = variation_idx as f32 / variations.len() as f32;
                         let mut score = 0.9 - (variation_index * 0.2);
                         // Bonus for matching first char
-                        if let (Some(query_first), Some(filename_first)) = 
-                            (query_lower.chars().next(), filename_lower.chars().next()) {
+                        if let (Some(query_first), Some(filename_first)) =
+                            (query_lower.chars().next(), filename_lower.chars().next())
+                        {
                             if query_first == filename_first {
                                 score += 0.3;
                             }

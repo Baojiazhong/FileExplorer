@@ -277,7 +277,10 @@ pub async fn remove_template_impl(
     } else if path.is_file() {
         fs::remove_file(path)
     } else {
-        return Err(format!("Template path is neither file nor directory: {}", template_path));
+        return Err(format!(
+            "Template path is neither file nor directory: {}",
+            template_path
+        ));
     };
 
     match remove_result {
@@ -417,11 +420,7 @@ pub async fn copy_to_dest_path(source_path: &str, dest_path: &str) -> Result<u64
                 // Copy file
                 match fs::copy(&entry_path, &dest_path_entry) {
                     Ok(size) => {
-                        log_info!(
-                            "Copied file: {} ({} bytes)",
-                            entry_path.display(),
-                            size
-                        );
+                        log_info!("Copied file: {} ({} bytes)", entry_path.display(), size);
                         total_size += size;
                     }
                     Err(err) => {
@@ -500,7 +499,9 @@ pub async fn copy_to_dest_path(source_path: &str, dest_path: &str) -> Result<u64
             Ok(size) => {
                 log_info!(
                     "Copied file: {} to {} ({} bytes)",
-                    source_path, final_dest_path.display(), size
+                    source_path,
+                    final_dest_path.display(),
+                    size
                 );
                 Ok(size)
             }
@@ -982,10 +983,10 @@ mod tests_template_commands {
         );
 
         // Verify the file content was preserved
-        let content = fs::read_to_string(expected_template_path).expect("Failed to read template file");
+        let content =
+            fs::read_to_string(expected_template_path).expect("Failed to read template file");
         assert_eq!(
-            content,
-            "Single file template content",
+            content, "Single file template content",
             "File content should match"
         );
     }

@@ -4,13 +4,11 @@ use crate::state::SettingsState;
 #[allow(unused_imports)]
 use crate::{log_error, log_info, log_warn};
 use serde::{Deserialize, Serialize};
+use std::fs;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, RwLock};
-use std::time::{Instant};
-use std::{fs};
+use std::time::Instant;
 use tokio;
-
-
 
 /// Current operational status of the search engine.
 ///
@@ -57,6 +55,7 @@ impl Default for IndexingProgress {
 /// Collects statistics about search engine performance to help users
 /// understand system behavior and identify potential optimizations.
 #[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Default)]
 pub struct SearchEngineMetrics {
     pub last_indexing_duration_ms: Option<u64>,
     pub average_search_time_ms: Option<f32>,
@@ -65,36 +64,18 @@ pub struct SearchEngineMetrics {
     pub cache_hits: usize,
 }
 
-impl Default for SearchEngineMetrics {
-    fn default() -> Self {
-        Self {
-            last_indexing_duration_ms: None,
-            average_search_time_ms: None,
-            cache_hit_rate: None,
-            total_searches: 0,
-            cache_hits: 0,
-        }
-    }
-}
 
 /// User activity data related to search operations.
 ///
 /// Tracks recent user interactions with the search system to provide
 /// history features and improve result relevance through usage patterns.
 #[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Default)]
 pub struct RecentActivity {
     pub recent_searches: Vec<String>,
     pub most_accessed_paths: Vec<String>,
 }
 
-impl Default for RecentActivity {
-    fn default() -> Self {
-        Self {
-            recent_searches: Vec::new(),
-            most_accessed_paths: Vec::new(),
-        }
-    }
-}
 
 /// Serializable version of engine statistics.
 ///
@@ -195,8 +176,12 @@ impl SearchEngineState {
     pub fn new(settings_state: Arc<Mutex<SettingsState>>) -> Self {
         // Get config from settings_state
         let config = {
-            let settings = settings_state.lock().expect("Failed to acquire lock on settings state during SearchEngineState initialization");
-            let inner_settings = settings.0.lock().expect("Failed to acquire lock on inner settings during SearchEngineState initialization");
+            let settings = settings_state.lock().expect(
+                "Failed to acquire lock on settings state during SearchEngineState initialization",
+            );
+            let inner_settings = settings.0.lock().expect(
+                "Failed to acquire lock on inner settings during SearchEngineState initialization",
+            );
             inner_settings.backend_settings.search_engine_config.clone()
         };
 
@@ -211,7 +196,9 @@ impl SearchEngineState {
         let engine = SearchCore::new(
             config.cache_size,
             config.max_results,
-            config.cache_ttl.unwrap_or_else(|| std::time::Duration::from_secs(3600)),  // Default 1 hour TTL
+            config
+                .cache_ttl
+                .unwrap_or_else(|| std::time::Duration::from_secs(3600)), // Default 1 hour TTL
             ranking_config,
         );
 
@@ -279,8 +266,14 @@ impl SearchEngineState {
     #[allow(dead_code)]
     pub fn start_indexing(&self, folder: PathBuf) -> Result<(), String> {
         // Get locks on both data and engine
-        let mut data = self.data.lock().map_err(|_| "Failed to lock search engine data")?;
-        let mut engine = self.engine.write().map_err(|_| "Failed to acquire write lock on search engine")?;
+        let mut data = self
+            .data
+            .lock()
+            .map_err(|_| "Failed to lock search engine data")?;
+        let mut engine = self
+            .engine
+            .write()
+            .map_err(|_| "Failed to acquire write lock on search engine")?;
 
         // Check if search engine is enabled
         if !data.config.search_engine_enabled {
@@ -327,20 +320,30 @@ impl SearchEngineState {
 
             // Get the engine again for the recursive operation
             {
-                let mut engine = self.engine.write().map_err(|_| "Failed to acquire write lock on search engine")?;
+                let mut engine = self
+                    .engine
+                    .write()
+                    .map_err(|_| "Failed to acquire write lock on search engine")?;
                 // Since add_paths_recursive is async, we need to use a runtime
-                let rt = tokio::runtime::Runtime::new().map_err(|_| "Failed to create tokio runtime")?;
+                let rt =
+                    tokio::runtime::Runtime::new().map_err(|_| "Failed to create tokio runtime")?;
                 let patterns = excluded_patterns.as_ref();
                 rt.block_on(engine.add_paths_recursive(folder_str, patterns));
             }
 
             // Update status and metrics after indexing completes or stops
-            let mut data = self.data.lock().map_err(|_| "Failed to lock search engine data")?;
+            let mut data = self
+                .data
+                .lock()
+                .map_err(|_| "Failed to lock search engine data")?;
             let elapsed = start_time.elapsed();
             data.metrics.last_indexing_duration_ms = Some(elapsed.as_millis() as u64);
 
             // Check if it was cancelled
-            let engine = self.engine.read().map_err(|_| "Failed to acquire read lock on search engine")?;
+            let engine = self
+                .engine
+                .read()
+                .map_err(|_| "Failed to acquire read lock on search engine")?;
             if engine.should_stop_indexing() {
                 data.status = SearchEngineStatus::Cancelled;
                 #[cfg(test)]
@@ -383,8 +386,14 @@ impl SearchEngineState {
     /// * `Err(String)` - An error occurred during indexing
     pub fn start_chunked_indexing(&self, folder: PathBuf, chunk_size: usize) -> Result<(), String> {
         // Get locks on both data and engine
-        let mut data = self.data.lock().map_err(|_| "Failed to lock search engine data")?;
-        let mut engine = self.engine.write().map_err(|_| "Failed to acquire write lock on search engine")?;
+        let mut data = self
+            .data
+            .lock()
+            .map_err(|_| "Failed to lock search engine data")?;
+        let mut engine = self
+            .engine
+            .write()
+            .map_err(|_| "Failed to acquire write lock on search engine")?;
 
         // Check if search engine is enabled
         if !data.config.search_engine_enabled {
@@ -430,13 +439,16 @@ impl SearchEngineState {
 
             // Initialize progress tracking with immediate update
             {
-                let mut data = self.data.lock().map_err(|_| "Failed to lock search engine data for progress update")?;
+                let mut data = self
+                    .data
+                    .lock()
+                    .map_err(|_| "Failed to lock search engine data for progress update")?;
                 data.progress.files_discovered = 0;
                 data.progress.files_indexed = 0;
                 data.progress.percentage_complete = 0.0;
                 data.progress.current_path = Some(folder.to_string_lossy().to_string());
                 data.last_updated = chrono::Utc::now().timestamp_millis() as u64;
-                
+
                 #[cfg(feature = "index-progress-logging")]
                 log_info!("Starting streaming indexing for: {}", folder.display());
             }
@@ -466,7 +478,10 @@ impl SearchEngineState {
         let start_time = Instant::now();
 
         #[cfg(feature = "index-progress-logging")]
-        log_info!("Starting optimized streaming indexing for: {}", dir.display());
+        log_info!(
+            "Starting optimized streaming indexing for: {}",
+            dir.display()
+        );
 
         // Use iterative directory processing to prevent stack overflow
         self.process_directory_iterative(
@@ -484,12 +499,18 @@ impl SearchEngineState {
         }
 
         // Update final status
-        let mut data = self.data.lock().map_err(|_| "Failed to lock search engine data for final status update")?;
+        let mut data = self
+            .data
+            .lock()
+            .map_err(|_| "Failed to lock search engine data for final status update")?;
         let elapsed = start_time.elapsed();
         data.metrics.last_indexing_duration_ms = Some(elapsed.as_millis() as u64);
 
         // Check if it was cancelled
-        let engine = self.engine.read().map_err(|_| "Failed to acquire read lock on search engine for status check")?;
+        let engine = self
+            .engine
+            .read()
+            .map_err(|_| "Failed to acquire read lock on search engine for status check")?;
         if engine.should_stop_indexing() {
             data.status = SearchEngineStatus::Cancelled;
             log_info!("Optimized streaming indexing was cancelled");
@@ -523,32 +544,41 @@ impl SearchEngineState {
         chunk_size: usize,
     ) -> Result<(), String> {
         use std::collections::VecDeque;
-        
+
         // Use a queue for iterative traversal instead of recursion
         let mut dir_queue = VecDeque::new();
         dir_queue.push_back((root_dir.clone(), 0));
-        
+
         const MAX_DEPTH: usize = 25;
         const MAX_FILES: usize = 500000;
-        
+
         while let Some((current_dir, depth)) = dir_queue.pop_front() {
             // Depth limiting to prevent infinite loops and excessive memory usage
             if depth >= MAX_DEPTH {
                 #[cfg(feature = "index-progress-logging")]
-                log_info!("Skipping directory due to depth limit: {} (depth: {})", current_dir.display(), depth);
+                log_info!(
+                    "Skipping directory due to depth limit: {} (depth: {})",
+                    current_dir.display(),
+                    depth
+                );
                 continue;
             }
 
             // File count limiting to prevent memory exhaustion
             if *discovered_files > MAX_FILES {
                 #[cfg(feature = "index-progress-logging")]
-                log_info!("Stopping indexing due to file count limit: {}", *discovered_files);
+                log_info!(
+                    "Stopping indexing due to file count limit: {}",
+                    *discovered_files
+                );
                 break;
             }
 
             // Check for cancellation more frequently
             {
-                let engine = self.engine.read().map_err(|_| "Failed to acquire read lock on search engine for cancellation check")?;
+                let engine = self.engine.read().map_err(|_| {
+                    "Failed to acquire read lock on search engine for cancellation check"
+                })?;
                 if engine.should_stop_indexing() {
                     return Ok(());
                 }
@@ -585,13 +615,21 @@ impl SearchEngineState {
                             *discovered_files += 1;
 
                             // Update progress more frequently for better UX
-                            if *discovered_files % 10 == 0 || *discovered_files == 1 {
-                                self.update_progress_safely(*discovered_files, *indexed_files, Some(path_str.to_string()));
+                            if (*discovered_files).is_multiple_of(10) || *discovered_files == 1 {
+                                self.update_progress_safely(
+                                    *discovered_files,
+                                    *indexed_files,
+                                    Some(path_str.to_string()),
+                                );
                             }
 
                             // Process batch when it reaches chunk_size to prevent memory buildup
                             if current_batch.len() >= chunk_size {
-                                self.process_batch(current_batch, indexed_files, *discovered_files)?;
+                                self.process_batch(
+                                    current_batch,
+                                    indexed_files,
+                                    *discovered_files,
+                                )?;
                                 current_batch.clear();
                                 current_batch.reserve(chunk_size); // Pre-allocate for next batch
                             }
@@ -615,24 +653,33 @@ impl SearchEngineState {
     }
 
     /// Safely update progress without holding locks too long
-    fn update_progress_safely(&self, discovered: usize, indexed: usize, current_path: Option<String>) {
+    fn update_progress_safely(
+        &self,
+        discovered: usize,
+        indexed: usize,
+        current_path: Option<String>,
+    ) {
         if let Ok(mut data) = self.data.try_lock() {
             data.progress.files_discovered = discovered;
             data.progress.files_indexed = indexed;
             data.progress.current_path = current_path;
-            
+
             // Calculate percentage with better accuracy
             if discovered > 0 {
                 let base_percentage = (indexed as f32 / discovered as f32) * 85.0; // Cap indexing at 85%
                 let discovery_percentage = (discovered as f32 / (discovered as f32 + 50.0)) * 15.0; // Discovery gets 15%
                 data.progress.percentage_complete = base_percentage + discovery_percentage;
             }
-            
+
             data.last_updated = chrono::Utc::now().timestamp_millis() as u64;
-            
+
             #[cfg(feature = "index-progress-logging")]
-            log_info!("Progress update: discovered={}, indexed={}, percentage={:.1}%", 
-                     discovered, indexed, data.progress.percentage_complete);
+            log_info!(
+                "Progress update: discovered={}, indexed={}, percentage={:.1}%",
+                discovered,
+                indexed,
+                data.progress.percentage_complete
+            );
         }
         // If lock fails, just continue - progress updates aren't critical
     }
@@ -650,7 +697,9 @@ impl SearchEngineState {
 
         // Check for cancellation before processing
         {
-            let engine = self.engine.read().map_err(|_| "Failed to acquire read lock on search engine for batch cancellation check")?;
+            let engine = self.engine.read().map_err(|_| {
+                "Failed to acquire read lock on search engine for batch cancellation check"
+            })?;
             if engine.should_stop_indexing() {
                 return Ok(());
             }
@@ -658,11 +707,13 @@ impl SearchEngineState {
 
         // Process smaller sub-batches to reduce memory pressure
         const SUB_BATCH_SIZE: usize = 25; // Process in smaller chunks
-        
+
         for chunk in batch.chunks(SUB_BATCH_SIZE) {
             // Check for cancellation before each sub-batch
             {
-                let engine = self.engine.read().map_err(|_| "Failed to acquire read lock on search engine for sub-batch cancellation check")?;
+                let engine = self.engine.read().map_err(|_| {
+                    "Failed to acquire read lock on search engine for sub-batch cancellation check"
+                })?;
                 if engine.should_stop_indexing() {
                     return Ok(());
                 }
@@ -670,7 +721,9 @@ impl SearchEngineState {
 
             // Process the sub-batch
             {
-                let mut engine = self.engine.write().map_err(|_| "Failed to acquire write lock on search engine for sub-batch processing")?;
+                let mut engine = self.engine.write().map_err(|_| {
+                    "Failed to acquire write lock on search engine for sub-batch processing"
+                })?;
                 let batch_refs: Vec<&str> = chunk.iter().map(|s| s.as_str()).collect();
                 engine.add_paths_batch(batch_refs, None);
             } // Release write lock immediately
@@ -681,7 +734,7 @@ impl SearchEngineState {
             if let Ok(mut data) = self.data.try_lock() {
                 data.progress.files_indexed = *indexed_files;
                 data.progress.files_discovered = total_discovered;
-                
+
                 // Better percentage calculation
                 data.progress.percentage_complete = if total_discovered > 0 {
                     (*indexed_files as f32 / total_discovered as f32) * 100.0
@@ -701,11 +754,15 @@ impl SearchEngineState {
                 }
 
                 data.last_updated = chrono::Utc::now().timestamp_millis() as u64;
-                
+
                 // Log batch progress for debugging
                 #[cfg(feature = "index-progress-logging")]
-                log_info!("Sub-batch processed: indexed={}/{} discovered ({:.1}%)", 
-                         *indexed_files, total_discovered, data.progress.percentage_complete);
+                log_info!(
+                    "Sub-batch processed: indexed={}/{} discovered ({:.1}%)",
+                    *indexed_files,
+                    total_discovered,
+                    data.progress.percentage_complete
+                );
             }
 
             // Small delay between sub-batches to yield control and prevent blocking
@@ -741,7 +798,10 @@ impl SearchEngineState {
     /// }
     /// ```
     pub fn search(&self, query: &str) -> Result<Vec<(String, f32)>, String> {
-        let mut data = self.data.lock().map_err(|_| "Failed to lock search engine data for search operation")?;
+        let mut data = self
+            .data
+            .lock()
+            .map_err(|_| "Failed to lock search engine data for search operation")?;
 
         // Check if search engine is enabled
         if !data.config.search_engine_enabled {
@@ -756,31 +816,33 @@ impl SearchEngineState {
 
         // Get current directory context
         let current_dir = data.current_directory.clone();
-        
+
         // Check if engine is already in a search operation
         if matches!(data.status, SearchEngineStatus::Searching) {
             return Err("Engine is currently searching".to_string());
         }
-        
+
         // Update state for search operation
         data.status = SearchEngineStatus::Searching;
         data.last_updated = chrono::Utc::now().timestamp_millis() as u64;
-        
+
         // Release data lock before acquiring engine lock
         drop(data);
 
         // Always use write lock to ensure caching works properly
         // Update directory context if needed, then perform cached search
         let results = {
-            let mut engine = self.engine.write().map_err(|_| "Failed to acquire write lock on search engine for search operation")?;
-            
+            let mut engine = self.engine.write().map_err(|_| {
+                "Failed to acquire write lock on search engine for search operation"
+            })?;
+
             // Update directory context if needed
             if let Some(current_dir) = &current_dir {
                 engine.set_current_directory(Some(current_dir.clone()));
             } else {
                 engine.set_current_directory(None);
             }
-            
+
             // Perform search with caching enabled
             let start_time = Instant::now();
             let results = engine.search(query);
@@ -792,7 +854,10 @@ impl SearchEngineState {
         let (search_results, search_time, was_cache_hit) = results;
 
         // Update metrics
-        let mut data = self.data.lock().map_err(|_| "Failed to lock search engine data for metrics update")?;
+        let mut data = self
+            .data
+            .lock()
+            .map_err(|_| "Failed to lock search engine data for metrics update")?;
         data.metrics.total_searches += 1;
 
         // Track cache hits
@@ -802,16 +867,17 @@ impl SearchEngineState {
 
         // Calculate cache hit rate
         if data.metrics.total_searches > 0 {
-            let hit_rate = (data.metrics.cache_hits as f32 / data.metrics.total_searches as f32) * 100.0;
+            let hit_rate =
+                (data.metrics.cache_hits as f32 / data.metrics.total_searches as f32) * 100.0;
             // Ensure cache hit rate is reasonable (between 0% and 100%)
             let clamped_hit_rate = hit_rate.min(100.0).max(0.0);
-            
+
             #[cfg(debug_assertions)]
             if hit_rate > 100.0 {
                 log_warn!("Invalid cache hit rate calculated: {:.2}% (cache_hits: {}, total_searches: {})", 
                          hit_rate, data.metrics.cache_hits, data.metrics.total_searches);
             }
-            
+
             data.metrics.cache_hit_rate = Some(clamped_hit_rate);
         }
 
@@ -875,7 +941,10 @@ impl SearchEngineState {
         query: &str,
         extensions: Vec<String>,
     ) -> Result<Vec<(String, f32)>, String> {
-        let mut data = self.data.lock().map_err(|_| "Failed to lock search engine data for extension search")?;
+        let mut data = self
+            .data
+            .lock()
+            .map_err(|_| "Failed to lock search engine data for extension search")?;
 
         // Check if search engine is enabled
         if !data.config.search_engine_enabled {
@@ -898,12 +967,15 @@ impl SearchEngineState {
 
         // Get current directory context
         let current_dir = data.current_directory.clone();
-        
+
         // Release data lock before acquiring engine lock
         drop(data);
 
         // Use write lock for modifying extension preferences
-        let mut engine = self.engine.write().map_err(|_| "Failed to acquire write lock on search engine for extension search")?;
+        let mut engine = self
+            .engine
+            .write()
+            .map_err(|_| "Failed to acquire write lock on search engine for extension search")?;
 
         // Set current directory context if available
         if let Some(current_dir) = &current_dir {
@@ -946,7 +1018,10 @@ impl SearchEngineState {
         drop(engine);
 
         // Update metrics
-        let mut data = self.data.lock().map_err(|_| "Failed to lock search engine data for extension search metrics update")?;
+        let mut data = self
+            .data
+            .lock()
+            .map_err(|_| "Failed to lock search engine data for extension search metrics update")?;
         data.metrics.total_searches += 1;
 
         // Track cache hits
@@ -956,16 +1031,17 @@ impl SearchEngineState {
 
         // Calculate cache hit rate
         if data.metrics.total_searches > 0 {
-            let hit_rate = (data.metrics.cache_hits as f32 / data.metrics.total_searches as f32) * 100.0;
+            let hit_rate =
+                (data.metrics.cache_hits as f32 / data.metrics.total_searches as f32) * 100.0;
             // Ensure cache hit rate is reasonable (between 0% and 100%)
             let clamped_hit_rate = hit_rate.min(100.0).max(0.0);
-            
+
             #[cfg(debug_assertions)]
             if hit_rate > 100.0 {
                 log_warn!("Invalid cache hit rate calculated: {:.2}% (cache_hits: {}, total_searches: {})", 
                          hit_rate, data.metrics.cache_hits, data.metrics.total_searches);
             }
-            
+
             data.metrics.cache_hit_rate = Some(clamped_hit_rate);
         }
 
@@ -1023,7 +1099,10 @@ impl SearchEngineState {
         total: usize,
         current_path: Option<String>,
     ) {
-        let mut data = self.data.lock().expect("Failed to lock search engine data for progress update");
+        let mut data = self
+            .data
+            .lock()
+            .expect("Failed to lock search engine data for progress update");
 
         data.progress.files_indexed = indexed;
         data.progress.files_discovered = total;
@@ -1061,7 +1140,10 @@ impl SearchEngineState {
     ///
     /// O(1) - Simple field access operations
     pub fn get_stats(&self) -> EngineStatsSerializable {
-        let engine = self.engine.read().expect("Failed to acquire read lock on search engine for stats retrieval");
+        let engine = self
+            .engine
+            .read()
+            .expect("Failed to acquire read lock on search engine for stats retrieval");
         let stats = engine.get_stats();
         EngineStatsSerializable::from(stats)
     }
@@ -1082,13 +1164,18 @@ impl SearchEngineState {
         let data = match self.data.lock() {
             Ok(data) => data,
             Err(_) => {
-                log_error!("Failed to lock search engine data for info retrieval, returning minimal info");
+                log_error!(
+                    "Failed to lock search engine data for info retrieval, returning minimal info"
+                );
                 return SearchEngineInfo {
                     status: SearchEngineStatus::Failed,
                     progress: IndexingProgress::default(),
                     metrics: SearchEngineMetrics::default(),
                     recent_activity: RecentActivity::default(),
-                    stats: EngineStatsSerializable { cache_size: 0, trie_size: 0 },
+                    stats: EngineStatsSerializable {
+                        cache_size: 0,
+                        trie_size: 0,
+                    },
                     last_updated: 0,
                 };
             }
@@ -1125,12 +1212,21 @@ impl SearchEngineState {
     /// O(1) plus cache invalidation cost for changed preferences
     #[cfg(test)]
     pub fn update_config(&self, path: Option<String>) -> Result<(), String> {
-        let mut data = self.data.lock().map_err(|_| "Failed to lock search engine data for config update")?;
+        let mut data = self
+            .data
+            .lock()
+            .map_err(|_| "Failed to lock search engine data for config update")?;
 
         // Get fresh config from settings state
         let config = {
-            let settings = self.settings_state.lock().map_err(|_| "Failed to lock settings state for config update")?;
-            let inner_settings = settings.0.lock().map_err(|_| "Failed to lock inner settings for config update")?;
+            let settings = self
+                .settings_state
+                .lock()
+                .map_err(|_| "Failed to lock settings state for config update")?;
+            let inner_settings = settings
+                .0
+                .lock()
+                .map_err(|_| "Failed to lock inner settings for config update")?;
             inner_settings.backend_settings.search_engine_config.clone()
         };
 
@@ -1139,11 +1235,14 @@ impl SearchEngineState {
 
         // Update the current directory in the data structure
         data.current_directory = path.clone();
-        
+
         // Release data lock before acquiring engine lock
         drop(data);
 
-        let mut engine = self.engine.write().map_err(|_| "Failed to acquire write lock on search engine for config update")?;
+        let mut engine = self
+            .engine
+            .write()
+            .map_err(|_| "Failed to acquire write lock on search engine for config update")?;
         engine.set_preferred_extensions(config.preferred_extensions);
 
         Ok(())
@@ -1163,7 +1262,10 @@ impl SearchEngineState {
     /// * `Ok(())` - Path was successfully added
     /// * `Err(String)` - An error occurred while adding the path
     pub fn add_path(&self, path: &str) -> Result<(), String> {
-        let data = self.data.lock().map_err(|_| "Failed to lock search engine data for path addition")?;
+        let data = self
+            .data
+            .lock()
+            .map_err(|_| "Failed to lock search engine data for path addition")?;
 
         // Check if search engine is enabled
         if !data.config.search_engine_enabled {
@@ -1175,9 +1277,15 @@ impl SearchEngineState {
         let excluded_patterns = data.config.excluded_patterns.clone();
         drop(data);
 
-        let mut engine = self.engine.write().map_err(|_| "Failed to acquire write lock on search engine for path addition")?;
+        let mut engine = self
+            .engine
+            .write()
+            .map_err(|_| "Failed to acquire write lock on search engine for path addition")?;
         // Use the new method to check exclusions before adding
-        engine.add_path_with_exclusion_check(path, Some(&excluded_patterns.ok_or("No excluded patterns configuration available")?));
+        engine.add_path_with_exclusion_check(
+            path,
+            Some(&excluded_patterns.ok_or("No excluded patterns configuration available")?),
+        );
         Ok(())
     }
 
@@ -1195,7 +1303,10 @@ impl SearchEngineState {
     /// * `Ok(())` - Path was successfully removed
     /// * `Err(String)` - An error occurred while removing the path
     pub fn remove_path(&self, path: &str) -> Result<(), String> {
-        let data = self.data.lock().map_err(|_| "Failed to lock search engine data for path removal")?;
+        let data = self
+            .data
+            .lock()
+            .map_err(|_| "Failed to lock search engine data for path removal")?;
 
         // Check if search engine is enabled
         if !data.config.search_engine_enabled {
@@ -1205,7 +1316,10 @@ impl SearchEngineState {
 
         drop(data);
 
-        let mut engine = self.engine.write().map_err(|_| "Failed to acquire write lock on search engine for path removal")?;
+        let mut engine = self
+            .engine
+            .write()
+            .map_err(|_| "Failed to acquire write lock on search engine for path removal")?;
         engine.remove_path(path);
         Ok(())
     }
@@ -1224,7 +1338,10 @@ impl SearchEngineState {
     /// * `Ok(())` - Path and its contents were successfully removed
     /// * `Err(String)` - An error occurred during removal
     pub fn remove_paths_recursive(&self, path: &str) -> Result<(), String> {
-        let data = self.data.lock().map_err(|_| "Failed to lock search engine data for recursive path removal")?;
+        let data = self
+            .data
+            .lock()
+            .map_err(|_| "Failed to lock search engine data for recursive path removal")?;
 
         // Check if search engine is enabled
         if !data.config.search_engine_enabled {
@@ -1234,7 +1351,9 @@ impl SearchEngineState {
 
         drop(data);
 
-        let mut engine = self.engine.write().map_err(|_| "Failed to acquire write lock on search engine for recursive path removal")?;
+        let mut engine = self.engine.write().map_err(|_| {
+            "Failed to acquire write lock on search engine for recursive path removal"
+        })?;
         engine.remove_paths_recursive(path);
         Ok(())
     }
@@ -1254,18 +1373,24 @@ impl SearchEngineState {
     /// O(1) - Simple flag operation
     #[cfg(test)] // maybe use in a later release
     pub fn stop_indexing(&self) -> Result<(), String> {
-        let mut data = self.data.lock().map_err(|_| "Failed to lock search engine data for stop indexing")?;
+        let mut data = self
+            .data
+            .lock()
+            .map_err(|_| "Failed to lock search engine data for stop indexing")?;
 
         if matches!(data.status, SearchEngineStatus::Indexing) {
             // Update state first
             data.status = SearchEngineStatus::Cancelled;
             data.last_updated = chrono::Utc::now().timestamp_millis() as u64;
-            
+
             let index_folder = data.index_folder.clone();
             drop(data);
 
             // Signal the engine to stop indexing (works for both traditional and chunked)
-            let mut engine = self.engine.write().map_err(|_| "Failed to acquire write lock on search engine for stop indexing")?;
+            let mut engine = self
+                .engine
+                .write()
+                .map_err(|_| "Failed to acquire write lock on search engine for stop indexing")?;
             engine.stop_indexing();
 
             #[cfg(test)]
@@ -1324,8 +1449,8 @@ impl Clone for SearchEngineState {
 #[cfg(test)]
 // Helper function to get test data directory
 fn get_test_data_path() -> PathBuf {
-    use crate::search_engine::test_generate_test_data::generate_test_data_if_not_exists;
     use crate::constants::TEST_DATA_PATH;
+    use crate::search_engine::test_generate_test_data::generate_test_data_if_not_exists;
 
     let path = PathBuf::from(TEST_DATA_PATH);
     generate_test_data_if_not_exists(PathBuf::from(TEST_DATA_PATH)).unwrap_or_else(|err| {
@@ -1549,8 +1674,12 @@ mod tests_searchengine_state {
         {
             let data = state.data.lock().unwrap();
             assert!(
-                matches!(data.status, SearchEngineStatus::Cancelled | SearchEngineStatus::Idle),
-                "Expected Cancelled or Idle, but got {:?}", data.status
+                matches!(
+                    data.status,
+                    SearchEngineStatus::Cancelled | SearchEngineStatus::Idle
+                ),
+                "Expected Cancelled or Idle, but got {:?}",
+                data.status
             );
         }
 
@@ -1623,7 +1752,10 @@ mod tests_searchengine_state {
         {
             let data = state.data.lock().unwrap();
             assert!(
-                matches!(data.status, SearchEngineStatus::Cancelled | SearchEngineStatus::Idle),
+                matches!(
+                    data.status,
+                    SearchEngineStatus::Cancelled | SearchEngineStatus::Idle
+                ),
                 "Status should be either Cancelled or Idle after cancellation attempt, got {:?}",
                 data.status
             );
@@ -3335,9 +3467,9 @@ mod tests_searchengine_state {
 mod bench_indexing_methods {
     use super::*;
     use std::collections::HashMap;
-    use std::time::Instant;
     use std::thread;
     use std::time::Duration;
+    use std::time::Instant;
 
     // Helper function to create a larger test dataset for benchmarking using real test data
     fn create_benchmark_test_files(base_dir: &PathBuf, file_count: usize) -> Vec<PathBuf> {
@@ -3895,23 +4027,26 @@ mod bench_indexing_methods {
             let mut data = state.data.lock().unwrap();
             data.current_directory = Some("/some/different/path".to_string());
         }
-        
+
         // This should trigger directory update (write lock path)
         let result1 = state.search("test");
         assert!(result1.is_ok(), "Search with directory update should work");
 
         // Test 2: Same directory - should use read lock (concurrent path)
         let result2 = state.search("test");
-        assert!(result2.is_ok(), "Subsequent search should use concurrent path");
+        assert!(
+            result2.is_ok(),
+            "Subsequent search should use concurrent path"
+        );
 
         // Test 3: Multiple concurrent searches should work simultaneously
         let state_arc = Arc::new(state);
         let mut handles = vec![];
-        
+
         for _i in 0..5 {
             let state_clone = Arc::clone(&state_arc);
             let search_term = "test"; // Use a term that should match our test data
-            
+
             let handle = thread::spawn(move || {
                 // All these should use read locks concurrently
                 state_clone.search(search_term)
@@ -3930,7 +4065,12 @@ mod bench_indexing_methods {
                     println!("Concurrent search {} failed with error: {}", i, err);
                 }
             }
-            assert!(result.is_ok(), "Concurrent search {} should succeed, got error: {:?}", i, result.err());
+            assert!(
+                result.is_ok(),
+                "Concurrent search {} should succeed, got error: {:?}",
+                i,
+                result.err()
+            );
         }
     }
 }

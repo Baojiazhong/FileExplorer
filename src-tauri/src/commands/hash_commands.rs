@@ -1,9 +1,9 @@
-use std::fmt::Display;
 use crate::state::SettingsState;
 use crc32fast::Hasher;
 use md5::{Digest as Md5Digest, Md5 as Md5Hasher};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest as Sha2Digest, Sha256, Sha384, Sha512};
+use std::fmt::Display;
 use std::path::Path;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
@@ -63,7 +63,10 @@ async fn get_checksum_method(
         .0
         .lock()
         .map_err(|_| HashError::SettingsLockError)?;
-    Ok(inner_settings.backend_settings.default_checksum_hash.clone())
+    Ok(inner_settings
+        .backend_settings
+        .default_checksum_hash
+        .clone())
 }
 
 fn calculate_md5(data: &[u8]) -> String {
@@ -503,7 +506,10 @@ mod tests_hash_commands {
         for method in methods {
             let state_guard = state.lock().unwrap();
             state_guard
-                .update_setting_field("backend_settings.default_checksum_hash", json!(method.clone()))
+                .update_setting_field(
+                    "backend_settings.default_checksum_hash",
+                    json!(method.clone()),
+                )
                 .unwrap();
             drop(state_guard);
 

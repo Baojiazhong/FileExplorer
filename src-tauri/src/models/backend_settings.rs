@@ -1,8 +1,8 @@
-use crate::models::search_engine_config::SearchEngineConfig;
 use crate::models::logging_config::LoggingConfig;
+use crate::models::search_engine_config::SearchEngineConfig;
 
-use serde::{Deserialize, Serialize};
 use crate::commands::hash_commands::ChecksumMethod;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct BackendSettings {

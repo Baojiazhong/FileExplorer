@@ -1,4 +1,3 @@
-use std::process::Command;
 
 #[tauri::command]
 pub fn request_full_disk_access() -> Result<(), String> {
@@ -9,13 +8,13 @@ pub fn request_full_disk_access() -> Result<(), String> {
         let result = Command::new("open")
             .arg("x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles")
             .output();
-            
+
         match result {
             Ok(_) => Ok(()),
-            Err(e) => Err(format!("Failed to open System Preferences: {}", e))
+            Err(e) => Err(format!("Failed to open System Preferences: {}", e)),
         }
     }
-    
+
     #[cfg(not(target_os = "macos"))]
     {
         Ok(())
@@ -25,10 +24,10 @@ pub fn request_full_disk_access() -> Result<(), String> {
 #[tauri::command]
 pub fn check_directory_access(path: String) -> Result<bool, String> {
     use std::fs;
-    
+
     match fs::read_dir(&path) {
         Ok(_) => Ok(true),
-        Err(_) => Ok(false)
+        Err(_) => Ok(false),
     }
 }
 
@@ -62,4 +61,3 @@ mod permission_commands_tests {
         }
     }
 }
-

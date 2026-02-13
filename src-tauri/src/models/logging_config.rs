@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use crate::models::LoggingLevel;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct LoggingConfig {
@@ -15,7 +15,7 @@ impl Default for LoggingConfig {
             logging_level: LoggingLevel::Full,
             json_log: false,
             max_log_size: Some(5 * 1024 * 1024), //max log size in Megabytes (5 MB)
-            max_log_files: Some(3), // max number of log files to keep
+            max_log_files: Some(3),              // max number of log files to keep
         }
     }
 }

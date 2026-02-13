@@ -93,7 +93,7 @@ where
     /// ```
     pub fn new(capacity: usize) -> Self {
         assert!(capacity > 0, "Capacity must be greater than zero");
-        
+
         Self {
             capacity,
             map: HashMap::with_capacity(capacity),

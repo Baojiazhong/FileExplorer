@@ -1,6 +1,6 @@
-use std::time::Duration;
-use serde::{Deserialize, Serialize};
 use crate::models::ranking_config::RankingConfig;
+use serde::{Deserialize, Serialize};
+use std::time::Duration;
 
 /// Configuration options for the search engine.
 ///
@@ -66,7 +66,7 @@ impl Default for SearchEngineConfig {
                 "target".to_string(),
             ]),
             cache_size: 1000,
-            
+
             cache_ttl: Duration::from_secs(300).into(), // 5 minutes
             prefer_directories: false,
             //collect_usage_stats: true,
@@ -74,11 +74,11 @@ impl Default for SearchEngineConfig {
             //search_logging_enabled: false,
             //search_timeout_ms: Some(5000), // 5 seconds
             //result_score_threshold: Some(0.1),
-            //min_query_length: None,           
-            //max_indexed_files: None, 
-            //max_index_depth: None,            
-            //index_hidden_files: false, 
-            //follow_symlinks: false,  
+            //min_query_length: None,
+            //max_indexed_files: None,
+            //max_index_depth: None,
+            //index_hidden_files: false,
+            //follow_symlinks: false,
             //fuzzy_trigram_threshold: Some(0.5),
             //fuzzy_search_enabled: true,
             //case_sensitive_search: false,
@@ -86,10 +86,10 @@ impl Default for SearchEngineConfig {
             //persistent_index_path: None,
             //index_compression_enabled: true,
             //indexing_priority: Some(1),
-            //default_search_operator: Some("AND".to_string()), 
+            //default_search_operator: Some("AND".to_string()),
             //enable_wildcard_search: false,
-            //indexing_batch_size: Some(100), 
-            //retry_failed_indexing: true, 
+            //indexing_batch_size: Some(100),
+            //retry_failed_indexing: true,
         }
     }
 }

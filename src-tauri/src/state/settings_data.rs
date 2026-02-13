@@ -1,3 +1,4 @@
+use crate::models::backend_settings::BackendSettings;
 use crate::{constants, log_error};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -6,7 +7,6 @@ use std::io;
 use std::io::{Error, Write};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
-use crate::models::backend_settings::BackendSettings;
 
 //In this file we should change everything to lowercase for the json -> first step is done in DefaultView
 /// File view mode for directories.
@@ -140,9 +140,8 @@ impl Default for Settings {
             enable_animations_and_transitions: true,
             enable_virtual_scroll_for_large_directories: false,
             enable_suggestions: true, //implement?
-            highlight_matches: true, // implement?
+            highlight_matches: true,  // implement?
             backend_settings: BackendSettings::default(),
-            
         }
     }
 }
@@ -174,7 +173,8 @@ impl SettingsState {
         let path = Settings::default().abs_file_path_buf.to_path_buf();
 
         let settings = if path.exists() {
-            Self::read_settings_from_file(&path).unwrap_or_else(|_| Self::write_default_settings_to_file_and_save_in_state())
+            Self::read_settings_from_file(&path)
+                .unwrap_or_else(|_| Self::write_default_settings_to_file_and_save_in_state())
         } else {
             Self::write_default_settings_to_file_and_save_in_state()
         };
@@ -205,15 +205,13 @@ impl SettingsState {
     pub fn settings_to_json_map(
         settings: &Settings,
     ) -> Result<serde_json::Map<String, Value>, Error> {
-        let settings_value = serde_json::to_value(settings)
-            .map_err(|e| Error::new(io::ErrorKind::Other, e))?;
+        let settings_value =
+            serde_json::to_value(settings).map_err(Error::other)?;
 
-        settings_value.as_object().cloned().ok_or_else(|| {
-            Error::new(
-                io::ErrorKind::InvalidData,
-                "Settings is not a JSON object",
-            )
-        })
+        settings_value
+            .as_object()
+            .cloned()
+            .ok_or_else(|| Error::new(io::ErrorKind::InvalidData, "Settings is not a JSON object"))
     }
 
     /// Converts a JSON map back to a Settings struct.
@@ -238,9 +236,7 @@ impl SettingsState {
     /// let settings = json_map_to_settings(map)?;
     /// println!("Converted settings: {:?}", settings);
     /// ```
-    pub fn json_map_to_settings(
-        map: serde_json::Map<String, Value>,
-    ) -> Result<Settings, Error> {
+    pub fn json_map_to_settings(map: serde_json::Map<String, Value>) -> Result<Settings, Error> {
         serde_json::from_value(Value::Object(map))
             .map_err(|e| Error::new(io::ErrorKind::InvalidData, e))
     }
@@ -268,7 +264,10 @@ impl SettingsState {
     /// println!("Updated settings: {:?}", result);
     /// ```
     pub fn update_setting_field(&self, key: &str, value: Value) -> Result<Settings, Error> {
-        let mut settings = self.0.lock().map_err(|_| io::Error::new(io::ErrorKind::Other, "Failed to acquire settings lock"))?;
+        let mut settings = self
+            .0
+            .lock()
+            .map_err(|_| io::Error::other("Failed to acquire settings lock"))?;
 
         let mut settings_map = Self::settings_to_json_map(&settings)?;
 
@@ -373,9 +372,12 @@ impl SettingsState {
     /// println!("Current theme: {}", theme);
     /// ```
     pub fn get_setting_field(&self, key: &str) -> Result<Value, Error> {
-        let settings = self.0.lock().map_err(|_| io::Error::new(io::ErrorKind::Other, "Failed to acquire settings lock"))?;
+        let settings = self
+            .0
+            .lock()
+            .map_err(|_| io::Error::other("Failed to acquire settings lock"))?;
         let settings_value =
-            serde_json::to_value(&*settings).map_err(|e| Error::new(io::ErrorKind::Other, e))?;
+            serde_json::to_value(&*settings).map_err(Error::other)?;
 
         if let Some(obj) = settings_value.as_object() {
             // Handle nested fields with dot notation
@@ -512,7 +514,10 @@ impl SettingsState {
     /// }
     /// ```
     pub fn reset_settings(&self) -> Result<Settings, Error> {
-        let mut settings = self.0.lock().map_err(|_| io::Error::new(io::ErrorKind::Other, "Failed to acquire settings lock"))?;
+        let mut settings = self
+            .0
+            .lock()
+            .map_err(|_| io::Error::other("Failed to acquire settings lock"))?;
 
         let default_settings = Settings::default();
         *settings = default_settings.clone();
@@ -570,7 +575,7 @@ impl SettingsState {
     fn write_settings_to_file(&self, settings: &Settings) -> io::Result<()> {
         let user_config_file_path = &settings.abs_file_path_buf;
         let serialized = serde_json::to_string_pretty(&settings)
-            .map_err(|e| Error::new(io::ErrorKind::Other, e))?;
+            .map_err(Error::other)?;
 
         // Makes sure the parent directory exists
         if let Some(parent) = user_config_file_path.parent() {
@@ -662,10 +667,10 @@ impl SettingsState {
 #[cfg(test)]
 mod tests_settings {
     use super::*;
+    use crate::commands::hash_commands::ChecksumMethod;
+    use crate::models::LoggingLevel;
     use serde_json::{json, Map, Value};
     use tempfile::tempdir;
-    use crate::models::LoggingLevel;
-    use crate::commands::hash_commands::ChecksumMethod;
 
     /// Tests that the default settings have the expected initial values.
     ///
@@ -679,8 +684,14 @@ mod tests_settings {
         assert_eq!(settings.default_theme, "".to_string());
         //assert_eq!(settings.default_themes_path, Default::default());
         //assert_eq!(settings.default_folder_path_on_opening, Default::default());
-        assert_eq!(settings.backend_settings.default_checksum_hash, ChecksumMethod::SHA256);
-        assert_eq!(settings.backend_settings.logging_config.logging_level, LoggingLevel::Full);
+        assert_eq!(
+            settings.backend_settings.default_checksum_hash,
+            ChecksumMethod::SHA256
+        );
+        assert_eq!(
+            settings.backend_settings.logging_config.logging_level,
+            LoggingLevel::Full
+        );
         assert_eq!(
             settings.abs_file_path_buf,
             constants::SETTINGS_CONFIG_ABS_PATH.to_path_buf()
@@ -829,9 +840,13 @@ mod tests_settings {
             tempfile::NamedTempFile::new().unwrap().path().to_path_buf(),
         );
 
-        let result = state.update_setting_field("backend_settings.default_checksum_hash", json!("MD5"));
+        let result =
+            state.update_setting_field("backend_settings.default_checksum_hash", json!("MD5"));
         assert!(result.is_ok());
-        assert_eq!(result.unwrap().backend_settings.default_checksum_hash, ChecksumMethod::MD5);
+        assert_eq!(
+            result.unwrap().backend_settings.default_checksum_hash,
+            ChecksumMethod::MD5
+        );
     }
 
     /// Tests updating the custom_themes setting field.
@@ -887,9 +902,19 @@ mod tests_settings {
             tempfile::NamedTempFile::new().unwrap().path().to_path_buf(),
         );
 
-        let result = state.update_setting_field("backend_settings.logging_config.logging_level", json!("Minimal"));
+        let result = state.update_setting_field(
+            "backend_settings.logging_config.logging_level",
+            json!("Minimal"),
+        );
         assert!(result.is_ok());
-        assert_eq!(result.unwrap().backend_settings.logging_config.logging_level, LoggingLevel::Minimal);
+        assert_eq!(
+            result
+                .unwrap()
+                .backend_settings
+                .logging_config
+                .logging_level,
+            LoggingLevel::Minimal
+        );
     }
 
     /// Tests error handling when attempting to update a non-existent key.

@@ -36,7 +36,11 @@ pub fn get_system_volumes_information_as_json() -> String {
 /// Gets information about all system volumes/disks.
 /// Collects detailed information such as volume names, mount points, file systems,
 /// total and available space, and whether the volume is removable.
-/// Automatically filters out duplicate entries and boot volumes.
+///
+/// Notes:
+/// - On Windows some volumes have an empty label (e.g. unnamed NTFS partitions).
+///   Dedupe must therefore be based on `mount_point` (drive root) instead of `volume_name`,
+///   otherwise multiple drives can be incorrectly collapsed into one.
 ///
 /// # Returns
 /// * `Vec<VolumeInformation>` - A vector of VolumeInformation structs, each containing
@@ -63,75 +67,55 @@ pub fn get_system_volumes_information_as_json() -> String {
 /// ```
 #[tauri::command]
 pub fn get_system_volumes_information() -> Vec<VolumeInformation> {
-    let mut volume_information_vec: Vec<VolumeInformation> = Vec::new();
     let disks = Disks::new_with_refreshed_list();
 
+    // Dedupe by mount point (drive root). Using `volume_name` is incorrect on Windows because
+    // multiple distinct drives can share the same/empty label.
+    let mut by_mount_point: std::collections::BTreeMap<String, VolumeInformation> =
+        std::collections::BTreeMap::new();
+
     for disk in &disks {
-        volume_information_vec.push(VolumeInformation {
-            volume_name: disk.name().to_string_lossy().into_owned(), // Convert OsStr to String
-            mount_point: disk.mount_point().to_string_lossy().into_owned(), // Convert mount point
+        let mount_point = disk.mount_point().to_string_lossy().into_owned();
+
+        let volume = VolumeInformation {
+            volume_name: disk.name().to_string_lossy().into_owned(),
+            mount_point: mount_point.clone(),
             file_system: disk
                 .file_system()
                 .to_str()
                 .expect("Error during parsing the given string from file_system")
-                .to_owned(), // Convert file system
+                .to_owned(),
             size: disk.total_space(),
             available_space: disk.available_space(),
             is_removable: disk.is_removable(),
             total_written_bytes: disk.usage().total_written_bytes,
             total_read_bytes: disk.usage().total_read_bytes,
-        });
-    }
+        };
 
-    // Create a new vector to store non-duplicate items
-    let mut result = Vec::new();
-    let mut skip_indices = std::collections::HashSet::new();
-
-    // First pass: identify duplicates
-    for i in 0..volume_information_vec.len() {
-        if skip_indices.contains(&i) {
-            continue;
-        }
-
-        for j in i + 1..volume_information_vec.len() {
-            // Check if the two volumes have the same name
-            if volume_information_vec[i].volume_name == volume_information_vec[j].volume_name {
-                // Mark the one with longer mount_point to be skipped
-                if volume_information_vec[i].mount_point.len()
-                    > volume_information_vec[j].mount_point.len()
-                {
-                    skip_indices.insert(i);
-                } else {
-                    skip_indices.insert(j);
-                }
+        match by_mount_point.get(&mount_point) {
+            None => {
+                by_mount_point.insert(mount_point, volume);
             }
+            Some(existing) => {
+                // Prefer entries that have a label/name.
+                let existing_name_empty = existing.volume_name.trim().is_empty();
+                let new_name_empty = volume.volume_name.trim().is_empty();
 
-            // Check if the two volumes have the same mount point
-            if volume_information_vec[i].mount_point == volume_information_vec[j].mount_point {
-                // Mark the one with longer volume_name to be skipped
-                if volume_information_vec[i].volume_name.len()
-                    > volume_information_vec[j].volume_name.len()
-                {
-                    skip_indices.insert(i);
-                } else {
-                    skip_indices.insert(j);
+                if existing_name_empty && !new_name_empty {
+                    by_mount_point.insert(mount_point, volume);
                 }
             }
         }
     }
 
-    // Second pass: collect non-skipped items and remove boot volumes
-    for (index, volume) in volume_information_vec.into_iter().enumerate() {
-        if !skip_indices.contains(&index) {
-            //filter boot volumes out on second pass
-            if volume.mount_point == "efi" || volume.mount_point.contains("boot") {
-                continue;
-            }
-            result.push(volume);
-        }
-    }
-
-    result
+    by_mount_point
+        .into_values()
+        .filter(|volume| {
+            // Keep the original intent of filtering boot volumes, but do it case-insensitively.
+            let mp = volume.mount_point.to_lowercase();
+            !(mp == "efi" || mp.contains("boot"))
+        })
+        .collect()
 }
 
 #[cfg(test)]
