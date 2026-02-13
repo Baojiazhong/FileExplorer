@@ -37,7 +37,7 @@ const FileItem = ({
     const isDirectory = item.isDirectory || 'sub_file_count' in item;
     const fileType = isDirectory ? 'Folder' : getFileType(item.name);
     const size = isDirectory
-        ? `${item.sub_file_count || 0} items`
+        ? `${item.sub_file_count || 0} files, ${item.sub_dir_count || 0} folders`
         : formatFileSize(item.size_in_bytes);
 
     // Check if this item is cut (in clipboard with cut operation)
