@@ -1,5 +1,5 @@
 [package]
-name = "src-tauri"
+name = "file-explorer"
 version = "0.1.0"
 description = "Explr - Modern File Explorer"
 authors = ["Conaticus", "ProtogenDelta", "Marco Brandt", "Lauritz Wiebusch", "Daniel Schatz", "Sören Panten"]
@@ -46,6 +46,18 @@ cocoa = "0.25"
 
 [build-dependencies]
 tauri-build = { version = "2.1", features = [] }
+
+[lib]
+name = "file_explorer"
+path = "src/lib.rs"
+
+[[bin]]
+name = "file-explorer"
+path = "src/main.rs"
+
+[[example]]
+name = "art_usage_example"
+path = "examples/art_usage_example.rs"
 
 [package.metadata.tauri]
 bundle.identifier = "com.explr.app"

@@ -2,7 +2,11 @@
 
 Error Structure as json can be found [here](./error_structure.md).
 
+Implementation details (ART / fuzzy / caching / ranking) are documented in
+[search_engine_implementation.md](./ai_generated/search_engine_implementation.md).
+
 ## Content
+- [Implementation Details](./ai_generated/search_engine_implementation.md)
 - [Search for Files](#search-endpoint)
 - [Search with Extension](#search_with_extension-endpoint)
 - [Add Paths Recursively](#add_paths_recursive-endpoint)
@@ -11,6 +15,7 @@ Error Structure as json can be found [here](./error_structure.md).
 - [Remove a Single Path](#remove_path-endpoint)
 - [Clear Search Engine](#clear_search_engine-endpoint)
 - [Get Search Engine Info](#get_search_engine_info-endpoint)
+
 
 # `search` endpoint
 

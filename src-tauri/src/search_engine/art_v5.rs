@@ -899,6 +899,102 @@ impl ART {
         }
     }
 
+    /// 公共调试方法：输出树的详细结构信息（包括节点类型、前缀、子节点等）
+    /// 此方法在任何配置下都可用，用于示例和调试
+    pub fn debug_tree_structure(&self) -> String {
+        let mut output = String::new();
+
+        if let Some(root) = &self.root {
+            output.push_str(&format!("ART 树结构 ({} 个路径):\n", self.path_count));
+            output.push_str("========================================\n");
+            Self::format_node_structure(root.as_ref(), 0, &mut output);
+        } else {
+            output.push_str("ART 树为空\n");
+        }
+
+        output
+    }
+
+    fn format_node_structure(node: &ARTNode, indent: usize, output: &mut String) {
+        let pad = "  ".repeat(indent);
+
+        // 获取节点信息
+        let (node_type, prefix, is_term, score, child_count) = match node {
+            ARTNode::Node4(n) => ("Node4", &n.prefix[..], n.is_terminal, n.score, n.keys.len()),
+            ARTNode::Node16(n) => (
+                "Node16",
+                &n.prefix[..],
+                n.is_terminal,
+                n.score,
+                n.keys.len(),
+            ),
+            ARTNode::Node48(n) => ("Node48", &n.prefix[..], n.is_terminal, n.score, n.size),
+            ARTNode::Node256(n) => ("Node256", &n.prefix[..], n.is_terminal, n.score, n.size),
+        };
+
+        let prefix_str = String::from_utf8_lossy(prefix);
+
+        // 格式化节点头信息
+        output.push_str(&format!("{}┌─ {} 节点\n", pad, node_type));
+        output.push_str(&format!(
+            "{}│  前缀: \"{}\" ({} 字节)\n",
+            pad,
+            prefix_str,
+            prefix.len()
+        ));
+        output.push_str(&format!(
+            "{}│  终端: {}\n",
+            pad,
+            if is_term { "是" } else { "否" }
+        ));
+        if let Some(s) = score {
+            output.push_str(&format!("{}│  分数: {:.2}\n", pad, s));
+        }
+        output.push_str(&format!(
+            "{}│  子节点数: {} / {}\n",
+            pad,
+            child_count,
+            match node_type {
+                "Node4" => 4,
+                "Node16" => 16,
+                "Node48" => 48,
+                "Node256" => 256,
+                _ => 0,
+            }
+        ));
+
+        // 显示子节点键
+        let children = node.iter_children();
+        if !children.is_empty() {
+            output.push_str(&format!("{}│  子节点键: ", pad));
+            for (i, (key, _)) in children.iter().enumerate() {
+                if i > 0 {
+                    output.push_str(", ");
+                }
+                let key_char = if key.is_ascii_graphic() {
+                    *key as char
+                } else {
+                    '?'
+                };
+                output.push_str(&format!("{}('{}')", key, key_char));
+            }
+            output.push_str("\n");
+        }
+
+        output.push_str(&format!("{}└─\n", pad));
+
+        // 递归处理子节点
+        for (key, child) in children {
+            let key_char = if key.is_ascii_graphic() {
+                key as char
+            } else {
+                '?'
+            };
+            output.push_str(&format!("{}  [键: {}('{}')]\n", pad, key, key_char));
+            Self::format_node_structure(child, indent + 1, output);
+        }
+    }
+
     /// Inserts a path into the trie with an associated score for ranking.
     /// Normalizes the path before insertion to ensure consistency.
     ///

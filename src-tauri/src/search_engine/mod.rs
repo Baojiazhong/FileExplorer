@@ -1,4 +1,4 @@
-mod art_v5;
+pub mod art_v5;
 mod fast_fuzzy_v2;
 mod lru_cache_v2;
 mod path_cache_wrapper;
