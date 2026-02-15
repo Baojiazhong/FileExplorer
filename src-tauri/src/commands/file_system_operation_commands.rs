@@ -176,18 +176,22 @@ pub async fn open_directory(path: String) -> Result<String, String> {
             .to_json()
         })?;
 
+        let name = entry
+            .file_name()
+            .to_str()
+            .unwrap_or("[invalid name]")
+            .to_string();
+        let is_hidden = models::is_hidden(&name, &metadata);
+
         if file_type.is_dir() {
             directories.push(models::Directory {
-                name: entry
-                    .file_name()
-                    .to_str()
-                    .unwrap_or("[invalid name]")
-                    .to_string(),
+                name,
                 path: path_of_entry
                     .to_str()
                     .unwrap_or("[invalid path]")
                     .to_string(),
                 is_symlink: path_of_entry.is_symlink(),
+                is_hidden,
                 access_rights_as_string: get_access_permission_string(metadata.permissions(), true),
                 access_rights_as_number: get_access_permission_number(metadata.permissions(), true),
                 size_in_bytes: 0,
@@ -214,16 +218,13 @@ pub async fn open_directory(path: String) -> Result<String, String> {
             });
         } else if file_type.is_file() {
             files.push(models::File {
-                name: entry
-                    .file_name()
-                    .to_str()
-                    .unwrap_or("[invalid name]")
-                    .to_string(),
+                name,
                 path: path_of_entry
                     .to_str()
                     .unwrap_or("[invalid path]")
                     .to_string(),
                 is_symlink: path_of_entry.is_symlink(),
+                is_hidden,
                 access_rights_as_string: get_access_permission_string(
                     metadata.permissions(),
                     false,
@@ -1454,6 +1455,14 @@ mod tests_file_system_operation_commands {
         fs::create_dir(&sub_dir_path).expect("Failed to create subdirectory");
         println!("Temporary subdirectory created: {:?}", sub_dir_path);
 
+        // Create a hidden subdirectory (dot-prefixed on Unix-like systems)
+        let hidden_sub_dir_path = temp_dir.path().join(".hiddendir");
+        fs::create_dir(&hidden_sub_dir_path).expect("Failed to create hidden subdirectory");
+        println!(
+            "Temporary hidden subdirectory created: {:?}",
+            hidden_sub_dir_path
+        );
+
         // Create files in the root directory
         let file1_path = temp_dir.path().join("file1.txt");
         let mut file1 = fs::File::create(&file1_path).expect("Failed to create file1");
@@ -1464,6 +1473,12 @@ mod tests_file_system_operation_commands {
         let mut file2 = fs::File::create(&file2_path).expect("Failed to create file2");
         writeln!(file2, "File 2 content").expect("Failed to write to file2");
         println!("File 2 created: {:?}", file2_path);
+
+        let hidden_file_path = temp_dir.path().join(".hiddenfile");
+        let mut hidden_file =
+            fs::File::create(&hidden_file_path).expect("Failed to create hidden file");
+        writeln!(hidden_file, "Hidden file content").expect("Failed to write to hidden file");
+        println!("Hidden file created: {:?}", hidden_file_path);
 
         // Create files in the subdirectory
         let sub_file1_path = sub_dir_path.join("sub_file1.txt");
@@ -1486,27 +1501,70 @@ mod tests_file_system_operation_commands {
         let entries: Entries = serde_json::from_str(&entries).expect("Failed to parse JSON");
 
         // Verify directories
-        assert_eq!(entries.directories.len(), 1, "Expected 1 subdirectory");
-        assert_eq!(
-            entries.directories[0].name, "subdir",
-            "Subdirectory name does not match"
-        );
+        assert_eq!(entries.directories.len(), 2, "Expected 2 subdirectories");
+
+        let subdir = entries
+            .directories
+            .iter()
+            .find(|d| d.name == "subdir")
+            .expect("subdir not found");
+        assert!(!subdir.is_hidden, "subdir should not be hidden");
+
+        let hidden_subdir = entries
+            .directories
+            .iter()
+            .find(|d| d.name == ".hiddendir")
+            .expect(".hiddendir not found");
+        if cfg!(windows) {
+            // On Windows, dot-prefix is not inherently hidden.
+            assert!(
+                !hidden_subdir.is_hidden,
+                ".hiddendir should not be hidden on Windows unless attributes are set"
+            );
+        } else {
+            assert!(
+                hidden_subdir.is_hidden,
+                ".hiddendir should be hidden on Unix-like systems"
+            );
+        }
 
         // Verify files in the root directory
         assert_eq!(
             entries.files.len(),
-            2,
-            "Expected 2 files in the root directory"
+            3,
+            "Expected 3 files in the root directory"
         );
-        let file_names: Vec<String> = entries.files.iter().map(|f| f.name.clone()).collect();
-        assert!(
-            file_names.contains(&"file1.txt".to_string()),
-            "file1.txt not found"
-        );
-        assert!(
-            file_names.contains(&"file2.txt".to_string()),
-            "file2.txt not found"
-        );
+
+        let file1 = entries
+            .files
+            .iter()
+            .find(|f| f.name == "file1.txt")
+            .expect("file1.txt not found");
+        assert!(!file1.is_hidden, "file1.txt should not be hidden");
+
+        let file2 = entries
+            .files
+            .iter()
+            .find(|f| f.name == "file2.txt")
+            .expect("file2.txt not found");
+        assert!(!file2.is_hidden, "file2.txt should not be hidden");
+
+        let hidden_file = entries
+            .files
+            .iter()
+            .find(|f| f.name == ".hiddenfile")
+            .expect(".hiddenfile not found");
+        if cfg!(windows) {
+            assert!(
+                !hidden_file.is_hidden,
+                ".hiddenfile should not be hidden on Windows unless attributes are set"
+            );
+        } else {
+            assert!(
+                hidden_file.is_hidden,
+                ".hiddenfile should be hidden on Unix-like systems"
+            );
+        }
 
         // Verify subdirectory contents
         let subdir_result = open_directory(sub_dir_path.to_str().unwrap().to_string()).await;

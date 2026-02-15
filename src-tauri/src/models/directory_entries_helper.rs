@@ -2,9 +2,12 @@ use crate::models;
 use chrono::{DateTime, Local};
 use serde::{Deserialize, Serialize};
 use std::fs;
+use std::fs::Metadata;
 use std::fs::Permissions;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
+#[cfg(windows)]
+use std::os::windows::fs::MetadataExt;
 use std::time::SystemTime;
 use walkdir::WalkDir;
 
@@ -12,6 +15,22 @@ use walkdir::WalkDir;
 pub struct Entries {
     pub(crate) directories: Vec<models::Directory>,
     pub(crate) files: Vec<models::File>,
+}
+
+pub fn is_hidden(name: &str, metadata: &Metadata) -> bool {
+    #[cfg(windows)]
+    {
+        let _ = name;
+        const FILE_ATTRIBUTE_HIDDEN: u32 = 0x2;
+        (metadata.file_attributes() & FILE_ATTRIBUTE_HIDDEN) != 0
+    }
+
+    #[cfg(not(windows))]
+    {
+        let _ = metadata;
+        // Unix-like hidden: leading dot.
+        name.starts_with('.')
+    }
 }
 
 /// This function retrieves the access permissions of a file or directory.
