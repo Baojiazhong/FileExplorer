@@ -1855,145 +1855,84 @@ mod tests_searchengine_state {
 
     #[test]
     fn test_concurrent_operations() {
+        use tempfile::tempdir;
+
         let settings_state = Arc::new(Mutex::new(SettingsState::new()));
         let state = Arc::new(SearchEngineState::new(settings_state));
 
-        // Get a test directory for indexing
-        let (test_dir, subdir) = get_test_subdirs();
+        // Use a unique temp directory per test run to avoid cross-test interference.
+        let tmp = tempdir().expect("Failed to create temp dir");
+        let dir1 = tmp.path().join("index_dir1");
+        let dir2 = tmp.path().join("index_dir2");
+        fs::create_dir_all(&dir1).expect("Failed to create index_dir1");
+        fs::create_dir_all(&dir2).expect("Failed to create index_dir2");
 
-        // Create a LOT of test files to ensure indexing takes time
-        let mut test_files = Vec::new();
-        for i in 0..1000 {
-            // Increased to 1000 files to ensure indexing takes time
-            let file_path = test_dir.join(format!("concurrent_test_{}.txt", i));
+        // Create enough files to make indexing non-trivial and reduce timing flakiness.
+        for i in 0..2000 {
+            let file_path = dir1.join(format!("concurrent_test_{}.txt", i));
             let _ = fs::write(&file_path, format!("Test content {}", i));
-            test_files.push(file_path);
         }
 
-        // Use more reliable synchronization
-        let (status_tx, status_rx) = std::sync::mpsc::channel();
-
-        // Clone the Arc for the thread to use
         let state_clone = Arc::clone(&state);
-        let test_dir_clone = test_dir.clone();
+        let dir1_clone = dir1.clone();
 
         let indexing_thread = thread::spawn(move || {
-            // First manually set the status to Indexing to guarantee we're in that state
-            {
-                let mut data = state_clone.data.lock().unwrap();
-                data.status = SearchEngineStatus::Indexing;
-
-                // Signal the test thread that we've set the status
-                status_tx.send(()).unwrap();
-            }
-
-            // Now start the actual indexing (which may take a while)
-            state_clone.start_indexing(test_dir_clone).unwrap();
+            state_clone.start_indexing(dir1_clone).unwrap();
         });
 
-        // Wait for the signal that the status has been explicitly set to Indexing
-        status_rx.recv().unwrap();
-
-        // Double-check that we're in the Indexing state before proceeding
-        {
+        // Wait until the background indexing has transitioned the state.
+        let start_wait = std::time::Instant::now();
+        loop {
             let data = state.data.lock().unwrap();
-            assert_eq!(
-                data.status,
-                SearchEngineStatus::Indexing,
-                "Should be in Indexing state before testing concurrent operations"
-            );
+            if matches!(data.status, SearchEngineStatus::Indexing) && data.index_folder == dir1 {
+                break;
+            }
+            drop(data);
+
+            if start_wait.elapsed() > Duration::from_secs(5) {
+                panic!("Timed out waiting for indexing to start (status/index_folder not updated)");
+            }
+
+            thread::sleep(Duration::from_millis(10));
         }
 
-        // Try to search while indexing - should return an error
+        // Try to search while indexing - should return an error.
         let search_result = state.search("file");
         assert!(
             search_result.is_err(),
             "Search should fail with an error when engine is indexing"
         );
         assert!(
-            search_result.unwrap_err().contains("indexing"),
+            search_result.unwrap_err().to_lowercase().contains("index"),
             "Error should mention indexing"
         );
 
-        // Try to start another indexing operation - should stop the previous one and start new
-        let second_index_result = state.start_indexing(subdir.clone());
+        // Start a new indexing operation. This should succeed even if an indexing operation
+        // is already in progress (it may wait for locks, but should not fail).
+        let second_index_result = state.start_indexing(dir2.clone());
         assert!(
             second_index_result.is_ok(),
             "Starting new indexing operation should succeed even when one is in progress"
         );
 
-        // Wait for indexing thread to complete
-        indexing_thread.join().unwrap();
-
-        // Allow more time for the second indexing operation to complete and update the state
-        thread::sleep(Duration::from_millis(1000)); // Increased wait time to 1 second
-
-        // Get the expected directory name for comparison
-        let expected_name = subdir
-            .file_name()
-            .unwrap_or_default()
-            .to_string_lossy()
-            .to_string();
-
-        // Retry mechanism for checking the directory - sometimes indexing takes longer
-        let max_attempts = 5;
-        let mut attempt = 0;
-        let mut success = false;
-
-        while attempt < max_attempts && !success {
+        // After start_indexing returns, state must already reflect the requested folder.
+        {
             let data = state.data.lock().unwrap();
-
-            // Check if we're still indexing
-            if matches!(data.status, SearchEngineStatus::Indexing) {
-                // Skip this attempt if still indexing
-                log_info!(
-                    "Attempt {}: Indexing still in progress, waiting...",
-                    attempt + 1
-                );
-                drop(data); // Release the lock before sleeping
-                thread::sleep(Duration::from_millis(500));
-            } else {
-                // Get just the filename component for comparison
-                let actual_name = data
-                    .index_folder
-                    .file_name()
-                    .unwrap_or_default()
-                    .to_string_lossy()
-                    .to_string();
-
-                log_info!(
-                    "Attempt {}: Actual folder name: '{}', Expected: '{}'",
-                    attempt + 1,
-                    actual_name,
-                    expected_name
-                );
-
-                // If names match or one contains the other (to handle path formatting differences)
-                if actual_name == expected_name
-                    || actual_name.contains(&expected_name)
-                    || expected_name.contains(&actual_name)
-                {
-                    success = true;
-                    log_info!("Directory name check passed!");
-                } else {
-                    drop(data); // Release the lock before sleeping
-                    thread::sleep(Duration::from_millis(500));
-                }
-            }
-
-            attempt += 1;
+            assert_eq!(
+                data.index_folder, dir2,
+                "Index folder should be updated after starting a new indexing operation"
+            );
+            assert!(
+                matches!(
+                    data.status,
+                    SearchEngineStatus::Idle | SearchEngineStatus::Cancelled
+                ),
+                "Status should not remain Indexing after start_indexing returns"
+            );
         }
 
-        assert!(
-            success,
-            "Failed to verify index folder was updated after {} attempts",
-            max_attempts
-        );
-
-        // Clean up test files (best effort, don't fail test if cleanup fails)
-        for file in test_files {
-            let _ = fs::remove_file(file);
-        }
+        // Wait for the initial indexing thread to complete.
+        indexing_thread.join().unwrap();
     }
 
     #[test]
