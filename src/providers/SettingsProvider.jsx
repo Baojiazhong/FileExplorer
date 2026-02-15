@@ -13,7 +13,10 @@ const defaultSettings = {
     font_size: "Medium", // Small, Medium, Large
     show_hidden_files_and_folders: false,
     show_details_panel: false,
+    show_preview_pane: false,
+    preview_pane_width: 300,
     accent_color: "#0672ef",
+
 
     // Behavior settings
     confirm_delete: true,

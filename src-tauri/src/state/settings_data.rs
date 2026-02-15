@@ -8,6 +8,10 @@ use std::io::{Error, Write};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
+fn default_preview_pane_width() -> u32 {
+    300
+}
+
 //In this file we should change everything to lowercase for the json -> first step is done in DefaultView
 /// File view mode for directories.
 ///
@@ -92,6 +96,12 @@ pub struct Settings {
     pub show_hidden_files_and_folders: bool,
     /// Whether to show the details panel by default
     pub show_details_panel: bool,
+    /// Whether to show the preview pane by default
+    #[serde(default)]
+    pub show_preview_pane: bool,
+    /// Width of the preview pane in pixels
+    #[serde(default = "default_preview_pane_width")]
+    pub preview_pane_width: u32,
     /// Primary UI accent color in hex format
     pub accent_color: String,
     /// Whether to prompt for confirmation before deleting files
@@ -138,6 +148,8 @@ impl Default for Settings {
             font_size: FontSize::Medium,
             show_hidden_files_and_folders: false,
             show_details_panel: false,
+            show_preview_pane: false,
+            preview_pane_width: default_preview_pane_width(),
             accent_color: "#000000".to_string(),
             confirm_delete: true,
             auto_refresh_dir: true,

@@ -13,7 +13,7 @@ import './settings.css';
  * @returns {React.ReactElement} Settings panel modal component
  */
 const SettingsPanel = ({ isOpen, onClose }) => {
-    const { settings, error, updateSetting, resetSettings, reloadSettings } = useSettings();
+    const { settings, error, updateSetting, updateMultipleSettings, resetSettings, reloadSettings } = useSettings();
     const [isResetting, setIsResetting] = useState(false);
     const [activeTab, setActiveTab] = useState('appearance');
     const [localError, setLocalError] = useState(null);
@@ -221,10 +221,42 @@ const SettingsPanel = ({ isOpen, onClose }) => {
                     <input
                         type="checkbox"
                         checked={settings.show_details_panel || false}
-                        onChange={(e) => updateSetting('show_details_panel', e.target.checked)}
+                        onChange={(e) => {
+                            const checked = e.target.checked;
+                            // Details pane and Preview pane are mutually exclusive.
+                            if (checked) {
+                                updateMultipleSettings({
+                                    show_details_panel: true,
+                                    show_preview_pane: false,
+                                });
+                            } else {
+                                updateSetting('show_details_panel', false);
+                            }
+                        }}
                     />
                     <span>Show details panel by default</span>
                 </label>
+
+                <label className="checkbox-option">
+                    <input
+                        type="checkbox"
+                        checked={settings.show_preview_pane || false}
+                        onChange={(e) => {
+                            const checked = e.target.checked;
+                            // Details pane and Preview pane are mutually exclusive.
+                            if (checked) {
+                                updateMultipleSettings({
+                                    show_preview_pane: true,
+                                    show_details_panel: false,
+                                });
+                            } else {
+                                updateSetting('show_preview_pane', false);
+                            }
+                        }}
+                    />
+                    <span>Show preview pane by default</span>
+                </label>
+
 
                 <label className="checkbox-option">
                     <input

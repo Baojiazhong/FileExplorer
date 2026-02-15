@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useTheme } from '../providers/ThemeProvider';
 import { useFileSystem } from '../providers/FileSystemProvider';
 import { useContextMenu } from '../providers/ContextMenuProvider';
@@ -29,6 +29,7 @@ import ThisPCView from '../components/thisPc/ThisPCView';
 import NetworkView from '../components/network/NetworkView';
 import TemplateList from '../components/templates/TemplateList';
 import PreviewModal from '../components/preview/PreviewModal';
+import PreviewPane from '../components/preview/PreviewPane';
 
 // Hash Modals
 import HashFileModal from '../components/common/HashFileModal.jsx';
@@ -40,6 +41,7 @@ import SettingsApplier from '../utils/SettingsApplier.js';
 
 // Hooks
 import { usePreview } from '../hooks/usePreview';
+import { usePreviewPane } from '../hooks/usePreviewPane';
 
 import '../styles/layouts/mainLayout.css';
 import {replaceFileName} from "../utils/pathUtils.js";
@@ -53,7 +55,7 @@ import {replaceFileName} from "../utils/pathUtils.js";
 const MainLayout = () => {
     const { theme, toggleTheme } = useTheme();
     const { isLoading, currentDirData, selectedItems, loadDirectory, volumes, focusedItem, setFocusedItem, renameItem: fsRenameItem } = useFileSystem();
-    const { isSftpPath, parseSftpPath, createSftpUrl } = useSftp();
+    const { isSftpPath, parseSftpPath } = useSftp();
     const { 
         isOpen: isContextMenuOpen, 
         position, 
@@ -64,25 +66,33 @@ const MainLayout = () => {
         cutToClipboard,
         pasteFromClipboard,
         deleteItems,
-        renameItem,
         showProperties
     } = useContextMenu();
     const { currentPath, navigateTo } = useHistory();
-    const { settings, updateSetting } = useSettings();
+    const { settings, updateSetting, updateMultipleSettings } = useSettings();
+
+    const containerRef = useRef(null);
+    const isResizingRef = useRef(false);
+    const startXRef = useRef(0);
+    const startWidthRef = useRef(0);
 
     // UI State - Initialize from settings
     const [isDetailsPanelOpen, setIsDetailsPanelOpen] = useState(settings.show_details_panel || false);
+    const [isPreviewPaneOpen, setIsPreviewPaneOpen] = useState(settings.show_preview_pane || false);
+    const [rightPaneWidth, setRightPaneWidth] = useState(settings.preview_pane_width || 300);
     const [isTerminalOpen, setIsTerminalOpen] = useState(false);
     const [viewMode, setViewMode] = useState(settings.default_view || 'grid');
     const [searchValue, setSearchValue] = useState('');
     const [searchResults, setSearchResults] = useState(null);
     const [currentView, setCurrentView] = useState('explorer'); // 'explorer', 'this-pc', 'templates'
 
+
+
     // Modal states
     const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
-    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-    const [isTemplatesOpen, setIsTemplatesOpen] = useState(false);
-    const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
+     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+     const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
+
     const [itemToRename, setItemToRename] = useState(null);
 
     // Text viewer modal state
@@ -254,6 +264,16 @@ const MainLayout = () => {
         closePreview 
     } = usePreview(getFocusedItem, navigateUp, navigateDown, navigateLeft, navigateRight);
 
+    const {
+        payload: previewPanePayload,
+        isLoading: isPreviewPaneLoading,
+    } = usePreviewPane({
+        enabled: isPreviewPaneOpen && currentView === 'explorer',
+        selectedItem: selectedItems.length === 1 ? selectedItems[0] : null,
+        isMultipleSelection: selectedItems.length > 1,
+    });
+
+
     /**
      * Effect to update UI state when settings change
      */
@@ -261,7 +281,14 @@ const MainLayout = () => {
         if (settings.show_details_panel !== undefined) {
             setIsDetailsPanelOpen(settings.show_details_panel);
         }
-    }, [settings.show_details_panel]);
+        if (settings.show_preview_pane !== undefined) {
+            setIsPreviewPaneOpen(settings.show_preview_pane);
+        }
+        if (settings.preview_pane_width !== undefined) {
+            setRightPaneWidth(settings.preview_pane_width || 300);
+        }
+    }, [settings.show_details_panel, settings.show_preview_pane, settings.preview_pane_width]);
+
 
     /**
      * Effect to update view mode when settings change
@@ -284,15 +311,6 @@ const MainLayout = () => {
     }, [volumes, currentDirData, currentPath]);
 
     /**
-     * Effect to close details panel when switching to This PC view
-     */
-    useEffect(() => {
-        if (currentView === 'this-pc') {
-            setIsDetailsPanelOpen(false);
-        }
-    }, [currentView]);
-
-    /**
      * Effect to auto-start indexing when app loads
      */
     useEffect(() => {
@@ -300,33 +318,33 @@ const MainLayout = () => {
             if (volumes.length > 0) {
                 try {
                     console.log('MainLayout: Checking search engine status for auto-indexing...');
-                    
+
                     // Check if search engine has indexed files
                     const searchEngineInfo = await invoke('get_search_engine_info');
                     const hasNoIndexedFiles = !searchEngineInfo.stats?.trie_size || searchEngineInfo.stats.trie_size === 0;
-                    
+
                     console.log('MainLayout: Search engine info:', searchEngineInfo);
                     console.log('MainLayout: Has no indexed files:', hasNoIndexedFiles);
 
                     if (hasNoIndexedFiles) {
                         console.log('MainLayout: Starting auto-indexing of home directory...');
-                        
+
                         // Get system info to get the proper home directory
                         const metaDataJson = await invoke('get_meta_data_as_json');
                         const metaData = JSON.parse(metaDataJson);
-                        
+
                         if (!metaData.user_home_dir) {
                             console.error('MainLayout: User home directory not available');
                             return;
                         }
 
                         console.log('MainLayout: Using home directory:', metaData.user_home_dir);
-                        
+
                         // Auto-index home directory on app startup
                         const result = await invoke('add_paths_recursive_async', {
                             folder: metaData.user_home_dir
                         });
-                        
+
                         console.log('MainLayout: Auto-indexing initiated:', result);
                         showSuccess('Background indexing finished');
                     } else {
@@ -345,6 +363,7 @@ const MainLayout = () => {
         }
     }, [volumes.length]); // Only depend on volumes.length to avoid re-running
 
+
     /**
      * Effect to listen for custom events
      * Improved with debug information
@@ -355,15 +374,22 @@ const MainLayout = () => {
          */
         const handleOpenTemplates = () => {
             setCurrentView('templates');
-            setIsTemplatesOpen(true);
             navigateTo(null); // Clear explorer path
         };
+
 
         /**
          * Handler for showing properties panel
          */
         const handleShowProperties = (e) => {
             setIsDetailsPanelOpen(true);
+            setIsPreviewPaneOpen(false);
+
+            // Persist mutual exclusion so it survives restarts.
+            updateMultipleSettings({
+                show_details_panel: true,
+                show_preview_pane: false,
+            });
         };
 
         /**
@@ -470,19 +496,21 @@ const MainLayout = () => {
             }
         };
 
+        const handleForceExplorerView = () => setCurrentView('explorer');
+
         // Register event listeners
-    document.addEventListener('open-templates', handleOpenTemplates);
-    document.addEventListener('show-properties', handleShowProperties);
-    document.addEventListener('open-this-pc', handleOpenThisPC);
-    document.addEventListener('open-network', handleOpenNetwork);
-    document.addEventListener('open-settings', handleOpenSettings);
-    document.addEventListener('toggle-terminal', handleToggleTerminal);
-    document.addEventListener('open-rename-modal', handleOpenRenameModal);
-    document.addEventListener('open-hash-file-modal', handleOpenHashFileModal);
-    document.addEventListener('open-hash-compare-modal', handleOpenHashCompareModal);
-    document.addEventListener('open-hash-display-modal', handleOpenHashDisplayModal);
-    document.addEventListener('sftp-file-opened', handleSftpFileOpened);
-    document.addEventListener('force-explorer-view', () => setCurrentView('explorer'));
+        document.addEventListener('open-templates', handleOpenTemplates);
+        document.addEventListener('show-properties', handleShowProperties);
+        document.addEventListener('open-this-pc', handleOpenThisPC);
+        document.addEventListener('open-network', handleOpenNetwork);
+        document.addEventListener('open-settings', handleOpenSettings);
+        document.addEventListener('toggle-terminal', handleToggleTerminal);
+        document.addEventListener('open-rename-modal', handleOpenRenameModal);
+        document.addEventListener('open-hash-file-modal', handleOpenHashFileModal);
+        document.addEventListener('open-hash-compare-modal', handleOpenHashCompareModal);
+        document.addEventListener('open-hash-display-modal', handleOpenHashDisplayModal);
+        document.addEventListener('sftp-file-opened', handleSftpFileOpened);
+        document.addEventListener('force-explorer-view', handleForceExplorerView);
 
         console.log('MainLayout: All event listeners registered');
 
@@ -498,10 +526,11 @@ const MainLayout = () => {
             document.removeEventListener('open-hash-compare-modal', handleOpenHashCompareModal);
             document.removeEventListener('open-hash-display-modal', handleOpenHashDisplayModal);
             document.removeEventListener('sftp-file-opened', handleSftpFileOpened);
-            document.removeEventListener('force-explorer-view', () => setCurrentView('explorer'));
+            document.removeEventListener('force-explorer-view', handleForceExplorerView);
             console.log('MainLayout: All event listeners removed');
         };
-    }, []);
+    }, [navigateTo, updateMultipleSettings]);
+
 
     /**
      * Effect to switch to explorer view when navigating to a directory
@@ -510,7 +539,8 @@ const MainLayout = () => {
         if (currentPath && currentView !== 'explorer') {
             setCurrentView('explorer');
         }
-    }, [currentPath]);
+    }, [currentPath, currentView]);
+
 
     /**
      * Handles search functionality
@@ -697,11 +727,12 @@ const MainLayout = () => {
 
         // Save to settings
         try {
-            await invoke('update_settings_field', { key: 'default_view', value: newMode });
+            await updateSetting('default_view', newMode);
         } catch (error) {
             console.error('Failed to save view mode setting:', error);
         }
-    }, []);
+    }, [updateSetting]);
+
 
     /**
      * Handles details panel toggle with settings persistence
@@ -709,14 +740,97 @@ const MainLayout = () => {
     const handleDetailsPanelToggle = useCallback(async () => {
         const newState = !isDetailsPanelOpen;
         setIsDetailsPanelOpen(newState);
+        if (newState) {
+            setIsPreviewPaneOpen(false);
+        }
 
         // Save to settings
         try {
-            await invoke('update_settings_field', { key: 'show_details_panel', value: newState });
+            // When opening one pane, force-close the other (mutually exclusive).
+            if (newState) {
+                await updateMultipleSettings({
+                    show_details_panel: true,
+                    show_preview_pane: false,
+                });
+            } else {
+                await updateSetting('show_details_panel', false);
+            }
         } catch (error) {
             console.error('Failed to save details panel setting:', error);
         }
-    }, [isDetailsPanelOpen]);
+    }, [isDetailsPanelOpen, updateMultipleSettings, updateSetting]);
+
+    const handlePreviewPaneToggle = useCallback(async () => {
+        const newState = !isPreviewPaneOpen;
+        setIsPreviewPaneOpen(newState);
+        if (newState) {
+            setIsDetailsPanelOpen(false);
+        }
+
+        try {
+            // When opening one pane, force-close the other (mutually exclusive).
+            if (newState) {
+                await updateMultipleSettings({
+                    show_preview_pane: true,
+                    show_details_panel: false,
+                });
+            } else {
+                await updateSetting('show_preview_pane', false);
+            }
+        } catch (error) {
+            console.error('Failed to save preview pane setting:', error);
+        }
+    }, [isPreviewPaneOpen, updateMultipleSettings, updateSetting]);
+
+    const handleRightPaneResizeStart = useCallback((e) => {
+        if (!isDetailsPanelOpen && !isPreviewPaneOpen) return;
+
+        isResizingRef.current = true;
+        startXRef.current = e.clientX;
+        startWidthRef.current = rightPaneWidth;
+
+        document.body.style.userSelect = 'none';
+        document.body.style.cursor = 'col-resize';
+    }, [isDetailsPanelOpen, isPreviewPaneOpen, rightPaneWidth]);
+
+    useEffect(() => {
+        const handleResizeMove = (e) => {
+            if (!isResizingRef.current) return;
+
+            const containerWidth = containerRef.current?.offsetWidth || 0;
+            const deltaX = startXRef.current - e.clientX;
+
+            const newWidth = Math.min(
+                Math.max(200, startWidthRef.current + deltaX),
+                containerWidth ? Math.max(200, containerWidth - 400) : startWidthRef.current + deltaX
+            );
+
+            setRightPaneWidth(newWidth);
+        };
+
+        const handleResizeEnd = async () => {
+            if (!isResizingRef.current) return;
+
+            isResizingRef.current = false;
+            document.body.style.userSelect = '';
+            document.body.style.cursor = '';
+
+            try {
+                await updateSetting('preview_pane_width', rightPaneWidth);
+            } catch (error) {
+                console.error('Failed to save pane width setting:', error);
+            }
+        };
+
+        window.addEventListener('mousemove', handleResizeMove);
+        window.addEventListener('mouseup', handleResizeEnd);
+
+        return () => {
+            window.removeEventListener('mousemove', handleResizeMove);
+            window.removeEventListener('mouseup', handleResizeEnd);
+        };
+    }, [rightPaneWidth, updateSetting]);
+
 
     /**
      * Handles hidden files visibility toggle with settings persistence
@@ -735,9 +849,14 @@ const MainLayout = () => {
         }
     }, [settings.show_hidden_files_and_folders, updateSetting, currentPath, loadDirectory]);
 
-    /**
-     * File operation handlers - use the existing context menu functionality
-     */
+    // Close any docked pane when leaving explorer view (This PC / Network / Templates).
+    useEffect(() => {
+        if (currentView !== 'explorer') {
+            setIsDetailsPanelOpen(false);
+            setIsPreviewPaneOpen(false);
+        }
+    }, [currentView]);
+
     const handleCut = useCallback(() => {
         if (selectedItems.length === 0) return;
         cutToClipboard(selectedItems);
@@ -768,14 +887,25 @@ const MainLayout = () => {
 
     const handleProperties = useCallback(() => {
         if (selectedItems.length === 0) return;
+
+        // If preview is open, switch to details.
+        if (isPreviewPaneOpen) {
+            setIsPreviewPaneOpen(false);
+        }
+
         // Toggle the details panel: close if open, open if closed
         if (isDetailsPanelOpen) {
             setIsDetailsPanelOpen(false);
         } else {
             showProperties(selectedItems[0]);
             setIsDetailsPanelOpen(true);
+            updateMultipleSettings({
+                show_details_panel: true,
+                show_preview_pane: false,
+            });
         }
-    }, [selectedItems, showProperties, isDetailsPanelOpen]);
+    }, [selectedItems, showProperties, isDetailsPanelOpen, isPreviewPaneOpen, updateMultipleSettings]);
+
 
     /**
      * Effect to clear search when changing directory
@@ -801,8 +931,8 @@ const MainLayout = () => {
             case 'templates':
                 return <TemplateList onClose={() => {
                     setCurrentView('explorer');
-                    setIsTemplatesOpen(false);
                 }} />;
+
             default:
                 return (
                     <div className="files-container">
@@ -900,6 +1030,15 @@ const MainLayout = () => {
                                 </button>
                                 
                                 <button
+                                    className={`icon-button ${isPreviewPaneOpen ? 'active' : ''}`}
+                                    onClick={handlePreviewPaneToggle}
+                                    title="Preview Pane"
+                                    aria-label="Toggle preview pane"
+                                >
+                                    <span className="icon icon-eye"></span>
+                                </button>
+
+                                <button
                                     className={`icon-button ${isDetailsPanelOpen ? 'active' : ''}`}
                                     onClick={handleDetailsPanelToggle}
                                     title="Details Panel"
@@ -970,22 +1109,43 @@ const MainLayout = () => {
                     {/* Main content area */}
                     <div className="content-area">
                         {/* Main content with file list and optional details panel */}
-                        <div
-                            className="main-content"
-                            style={isTerminalOpen ? { paddingBottom: `${terminalHeight}px` } : {}}
-                        >
+                         <div
+                             className="main-content"
+                             ref={containerRef}
+                             style={{
+                                 ...(isTerminalOpen ? { paddingBottom: `${terminalHeight}px` } : {}),
+                                 '--details-panel-width': `${rightPaneWidth}px`,
+                             }}
+                         >
+
                             {renderMainContent()}
 
-                            {/* Details panel (when selected) */}
-                            {isDetailsPanelOpen && (
-                                <>
-                                    <div className="panel-resize-handle"></div>
-                                    <DetailsPanel
-                                        item={selectedItems[0] || null}
-                                        isMultipleSelection={selectedItems.length > 1}
-                                    />
-                                </>
-                            )}
+                             {/* Right pane: Preview or Details (mutually exclusive) */}
+                             {(isPreviewPaneOpen || isDetailsPanelOpen) && (
+                                 <div
+                                     className="panel-resize-handle"
+                                     onMouseDown={handleRightPaneResizeStart}
+                                     role="separator"
+                                     aria-orientation="vertical"
+                                     aria-label="Resize right pane"
+                                 ></div>
+                             )}
+
+                             {isPreviewPaneOpen && currentView === 'explorer' && (
+                                 <PreviewPane
+                                     payload={previewPanePayload}
+                                     isLoading={isPreviewPaneLoading}
+                                     selectedCount={selectedItems.length}
+                                 />
+                             )}
+
+                             {!isPreviewPaneOpen && isDetailsPanelOpen && currentView === 'explorer' && (
+                                 <DetailsPanel
+                                     item={selectedItems[0] || null}
+                                     isMultipleSelection={selectedItems.length > 1}
+                                 />
+                             )}
+
                         </div>
 
                         {/* Terminal positioned absolutely at the bottom */}

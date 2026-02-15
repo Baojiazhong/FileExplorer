@@ -1,0 +1,101 @@
+.preview-pane {
+  width: var(--details-panel-width);
+  height: 100%;
+  background-color: var(--background-secondary);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.preview-pane-header {
+  padding: var(--space-md);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.preview-pane-title {
+  margin: 0;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+}
+
+.preview-pane-content {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.preview-pane-body {
+  flex: 1;
+  overflow: auto;
+  padding: var(--space-md);
+}
+
+.preview-pane-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--text-secondary);
+  padding: var(--space-xl);
+  gap: var(--space-sm);
+}
+
+.preview-pane-empty-title {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+}
+
+.preview-pane-empty-subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+/* Make modal-oriented preview styles work in a narrow docked pane */
+.preview-pane .preview-folder-container,
+.preview-pane .preview-text-container {
+  min-width: 0;
+  max-width: 100%;
+  padding: 0;
+}
+
+.preview-pane .preview-pdf-container {
+  min-height: 320px;
+  max-height: none;
+}
+
+.preview-pane .preview-image-container,
+.preview-pane .preview-video-container {
+  max-height: 60vh;
+}
+
+.preview-pane .preview-audio-player {
+  min-width: 0;
+  width: 100%;
+  padding: var(--space-lg);
+}
+
+.preview-pane .preview-text {
+  padding: var(--space-md);
+}
+
+/* Responsive: behave like existing details panel */
+@media (max-width: 768px) {
+  .preview-pane {
+    width: 100%;
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: var(--z-index-fixed);
+    box-shadow: var(--shadow-lg);
+  }
+}
