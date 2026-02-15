@@ -46,16 +46,15 @@ pub fn is_hidden(name: &str, metadata: &Metadata) -> bool {
 ///
 /// # Example
 /// ```rust
-/// use crate::commands::fs_dir_loader_commands::get_access_permission_number;
-/// use std::fs::Permissions;
-/// use std::os::unix::fs::PermissionsExt;
+/// use file_explorer::models::get_access_permission_number;
 ///
-/// fn main() {
-///  let permissions = Permissions::from_mode(0o755);
-///  let is_directory = true;
-///  let permission_number = get_access_permission_number(permissions, is_directory);
-///  println!("Access permissions number: {}", permission_number);
-/// }
+/// let metadata = std::fs::metadata(".").unwrap();
+/// let permissions = metadata.permissions();
+/// let is_directory = metadata.is_dir();
+///
+/// let permission_number = get_access_permission_number(permissions, is_directory);
+/// println!("Access permissions number: {}", permission_number);
+/// ```
 pub fn get_access_permission_number(permissions: Permissions, _is_directory: bool) -> u32 {
     #[cfg(windows)]
     {
@@ -87,16 +86,14 @@ pub fn get_access_permission_number(permissions: Permissions, _is_directory: boo
 ///
 /// # Example
 /// ```rust
-/// use crate::commands::fs_dir_loader_commands::get_access_permission_string;
-/// use std::fs::Permissions;
-/// use std::os::unix::fs::PermissionsExt;
+/// use file_explorer::models::get_access_permission_string;
 ///
-/// fn main() {
-///   let permissions = Permissions::from_mode(0o755);
-///   let is_directory = true;
-///   let permission_string = get_access_permission_string(permissions, is_directory);
-///   println!("Access permissions: {}", permission_string);
-/// }
+/// let metadata = std::fs::metadata(".").unwrap();
+/// let permissions = metadata.permissions();
+/// let is_directory = metadata.is_dir();
+///
+/// let permission_string = get_access_permission_string(permissions, is_directory);
+/// println!("Access permissions: {}", permission_string);
 /// ```
 #[allow(unused_variables)]
 pub fn get_access_permission_string(permissions: Permissions, is_directory: bool) -> String {
@@ -122,16 +119,14 @@ pub fn get_access_permission_string(permissions: Permissions, is_directory: bool
 ///
 /// # Example
 /// ```rust
-/// use crate::commands::fs_dir_loader_commands::get_access_permission_string;
-/// use std::fs::Permissions;
-/// use std::os::unix::fs::PermissionsExt;
+/// use file_explorer::models::access_permission_string_windows;
 ///
-/// fn main() {
-///  let permissions = Permissions::from_mode(0o755);
-///  let is_directory = true;
-///  let permission_string = get_access_permission_string(permissions, is_directory);
+/// let metadata = std::fs::metadata(".").unwrap();
+/// let permissions = metadata.permissions();
+/// let is_directory = metadata.is_dir();
+///
+/// let permission_string = access_permission_string_windows(permissions, is_directory);
 /// println!("Access permissions: {}", permission_string);
-/// }
 /// ```
 #[allow(dead_code)]
 pub fn access_permission_string_windows(permission: Permissions, is_directory: bool) -> String {
@@ -211,14 +206,13 @@ pub fn access_rights_to_string_unix(permissions: Permissions) -> String {
 ///
 /// # Example
 /// ```rust
-/// use crate::commands::fs_dir_loader_commands::format_system_time;
+/// use file_explorer::models::format_system_time;
 /// use std::time::SystemTime;
 ///
-/// fn main() {
-///  let system_time = SystemTime::now();
-///  let formatted_time = format_system_time(system_time);
-///  println!("Formatted time: {}", formatted_time);
-/// }
+/// let system_time = SystemTime::now();
+/// let formatted_time = format_system_time(system_time);
+/// println!("Formatted time: {}", formatted_time);
+/// ```
 pub fn format_system_time(system_time: SystemTime) -> String {
     let datetime: DateTime<Local> = system_time.into();
     datetime.format("%Y-%m-%d %H:%M:%S").to_string()
@@ -234,15 +228,15 @@ pub fn format_system_time(system_time: SystemTime) -> String {
 /// The total size of the directory in bytes.
 ///
 /// # Example
-/// ```rust
-/// use crate::commands::fs_dir_loader_commands::get_directory_size_in_bytes;
-/// use std::fs;
+/// ```rust,no_run
+/// use file_explorer::models::get_directory_size_in_bytes;
 ///
-/// fn main() {
-///  let path = "/path/to/directory";
-///  let size = get_directory_size_in_bytes(path);
-///  println!("Directory size: {} bytes", size);
-/// }
+/// let path = ".";
+/// let size = get_directory_size_in_bytes(path);
+/// println!("Directory size: {} bytes", size);
+/// ```
+///
+/// This can be expensive on large directories. Consider limiting traversal in UI code.
 #[allow(dead_code)]
 pub fn get_directory_size_in_bytes(path: &str) -> u64 {
     WalkDir::new(path)
@@ -268,14 +262,12 @@ pub fn get_directory_size_in_bytes(path: &str) -> u64 {
 ///
 /// # Example
 /// ```rust
-/// use crate::commands::fs_dir_loader_commands::count_subfiles_and_directories;
-/// use std::env;
+/// use file_explorer::models::count_subfiles_and_subdirectories;
 ///
-/// fn main() {
-///  let path = env::current_dir().unwrap().to_str().unwrap().to_string();
-///  let (file_count, dir_count) = count_subfiles_and_directories(&path);
-///  println!("Files: {}, Directories: {}", file_count, dir_count);
-/// }
+/// let path = std::env::current_dir().unwrap().to_string_lossy().to_string();
+/// let (file_count, dir_count) = count_subfiles_and_subdirectories(&path);
+/// println!("Files: {}, Directories: {}", file_count, dir_count);
+/// ```
 #[allow(dead_code)]
 pub fn count_subfiles_and_subdirectories(path: &str) -> (usize, usize) {
     let mut file_count = 0;
@@ -307,13 +299,10 @@ pub fn count_subfiles_and_subdirectories(path: &str) -> (usize, usize) {
 ///
 /// # Example
 /// ```rust
-/// use crate::models::directory_entries_helper::count_subfiles;
+/// use file_explorer::models::count_subfiles;
 ///
-/// fn main() {
-///   let path = "/path/to/directory";
-///   let file_count = count_subfiles(path);
-///   println!("Files: {}", file_count);
-/// }
+/// let file_count = count_subfiles(".");
+/// println!("Files: {}", file_count);
 /// ```
 pub fn count_subfiles(path: &str) -> usize {
     let mut file_count = 0;
@@ -342,13 +331,10 @@ pub fn count_subfiles(path: &str) -> usize {
 ///
 /// # Example
 /// ```rust
-/// use crate::models::directory_entries_helper::count_subdirectories;
+/// use file_explorer::models::count_subdirectories;
 ///
-/// fn main() {
-///   let path = "/path/to/directory";
-///   let dir_count = count_subdirectories(path);
-///   println!("Directories: {}", dir_count);
-/// }
+/// let dir_count = count_subdirectories(".");
+/// println!("Directories: {}", dir_count);
 /// ```
 pub fn count_subdirectories(path: &str) -> usize {
     let mut dir_count = 0;

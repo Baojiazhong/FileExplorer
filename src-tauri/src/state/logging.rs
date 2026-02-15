@@ -13,7 +13,11 @@
 //! - `log_critical!("Your message here");`
 //!
 //! Example:
-//! ```rust
+//! ```rust,no_run
+//! use file_explorer::{log_critical, log_error, log_info, log_warn};
+//!
+//! // Note: these macros write to the global Logger. In a real app, call
+//! // `Logger::init(settings_state)` during startup before logging.
 //! log_info!("Application started successfully.");
 //! log_warn!("This is a warning message.");
 //! log_error!("An error occurred while processing the request.");
@@ -196,6 +200,9 @@ impl Logger {
     ///
     /// # Example
     /// ```rust
+    /// # use file_explorer::state::logging::Logger;
+    /// # use file_explorer::state::SettingsState;
+    /// # use std::sync::{Arc, Mutex};
     /// let app_state = Arc::new(Mutex::new(SettingsState::new()));
     /// Logger::init(app_state.clone());
     /// ```

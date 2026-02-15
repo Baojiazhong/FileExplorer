@@ -12,12 +12,21 @@ use tauri::State;
 /// * `Err(String)` - An error message if the templates can't be retrieved
 ///
 /// # Example
-/// ```rust
-/// let result = get_template_paths_as_json(state).await;
-/// match result {
-///     Ok(json_paths) => println!("Available templates: {}", json_paths),
-///     Err(e) => eprintln!("Error getting templates: {}", e),
-/// }
+/// ```rust,no_run
+/// use file_explorer::commands::template_commands::get_template_paths_as_json_impl;
+/// use file_explorer::state::meta_data::MetaDataState;
+/// use std::sync::{Arc, Mutex};
+///
+/// let state = Arc::new(Mutex::new(MetaDataState::new()));
+///
+/// let rt = tokio::runtime::Runtime::new().unwrap();
+/// rt.block_on(async {
+///     let result = get_template_paths_as_json_impl(state).await;
+///     match result {
+///         Ok(json_paths) => println!("Available templates: {}", json_paths),
+///         Err(e) => eprintln!("Error getting templates: {}", e),
+///     }
+/// });
 /// ```
 #[tauri::command]
 pub async fn get_template_paths_as_json(
@@ -74,12 +83,21 @@ pub async fn get_template_paths_as_json_impl(
 /// * `Err(String)` - An error message if the template cannot be added
 ///
 /// # Example
-/// ```rust
-/// let result = add_template(state, "/path/to/my/template").await;
-/// match result {
-///     Ok(msg) => println!("{}", msg),  // Template 'template' added successfully (1024 bytes)
-///     Err(e) => eprintln!("Error adding template: {}", e),
-/// }
+/// ```rust,no_run
+/// use file_explorer::commands::template_commands::add_template_impl;
+/// use file_explorer::state::meta_data::MetaDataState;
+/// use std::sync::{Arc, Mutex};
+///
+/// let state = Arc::new(Mutex::new(MetaDataState::new()));
+///
+/// let rt = tokio::runtime::Runtime::new().unwrap();
+/// rt.block_on(async {
+///     let result = add_template_impl(state, "/path/to/my/template").await;
+///     match result {
+///         Ok(msg) => println!("{}", msg),
+///         Err(e) => eprintln!("Error adding template: {}", e),
+///     }
+/// });
 /// ```
 #[tauri::command]
 pub async fn add_template(
@@ -180,12 +198,17 @@ pub async fn add_template_impl(
 /// * `Err(String)` - An error message if the template cannot be applied
 ///
 /// # Example
-/// ```rust
-/// let result = use_template("/path/to/template", "/path/to/destination").await;
-/// match result {
-///     Ok(msg) => println!("{}", msg),  // Template applied successfully (1024 bytes copied)
-///     Err(e) => eprintln!("Error applying template: {}", e),
-/// }
+/// ```rust,no_run
+/// use file_explorer::commands::template_commands::use_template;
+///
+/// let rt = tokio::runtime::Runtime::new().unwrap();
+/// rt.block_on(async {
+///     let result = use_template("/path/to/template", "/path/to/destination").await;
+///     match result {
+///         Ok(msg) => println!("{}", msg),
+///         Err(e) => eprintln!("Error applying template: {}", e),
+///     }
+/// });
 /// ```
 #[tauri::command]
 pub async fn use_template(template_path: &str, dest_path: &str) -> Result<String, String> {
@@ -242,12 +265,21 @@ pub async fn use_template_impl(template_path: &str, dest_path: &str) -> Result<S
 /// * `Err(String)` - An error message if the template cannot be removed
 ///
 /// # Example
-/// ```rust
-/// let result = remove_template(state, "/path/to/templates/my_template").await;
-/// match result {
-///     Ok(msg) => println!("{}", msg),  // Template removed successfully
-///     Err(e) => eprintln!("Error removing template: {}", e),
-/// }
+/// ```rust,no_run
+/// use file_explorer::commands::template_commands::remove_template_impl;
+/// use file_explorer::state::meta_data::MetaDataState;
+/// use std::sync::{Arc, Mutex};
+///
+/// let state = Arc::new(Mutex::new(MetaDataState::new()));
+///
+/// let rt = tokio::runtime::Runtime::new().unwrap();
+/// rt.block_on(async {
+///     let result = remove_template_impl(state, "/path/to/templates/my_template").await;
+///     match result {
+///         Ok(msg) => println!("{}", msg),
+///         Err(e) => eprintln!("Error removing template: {}", e),
+///     }
+/// });
 /// ```
 #[tauri::command]
 pub async fn remove_template(

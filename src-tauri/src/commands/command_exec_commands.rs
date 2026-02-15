@@ -30,12 +30,17 @@ struct CommandResponse {
 ///
 /// # Example
 ///
-/// ```rust
-/// let result = execute_command("ls -la".to_string(), Some("/home/user".to_string())).await;
-/// match result {
-///     Ok(output) => println!("Command output: {}", output),
-///     Err(err) => println!("Error executing command: {}", err),
-/// }
+/// ```rust,no_run
+/// use file_explorer::commands::command_exec_commands::execute_command;
+///
+/// let rt = tokio::runtime::Runtime::new().unwrap();
+/// rt.block_on(async {
+///     let result = execute_command("ls -la".to_string(), Some("/home/user".to_string())).await;
+///     match result {
+///         Ok(output) => println!("Command output: {}", output),
+///         Err(err) => println!("Error executing command: {}", err),
+///     }
+/// });
 /// ```
 #[tauri::command]
 pub async fn execute_command(

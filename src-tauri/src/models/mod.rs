@@ -10,8 +10,9 @@ pub use volume::VolumeInformation;
 mod directory_entries_helper;
 pub use directory_entries_helper::Entries;
 pub use directory_entries_helper::{
-    count_subdirectories, count_subfiles, format_system_time, get_access_permission_number,
-    get_access_permission_string, is_hidden,
+    access_permission_string_windows, count_subdirectories, count_subfiles,
+    count_subfiles_and_subdirectories, format_system_time, get_access_permission_number,
+    get_access_permission_string, get_directory_size_in_bytes, is_hidden,
 };
 
 pub mod backend_settings;

@@ -22,13 +22,20 @@ type SearchResult = Vec<(String, f32)>;
 ///
 /// # Example
 /// ```rust
-/// let result = search("document".to_string(), search_engine_state).await;
+/// use file_explorer::commands::search_engine_commands::search_impl;
+/// use file_explorer::state::{SearchEngineState, SettingsState};
+/// use std::sync::{Arc, Mutex};
+///
+/// let settings_state = Arc::new(Mutex::new(SettingsState::new()));
+/// let search_engine_state = Arc::new(Mutex::new(SearchEngineState::new(settings_state)));
+///
+/// let result = search_impl("document".to_string(), search_engine_state);
 /// match result {
 ///     Ok(matches) => {
 ///         for (path, score) in matches {
 ///             println!("Match: {} (score: {})", path, score);
 ///         }
-///     },
+///     }
 ///     Err(err) => println!("Search error: {}", err),
 /// }
 /// ```
@@ -63,17 +70,24 @@ pub fn search_impl(
 ///
 /// # Example
 /// ```rust
-/// let result = search_with_extension(
+/// use file_explorer::commands::search_engine_commands::search_with_extension_impl;
+/// use file_explorer::state::{SearchEngineState, SettingsState};
+/// use std::sync::{Arc, Mutex};
+///
+/// let settings_state = Arc::new(Mutex::new(SettingsState::new()));
+/// let search_engine_state = Arc::new(Mutex::new(SearchEngineState::new(settings_state)));
+///
+/// let result = search_with_extension_impl(
 ///     "document".to_string(),
 ///     vec!["txt".to_string(), "md".to_string()],
-///     search_engine_state
-/// ).await;
+///     search_engine_state,
+/// );
 /// match result {
 ///     Ok(matches) => {
 ///         for (path, score) in matches {
 ///             println!("Match: {} (score: {})", path, score);
 ///         }
-///     },
+///     }
 ///     Err(err) => println!("Search error: {}", err),
 /// }
 /// ```
@@ -116,8 +130,15 @@ pub fn search_with_extension_impl(
 /// * `Err(String)` - If there was an error starting the indexing process
 ///
 /// # Example
-/// ```rust
-/// let result = add_paths_recursive("/path/to/documents".to_string(), search_engine_state).await;
+/// ```rust,no_run
+/// use file_explorer::commands::search_engine_commands::add_paths_recursive_impl;
+/// use file_explorer::state::{SearchEngineState, SettingsState};
+/// use std::sync::{Arc, Mutex};
+///
+/// let settings_state = Arc::new(Mutex::new(SettingsState::new()));
+/// let search_engine_state = Arc::new(Mutex::new(SearchEngineState::new(settings_state)));
+///
+/// let result = add_paths_recursive_impl("/path/to/documents".to_string(), search_engine_state);
 /// match result {
 ///     Ok(_) => println!("Started indexing the directory"),
 ///     Err(err) => println!("Failed to start indexing: {}", err),
@@ -205,8 +226,15 @@ pub fn add_paths_recursive_impl(
 /// * `Err(String)` - If there was an error adding the file
 ///
 /// # Example
-/// ```rust
-/// let result = add_path("/path/to/document.txt".to_string(), search_engine_state).await;
+/// ```rust,no_run
+/// use file_explorer::commands::search_engine_commands::add_path_impl;
+/// use file_explorer::state::{SearchEngineState, SettingsState};
+/// use std::sync::{Arc, Mutex};
+///
+/// let settings_state = Arc::new(Mutex::new(SettingsState::new()));
+/// let search_engine_state = Arc::new(Mutex::new(SearchEngineState::new(settings_state)));
+///
+/// let result = add_path_impl("/path/to/document.txt".to_string(), search_engine_state);
 /// match result {
 ///     Ok(_) => println!("File added to index"),
 ///     Err(err) => println!("Failed to add file: {}", err),
@@ -239,8 +267,15 @@ pub fn add_path_impl(path: String, state: Arc<Mutex<SearchEngineState>>) -> Resu
 /// * `Err(String)` - If there was an error removing the directory
 ///
 /// # Example
-/// ```rust
-/// let result = remove_paths_recursive("/path/to/old_documents".to_string(), search_engine_state).await;
+/// ```rust,no_run
+/// use file_explorer::commands::search_engine_commands::remove_paths_recursive_impl;
+/// use file_explorer::state::{SearchEngineState, SettingsState};
+/// use std::sync::{Arc, Mutex};
+///
+/// let settings_state = Arc::new(Mutex::new(SettingsState::new()));
+/// let search_engine_state = Arc::new(Mutex::new(SearchEngineState::new(settings_state)));
+///
+/// let result = remove_paths_recursive_impl("/path/to/old_documents".to_string(), search_engine_state);
 /// match result {
 ///     Ok(_) => println!("Directory removed from index"),
 ///     Err(err) => println!("Failed to remove directory: {}", err),
@@ -276,8 +311,15 @@ pub fn remove_paths_recursive_impl(
 /// * `Err(String)` - If there was an error removing the file
 ///
 /// # Example
-/// ```rust
-/// let result = remove_path("/path/to/old_document.txt".to_string(), search_engine_state).await;
+/// ```rust,no_run
+/// use file_explorer::commands::search_engine_commands::remove_path_impl;
+/// use file_explorer::state::{SearchEngineState, SettingsState};
+/// use std::sync::{Arc, Mutex};
+///
+/// let settings_state = Arc::new(Mutex::new(SettingsState::new()));
+/// let search_engine_state = Arc::new(Mutex::new(SearchEngineState::new(settings_state)));
+///
+/// let result = remove_path_impl("/path/to/old_document.txt".to_string(), search_engine_state);
 /// match result {
 ///     Ok(_) => println!("File removed from index"),
 ///     Err(err) => println!("Failed to remove file: {}", err),
@@ -310,7 +352,14 @@ pub fn remove_path_impl(path: String, state: Arc<Mutex<SearchEngineState>>) -> R
 ///
 /// # Example
 /// ```rust
-/// let result = clear_search_engine(search_engine_state).await;
+/// use file_explorer::commands::search_engine_commands::clear_search_engine_impl;
+/// use file_explorer::state::{SearchEngineState, SettingsState};
+/// use std::sync::{Arc, Mutex};
+///
+/// let settings_state = Arc::new(Mutex::new(SettingsState::new()));
+/// let search_engine_state = Arc::new(Mutex::new(SearchEngineState::new(settings_state)));
+///
+/// let result = clear_search_engine_impl(search_engine_state);
 /// match result {
 ///     Ok(_) => println!("Search engine index cleared"),
 ///     Err(err) => println!("Failed to clear search engine: {}", err),
@@ -357,7 +406,14 @@ pub fn clear_search_engine_impl(state: Arc<Mutex<SearchEngineState>>) -> Result<
 ///
 /// # Example
 /// ```rust
-/// let result = get_search_engine_info(search_engine_state).await;
+/// use file_explorer::commands::search_engine_commands::get_search_engine_info_impl;
+/// use file_explorer::state::{SearchEngineState, SettingsState};
+/// use std::sync::{Arc, Mutex};
+///
+/// let settings_state = Arc::new(Mutex::new(SettingsState::new()));
+/// let search_engine_state = Arc::new(Mutex::new(SearchEngineState::new(settings_state)));
+///
+/// let result = get_search_engine_info_impl(search_engine_state);
 /// match result {
 ///     Ok(info) => {
 ///         println!("Search engine status: {:?}", info.status);
@@ -365,24 +421,23 @@ pub fn clear_search_engine_impl(state: Arc<Mutex<SearchEngineState>>) -> Result<
 ///         println!("Files indexed: {}/{}", info.progress.files_indexed, info.progress.files_discovered);
 ///         println!("Currently indexing: {:?}", info.progress.current_path);
 ///         println!("Remaining time estimate: {:?} ms", info.progress.estimated_time_remaining);
-///         
+///
 ///         println!("Total searches: {}", info.metrics.total_searches);
 ///         println!("Average search time: {:?} ms", info.metrics.average_search_time_ms);
 ///         println!("Last indexing duration: {:?} ms", info.metrics.last_indexing_duration_ms);
-///         
+///
 ///         println!("Recent searches: {:?}", info.recent_activity.recent_searches);
 ///         println!("Most accessed paths: {:?}", info.recent_activity.most_accessed_paths);
-///         
+///
 ///         println!("Index size: {} entries", info.stats.trie_size);
 ///         println!("Cache size: {} entries", info.stats.cache_size);
-///         
+///
 ///         println!("Last updated: {}", info.last_updated);
-///         
-///         // Convert timestamp to readable date if needed
+///
 ///         let datetime = chrono::DateTime::from_timestamp_millis(info.last_updated as i64)
 ///             .map(|dt| dt.to_rfc3339());
 ///         println!("Last updated (readable): {:?}", datetime);
-///     },
+///     }
 ///     Err(err) => println!("Failed to get search engine info: {}", err),
 /// }
 /// ```
@@ -755,13 +810,20 @@ mod tests_autocomplete_commands {
 ///
 /// # Example
 /// ```rust
-/// let suggestions = get_suggestions("doc".to_string(), Some(5), search_engine_state).await;
+/// use file_explorer::commands::search_engine_commands::get_suggestions_impl;
+/// use file_explorer::state::{SearchEngineState, SettingsState};
+/// use std::sync::{Arc, Mutex};
+///
+/// let settings_state = Arc::new(Mutex::new(SettingsState::new()));
+/// let search_engine_state = Arc::new(Mutex::new(SearchEngineState::new(settings_state)));
+///
+/// let suggestions = get_suggestions_impl("doc".to_string(), 5, search_engine_state);
 /// match suggestions {
 ///     Ok(completions) => {
 ///         for suggestion in completions {
 ///             println!("Suggestion: {}", suggestion);
 ///         }
-///     },
+///     }
 ///     Err(err) => println!("Suggestion error: {}", err),
 /// }
 /// ```

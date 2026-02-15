@@ -83,6 +83,7 @@ impl PathMatcher {
     ///
     /// # Example
     /// ```rust
+    /// # use file_explorer::search_engine::PathMatcher;
     /// let matcher = PathMatcher::new();
     /// assert_eq!(matcher.search("test", 10).len(), 0); // Empty matcher returns no results
     /// ```
@@ -126,8 +127,13 @@ impl PathMatcher {
     ///
     /// # Example
     /// ```rust
-    /// assert_eq!(PathMatcher::fast_lowercase(b'A'), b'a');
-    /// assert_eq!(PathMatcher::fast_lowercase(b'z'), b'z');
+    /// // `fast_lowercase` is an internal helper and not part of the public API.
+    /// // Exercise the public behavior (case-insensitive search) instead.
+    /// # use file_explorer::search_engine::PathMatcher;
+    /// let mut matcher = PathMatcher::new();
+    /// matcher.add_path("/HOME/USER/REPORT.pdf");
+    /// let results = matcher.search("report", 10);
+    /// assert_eq!(results.len(), 1);
     /// ```
     #[inline(always)]
     fn fast_lowercase(c: u8) -> u8 {
@@ -144,6 +150,7 @@ impl PathMatcher {
     ///
     /// # Example
     /// ```rust
+    /// # use file_explorer::search_engine::PathMatcher;
     /// let mut matcher = PathMatcher::new();
     /// matcher.add_path("/home/user/documents/report.pdf");
     /// let results = matcher.search("report", 10);
@@ -173,6 +180,7 @@ impl PathMatcher {
     ///
     /// # Example
     /// ```rust
+    /// # use file_explorer::search_engine::PathMatcher;
     /// let mut matcher = PathMatcher::new();
     /// matcher.add_path("/home/user/file.txt");
     /// assert_eq!(matcher.search("file", 10).len(), 1);
@@ -356,6 +364,7 @@ impl PathMatcher {
     ///
     /// # Example
     /// ```rust
+    /// # use file_explorer::search_engine::PathMatcher;
     /// let mut matcher = PathMatcher::new();
     /// matcher.add_path("/home/user/documents/presentation.pptx");
     /// matcher.add_path("/home/user/images/photo.jpg");

@@ -166,6 +166,9 @@ impl SearchEngineState {
     /// # Example
     ///
     /// ```rust
+    /// # use file_explorer::state::searchengine_data::SearchEngineState;
+    /// # use file_explorer::state::SettingsState;
+    /// # use std::sync::{Arc, Mutex};
     /// let settings_state = Arc::new(Mutex::new(SettingsState::new()));
     /// let search_engine = SearchEngineState::new(settings_state);
     /// ```
@@ -256,7 +259,12 @@ impl SearchEngineState {
     /// # Example
     ///
     /// ```rust
-    /// let search_engine = SearchEngineState::new();
+    /// # use file_explorer::state::searchengine_data::SearchEngineState;
+    /// # use file_explorer::state::SettingsState;
+    /// # use std::path::PathBuf;
+    /// # use std::sync::{Arc, Mutex};
+    /// let settings_state = Arc::new(Mutex::new(SettingsState::new()));
+    /// let search_engine = SearchEngineState::new(settings_state);
     /// let result = search_engine.start_indexing(PathBuf::from("/path/to/index"));
     /// ```
     #[allow(dead_code)]
@@ -786,7 +794,11 @@ impl SearchEngineState {
     /// # Example
     ///
     /// ```rust
-    /// let search_engine = SearchEngineState::new();
+    /// # use file_explorer::state::searchengine_data::SearchEngineState;
+    /// # use file_explorer::state::SettingsState;
+    /// # use std::sync::{Arc, Mutex};
+    /// let settings_state = Arc::new(Mutex::new(SettingsState::new()));
+    /// let search_engine = SearchEngineState::new(settings_state);
     /// // ... index some files first ...
     /// let results = search_engine.search("document").unwrap();
     /// for (path, score) in results {
@@ -923,9 +935,18 @@ impl SearchEngineState {
     /// # Example
     ///
     /// ```rust
-    /// let search_engine = SearchEngineState::new();
+    /// # use file_explorer::state::searchengine_data::SearchEngineState;
+    /// # use file_explorer::state::SettingsState;
+    /// # use std::sync::{Arc, Mutex};
+    /// let settings_state = Arc::new(Mutex::new(SettingsState::new()));
+    /// let search_engine = SearchEngineState::new(settings_state);
     /// // Prioritize markdown and text files in search results
-    /// let results = search_engine.search_by_extension("document", vec!["md".to_string(), "txt".to_string()]).unwrap();
+    /// let results = search_engine
+    ///     .search_by_extension(
+    ///         "document",
+    ///         vec!["md".to_string(), "txt".to_string()],
+    ///     )
+    ///     .unwrap();
     /// ```
     ///
     /// # Performance

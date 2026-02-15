@@ -7,7 +7,8 @@ use serde::{Deserialize, Serialize};
 /// file extension preferences.
 ///
 /// # Example
-/// ```
+/// ```rust
+/// # use file_explorer::models::ranking_config::RankingConfig;
 /// let config = RankingConfig {
 ///     frequency_weight: 0.1,
 ///     max_frequency_boost: 0.6,

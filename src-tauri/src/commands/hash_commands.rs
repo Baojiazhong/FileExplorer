@@ -138,12 +138,21 @@ async fn read_file(path: &Path) -> Result<Vec<u8>, HashError> {
 /// * `Err(String)` - An error message if the hash cannot be generated.
 ///
 /// # Example
-/// ```rust
-/// let result = gen_hash_and_return_string("/path/to/file", state).await;
-/// match result {
-///     Ok(hash) => println!("Generated hash: {}", hash),
-///     Err(err) => println!("Error generating hash: {}", err),
-/// }
+/// ```rust,no_run
+/// use file_explorer::commands::hash_commands::gen_hash_and_return_string_impl;
+/// use file_explorer::state::SettingsState;
+/// use std::sync::{Arc, Mutex};
+///
+/// let settings_state = Arc::new(Mutex::new(SettingsState::new()));
+///
+/// let rt = tokio::runtime::Runtime::new().unwrap();
+/// rt.block_on(async {
+///     let result = gen_hash_and_return_string_impl("/path/to/file".to_string(), settings_state).await;
+///     match result {
+///         Ok(hash) => println!("Generated hash: {}", hash),
+///         Err(err) => println!("Error generating hash: {}", err),
+///     }
+/// });
 /// ```
 #[tauri::command]
 pub async fn gen_hash_and_return_string(
@@ -183,12 +192,26 @@ pub async fn gen_hash_and_return_string_impl(
 /// * `Err(String)` - An error message if the hash cannot be generated or saved.
 ///
 /// # Example
-/// ```rust
-/// let result = gen_hash_and_save_to_file("/path/to/source", "/path/to/output", state).await;
-/// match result {
-///     Ok(hash) => println!("Generated and saved hash: {}", hash),
-///     Err(err) => println!("Error generating/saving hash: {}", err),
-/// }
+/// ```rust,no_run
+/// use file_explorer::commands::hash_commands::gen_hash_and_save_to_file_impl;
+/// use file_explorer::state::SettingsState;
+/// use std::sync::{Arc, Mutex};
+///
+/// let settings_state = Arc::new(Mutex::new(SettingsState::new()));
+///
+/// let rt = tokio::runtime::Runtime::new().unwrap();
+/// rt.block_on(async {
+///     let result = gen_hash_and_save_to_file_impl(
+///         "/path/to/source".to_string(),
+///         "/path/to/output".to_string(),
+///         settings_state,
+///     )
+///     .await;
+///     match result {
+///         Ok(hash) => println!("Generated and saved hash: {}", hash),
+///         Err(err) => println!("Error generating/saving hash: {}", err),
+///     }
+/// });
 /// ```
 #[tauri::command]
 pub async fn gen_hash_and_save_to_file(
@@ -234,12 +257,26 @@ pub async fn gen_hash_and_save_to_file_impl(
 /// * `Err(String)` - An error message if the hash comparison cannot be performed.
 ///
 /// # Example
-/// ```rust
-/// let result = compare_file_or_dir_with_hash("/path/to/file", "expected_hash", state).await;
-/// match result {
-///     Ok(matches) => println!("Hash comparison result: {}", matches),
-///     Err(err) => println!("Error comparing hash: {}", err),
-/// }
+/// ```rust,no_run
+/// use file_explorer::commands::hash_commands::compare_file_or_dir_with_hash_impl;
+/// use file_explorer::state::SettingsState;
+/// use std::sync::{Arc, Mutex};
+///
+/// let settings_state = Arc::new(Mutex::new(SettingsState::new()));
+///
+/// let rt = tokio::runtime::Runtime::new().unwrap();
+/// rt.block_on(async {
+///     let result = compare_file_or_dir_with_hash_impl(
+///         "/path/to/file".to_string(),
+///         "expected_hash".to_string(),
+///         settings_state,
+///     )
+///     .await;
+///     match result {
+///         Ok(matches) => println!("Hash comparison result: {}", matches),
+///         Err(err) => println!("Error comparing hash: {}", err),
+///     }
+/// });
 /// ```
 #[tauri::command]
 pub async fn compare_file_or_dir_with_hash(

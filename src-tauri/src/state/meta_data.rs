@@ -105,6 +105,8 @@ impl MetaDataState {
     /// # Example
     ///
     /// ```rust
+    /// use file_explorer::state::meta_data::MetaDataState;
+    ///
     /// let metadata_state = MetaDataState::new();
     /// ```
     pub fn new() -> Self {
@@ -151,8 +153,11 @@ impl MetaDataState {
     /// # Example
     ///
     /// ```rust
+    /// use file_explorer::state::meta_data::MetaDataState;
+    ///
     /// let metadata_state = MetaDataState::new();
     /// metadata_state.refresh_volumes()?;
+    /// # Ok::<(), std::io::Error>(())
     /// ```
     pub fn refresh_volumes(&self) -> io::Result<()> {
         let mut meta_data = self.0.lock().unwrap();
@@ -174,8 +179,11 @@ impl MetaDataState {
     /// # Example
     ///
     /// ```rust
+    /// use file_explorer::state::meta_data::MetaDataState;
+    ///
     /// let metadata_state = MetaDataState::new();
     /// metadata_state.update_template_paths()?;
+    /// # Ok::<(), std::io::Error>(())
     /// ```
     pub fn update_template_paths(&self) -> io::Result<()> {
         let mut meta_data = self.0.lock().unwrap();
@@ -199,10 +207,13 @@ impl MetaDataState {
     ///
     /// # Example
     ///
-    /// ```rust
+    /// ```rust,no_run
+    /// use file_explorer::state::meta_data::MetaDataState;
+    ///
     /// let metadata_state = MetaDataState::new();
     /// let metadata = metadata_state.0.lock().unwrap().clone();
     /// metadata_state.write_meta_data_to_file(&metadata)?;
+    /// # Ok::<(), std::io::Error>(())
     /// ```
     pub fn write_meta_data_to_file(&self, meta_data: &MetaData) -> io::Result<()> {
         let user_config_file_path = &meta_data.abs_file_path_buf;
@@ -231,7 +242,10 @@ impl MetaDataState {
     /// # Example
     ///
     /// ```rust
-    /// let default_metadata = MetaDataState::write_default_meta_data_to_file_and_save_in_state();
+    /// use file_explorer::state::meta_data::MetaDataState;
+    ///
+    /// let metadata_state = MetaDataState::new();
+    /// let metadata = metadata_state.0.lock().unwrap().clone();
     /// ```
     fn write_default_meta_data_to_file_and_save_in_state() -> MetaData {
         let defaults = MetaData::default();
@@ -253,9 +267,17 @@ impl MetaDataState {
     ///
     /// # Example
     ///
-    /// ```rust
+    /// ```rust,no_run
+    /// use file_explorer::state::meta_data::MetaData;
+    /// use file_explorer::state::meta_data::MetaDataState;
+    /// use std::sync::{Arc, Mutex};
+    ///
     /// let metadata = MetaData::default();
-    /// let saved_metadata = MetaDataState::write_meta_data_to_file_and_save_in_state(metadata);
+    /// // This helper is private; in normal use you create a MetaDataState and call
+    /// // `write_meta_data_to_file` on it.
+    /// let metadata_state = MetaDataState(Arc::new(Mutex::new(metadata.clone())));
+    /// metadata_state.write_meta_data_to_file(&metadata)?;
+    /// # Ok::<(), std::io::Error>(())
     /// ```
     fn write_meta_data_to_file_and_save_in_state(defaults: MetaData) -> MetaData {
         let meta_data_state = Self(Arc::new(Mutex::new(defaults.clone())));
@@ -284,8 +306,10 @@ impl MetaDataState {
     /// # Example
     ///
     /// ```rust
+    /// # use std::path::PathBuf;
     /// let path = PathBuf::from("metadata.json");
     /// let metadata = MetaDataState::read_meta_data_from_file(&path)?;
+    /// # Ok::<(), std::io::Error>(())
     /// ```
     #[cfg(test)]
     pub fn read_meta_data_from_file(path: &PathBuf) -> io::Result<MetaData> {

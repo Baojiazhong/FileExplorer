@@ -176,6 +176,8 @@ impl SettingsState {
     /// # Example
     ///
     /// ```rust
+    /// use file_explorer::state::SettingsState;
+    ///
     /// let settings_state = SettingsState::new();
     /// ```
     pub fn new() -> Self {
@@ -207,9 +209,12 @@ impl SettingsState {
     /// # Example
     ///
     /// ```rust
+    /// use file_explorer::state::settings_data::Settings;
+    ///
     /// let settings = Settings::default();
-    /// let map = settings_to_json_map(&settings)?;
+    /// let map = file_explorer::state::SettingsState::settings_to_json_map(&settings)?;
     /// println!("Settings map: {:?}", map);
+    /// # Ok::<(), std::io::Error>(())
     /// ```
     pub fn settings_to_json_map(
         settings: &Settings,
@@ -238,11 +243,16 @@ impl SettingsState {
     /// # Example
     ///
     /// ```rust
-    /// let mut map = serde_json::Map::new();
-    /// map.insert("theme".to_string(), json!("dark"));
+    /// use file_explorer::state::SettingsState;
+    /// use file_explorer::state::settings_data::Settings;
+    /// use serde_json::json;
     ///
-    /// let settings = json_map_to_settings(map)?;
-    /// println!("Converted settings: {:?}", settings);
+    /// // Start from a full Settings JSON map so required fields exist.
+    /// let mut map = SettingsState::settings_to_json_map(&Settings::default()).unwrap();
+    /// map.insert("darkmode".to_string(), json!(true));
+    ///
+    /// let settings = SettingsState::json_map_to_settings(map).unwrap();
+    /// assert!(settings.darkmode);
     /// ```
     pub fn json_map_to_settings(map: serde_json::Map<String, Value>) -> Result<Settings, Error> {
         serde_json::from_value(Value::Object(map))
@@ -268,8 +278,13 @@ impl SettingsState {
     /// # Example
     ///
     /// ```rust
-    /// let result = settings_state.update_setting_field("theme", json!("dark"))?;
+    /// use file_explorer::state::SettingsState;
+    /// use serde_json::json;
+    ///
+    /// let settings_state = SettingsState::new();
+    /// let result = settings_state.update_setting_field("darkmode", json!(true))?;
     /// println!("Updated settings: {:?}", result);
+    /// # Ok::<(), std::io::Error>(())
     /// ```
     pub fn update_setting_field(&self, key: &str, value: Value) -> Result<Settings, Error> {
         let mut settings = self
@@ -376,8 +391,12 @@ impl SettingsState {
     /// # Example
     ///
     /// ```rust
-    /// let theme = settings_state.get_setting_field("theme")?;
-    /// println!("Current theme: {}", theme);
+    /// use file_explorer::state::SettingsState;
+    ///
+    /// let settings_state = SettingsState::new();
+    /// let darkmode = settings_state.get_setting_field("darkmode")?;
+    /// println!("Current darkmode: {}", darkmode);
+    /// # Ok::<(), std::io::Error>(())
     /// ```
     pub fn get_setting_field(&self, key: &str) -> Result<Value, Error> {
         let settings = self
@@ -473,12 +492,17 @@ impl SettingsState {
     /// # Example
     ///
     /// ```rust
+    /// use file_explorer::state::SettingsState;
+    /// use serde_json::json;
+    ///
+    /// let settings_state = SettingsState::new();
+    ///
     /// let mut updates = serde_json::Map::new();
-    /// updates.insert("theme".to_string(), json!("dark"));
-    /// updates.insert("notifications".to_string(), json!(true));
+    /// updates.insert("darkmode".to_string(), json!(true));
     ///
     /// let result = settings_state.update_multiple_settings(&updates)?;
     /// println!("Updated settings: {:?}", result);
+    /// # Ok::<(), std::io::Error>(())
     /// ```
     pub fn update_multiple_settings(
         &self,
@@ -514,9 +538,12 @@ impl SettingsState {
     /// # Example
     ///
     /// ```rust
+    /// use file_explorer::state::SettingsState;
+    ///
+    /// let settings_state = SettingsState::new();
     /// let result = settings_state.reset_settings();
     /// match result {
-    ///     Ok(settings) => println!("Settings have been reset to defaults."),
+    ///     Ok(_settings) => println!("Settings have been reset to defaults."),
     ///     Err(e) => eprintln!("Failed to reset settings: {}", e),
     /// }
     /// ```
@@ -546,6 +573,9 @@ impl SettingsState {
     /// # Example
     ///
     /// ```rust
+    /// use file_explorer::state::SettingsState;
+    /// use std::path::PathBuf;
+    ///
     /// let test_path = PathBuf::from("test_settings.json");
     /// let settings_state = SettingsState::new_with_path(test_path);
     /// ```
@@ -576,8 +606,12 @@ impl SettingsState {
     /// # Example
     ///
     /// ```rust
+    /// # use file_explorer::state::SettingsState;
+    /// # use file_explorer::state::settings_data::Settings;
+    /// let settings_state = SettingsState::new();
     /// let settings = Settings::default();
-    /// settings_state.write_settings_to_file(&settings)?;
+    /// // `write_settings_to_file` is a private helper, but it's exercised by the public update APIs.
+    /// settings_state.update_setting_field("darkmode", true.into()).unwrap();
     /// ```
     fn write_settings_to_file(&self, settings: &Settings) -> io::Result<()> {
         let user_config_file_path = &settings.abs_file_path_buf;
@@ -605,7 +639,10 @@ impl SettingsState {
     /// # Example
     ///
     /// ```rust
-    /// let default_settings = SettingsState::write_default_settings_to_file_and_save_in_state();
+    /// use file_explorer::state::SettingsState;
+    ///
+    /// let settings = SettingsState::new();
+    /// // Settings are written automatically if missing/invalid.
     /// ```
     fn write_default_settings_to_file_and_save_in_state() -> Settings {
         let defaults = Settings::default();
@@ -628,8 +665,11 @@ impl SettingsState {
     /// # Example
     ///
     /// ```rust
+    /// # use file_explorer::state::SettingsState;
+    /// # use file_explorer::state::settings_data::Settings;
     /// let settings = Settings::default();
-    /// let saved_settings = SettingsState::write_settings_to_file_and_save_in_state(settings);
+    /// let settings_state = SettingsState::new();
+    /// settings_state.update_setting_field("darkmode", settings.darkmode.into()).unwrap();
     /// ```
     fn write_settings_to_file_and_save_in_state(defaults: Settings) -> Settings {
         let settings_state = Self(Arc::new(Mutex::new(defaults.clone())));
@@ -657,9 +697,21 @@ impl SettingsState {
     /// # Example
     ///
     /// ```rust
-    /// let test_path = PathBuf::from("test_settings.json");
-    /// let settings = SettingsState::read_settings_from_file(&test_path)?;
-    /// println!("Read settings: {:?}", settings);
+    /// # use file_explorer::state::SettingsState;
+    /// # use file_explorer::state::settings_data::Settings;
+    /// # use std::io::Write;
+    /// # use std::path::PathBuf;
+    /// // Write a settings JSON file and read it back.
+    /// let dir = tempfile::tempdir().unwrap();
+    /// let test_path: PathBuf = dir.path().join("test_settings.json");
+    /// let settings = Settings::default();
+    /// std::fs::File::create(&test_path)
+    ///     .unwrap()
+    ///     .write_all(serde_json::to_string_pretty(&settings).unwrap().as_bytes())
+    ///     .unwrap();
+    ///
+    /// let loaded = SettingsState::read_settings_from_file(&test_path).unwrap();
+    /// println!("Read settings: {:?}", loaded);
     /// ```
     pub fn read_settings_from_file(path: &PathBuf) -> io::Result<Settings> {
         use std::io::Read;

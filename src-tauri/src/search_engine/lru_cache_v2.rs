@@ -89,6 +89,7 @@ where
     /// # Example
     ///
     /// ```rust
+    /// # use file_explorer::search_engine::LruPathCache;
     /// let cache: LruPathCache<String, String> = LruPathCache::new(100);
     /// ```
     pub fn new(capacity: usize) -> Self {
@@ -121,6 +122,7 @@ where
     /// # Example
     ///
     /// ```rust
+    /// # use file_explorer::search_engine::LruPathCache;
     /// use std::time::Duration;
     ///
     /// let cache: LruPathCache<String, String> = LruPathCache::with_ttl(
@@ -153,6 +155,7 @@ where
     /// # Example
     ///
     /// ```rust
+    /// # use file_explorer::search_engine::LruPathCache;
     /// let mut cache = LruPathCache::new(100);
     /// cache.insert("key1".to_string(), "value1".to_string());
     ///
@@ -200,6 +203,7 @@ where
     /// # Example
     ///
     /// ```rust
+    /// # use file_explorer::search_engine::LruPathCache;
     /// let mut cache = LruPathCache::new(100);
     /// cache.insert("key1".to_string(), "value1".to_string());
     ///
@@ -256,6 +260,7 @@ where
     /// # Example
     ///
     /// ```rust
+    /// # use file_explorer::search_engine::LruPathCache;
     /// let mut cache = LruPathCache::new(100);
     /// cache.insert("key1".to_string(), "value1".to_string());
     ///
@@ -300,6 +305,7 @@ where
     /// # Example
     ///
     /// ```rust
+    /// # use file_explorer::search_engine::LruPathCache;
     /// let mut cache = LruPathCache::new(100);
     ///
     /// // Insert a new entry
@@ -357,6 +363,7 @@ where
     /// # Example
     ///
     /// ```rust
+    /// # use file_explorer::search_engine::LruPathCache;
     /// let mut cache = LruPathCache::new(100);
     /// cache.insert("key1".to_string(), "value1".to_string());
     /// cache.insert("key2".to_string(), "value2".to_string());
@@ -390,6 +397,7 @@ where
     /// # Example
     ///
     /// ```rust
+    /// # use file_explorer::search_engine::LruPathCache;
     /// let mut cache = LruPathCache::new(100);
     /// cache.insert("key1".to_string(), "value1".to_string());
     /// cache.insert("key2".to_string(), "value2".to_string());
@@ -414,6 +422,7 @@ where
     /// # Example
     ///
     /// ```rust
+    /// # use file_explorer::search_engine::LruPathCache;
     /// let mut cache = LruPathCache::new(100);
     /// assert!(cache.is_empty());
     ///
@@ -494,8 +503,9 @@ where
     /// # Example
     ///
     /// ```rust
-    /// use std::time::Duration;
+    /// # use file_explorer::search_engine::LruPathCache;
     /// use std::thread::sleep;
+    /// use std::time::Duration;
     ///
     /// let mut cache = LruPathCache::with_ttl(100, Duration::from_millis(100));
     /// cache.insert("key1".to_string(), "value1".to_string());

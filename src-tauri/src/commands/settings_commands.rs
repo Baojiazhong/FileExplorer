@@ -19,8 +19,13 @@ use tauri::State;
 ///
 /// # Example
 ///
-/// ```rust
-/// let settings_json = get_settings_as_json(state);
+/// ```rust,no_run
+/// use file_explorer::commands::settings_commands::get_settings_as_json_impl;
+/// use file_explorer::state::SettingsState;
+/// use std::sync::{Arc, Mutex};
+///
+/// let state = Arc::new(Mutex::new(SettingsState::new()));
+/// let settings_json = get_settings_as_json_impl(state);
 /// println!("Current settings: {}", settings_json);
 /// ```
 #[tauri::command]
@@ -66,8 +71,13 @@ pub fn get_settings_as_json_impl(state: Arc<Mutex<SettingsState>>) -> String {
 ///
 /// # Example
 ///
-/// ```rust
-/// let result = get_setting_field(state, "theme".to_string());
+/// ```rust,no_run
+/// use file_explorer::commands::settings_commands::get_setting_field_impl;
+/// use file_explorer::state::SettingsState;
+/// use std::sync::{Arc, Mutex};
+///
+/// let state = Arc::new(Mutex::new(SettingsState::new()));
+/// let result = get_setting_field_impl(state, "theme".to_string());
 /// match result {
 ///     Ok(value) => println!("Theme setting: {}", value),
 ///     Err(err) => println!("Failed to get setting: {}", err),
@@ -118,8 +128,14 @@ pub fn get_setting_field_impl(
 ///
 /// # Example
 ///
-/// ```rust
-/// let result = update_settings_field(state, "theme".to_string(), json!("dark"));
+/// ```rust,no_run
+/// use file_explorer::commands::settings_commands::update_settings_field_impl;
+/// use file_explorer::state::SettingsState;
+/// use serde_json::json;
+/// use std::sync::{Arc, Mutex};
+///
+/// let state = Arc::new(Mutex::new(SettingsState::new()));
+/// let result = update_settings_field_impl(state, "theme".to_string(), json!("dark"));
 /// match result {
 ///     Ok(updated_settings) => println!("Updated settings: {}", updated_settings),
 ///     Err(err) => println!("Failed to update setting: {}", err),
@@ -174,12 +190,19 @@ pub fn update_settings_field_impl(
 ///
 /// # Example
 ///
-/// ```rust
+/// ```rust,no_run
+/// use file_explorer::commands::settings_commands::update_multiple_settings_impl;
+/// use file_explorer::state::SettingsState;
+/// use serde_json::json;
+/// use std::sync::{Arc, Mutex};
+///
+/// let state = Arc::new(Mutex::new(SettingsState::new()));
+///
 /// let mut updates = serde_json::Map::new();
 /// updates.insert("theme".to_string(), json!("dark"));
 /// updates.insert("notifications".to_string(), json!(true));
 ///
-/// let result = update_multiple_settings_command(state, updates);
+/// let result = update_multiple_settings_impl(state, updates);
 /// match result {
 ///     Ok(updated_settings) => println!("Updated settings: {}", updated_settings),
 ///     Err(err) => println!("Failed to update settings: {}", err),
@@ -231,8 +254,13 @@ pub fn update_multiple_settings_impl(
 ///
 /// # Example
 ///
-/// ```rust
-/// let result = reset_settings(state);
+/// ```rust,no_run
+/// use file_explorer::commands::settings_commands::reset_settings_impl;
+/// use file_explorer::state::SettingsState;
+/// use std::sync::{Arc, Mutex};
+///
+/// let state = Arc::new(Mutex::new(SettingsState::new()));
+/// let result = reset_settings_impl(state);
 /// match result {
 ///     Ok(_) => println!("Settings were reset to default."),
 ///     Err(err) => println!("Failed to reset settings: {}", err),

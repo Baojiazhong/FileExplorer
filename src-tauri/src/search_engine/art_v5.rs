@@ -770,9 +770,9 @@ impl ART {
     ///
     /// # Example
     /// ```rust
+    /// # use file_explorer::search_engine::art_v5::ART;
     /// let trie = ART::new(100); // Create a new ART with max 100 results
     /// assert_eq!(trie.len(), 0);
-    /// assert!(trie.is_empty());
     /// ```
     pub fn new(max_results: usize) -> Self {
         ART {
@@ -794,9 +794,13 @@ impl ART {
     ///
     /// # Example
     /// ```rust
-    /// let trie = ART::new(10);
-    /// let normalized = trie.normalize_path("C:\\Users\\Documents\\ file.txt");
-    /// assert_eq!(normalized, "C:/Users/Documents/file.txt");
+    /// // `normalize_path` is an internal helper. Public APIs normalize internally.
+    /// # use file_explorer::search_engine::art_v5::ART;
+    /// let mut trie = ART::new(10);
+    /// trie.insert("C:\\Users\\Documents\\ file.txt", 1.0);
+    /// let results = trie.search("Documents", None, true);
+    /// assert_eq!(results.len(), 1);
+    /// assert!(results[0].0.contains("Users"));
     /// ```
     fn normalize_path(&self, path: &str) -> String {
         let mut result = String::with_capacity(path.len());
@@ -1008,6 +1012,7 @@ impl ART {
     ///
     /// # Example
     /// ```rust
+    /// # use file_explorer::search_engine::art_v5::ART;
     /// let mut trie = ART::new(10);
     /// assert!(trie.insert("/home/user/documents/file.txt", 1.0));
     /// assert_eq!(trie.len(), 1);

@@ -25,12 +25,17 @@ use zip::ZipWriter;
 ///
 /// # Example
 ///
-/// ```rust
-/// let result = open_file("/path/to/file.txt").await;
-/// match result {
-///     Ok(contents) => println!("File contents: {}", contents),
-///     Err(err) => println!("Error opening file: {}", err),
-/// }
+/// ```rust,no_run
+/// use file_explorer::commands::file_system_operation_commands::open_file;
+///
+/// let rt = tokio::runtime::Runtime::new().unwrap();
+/// rt.block_on(async {
+///     let result = open_file("/path/to/file.txt").await;
+///     match result {
+///         Ok(contents) => println!("File contents: {}", contents),
+///         Err(err) => println!("Error opening file: {}", err),
+///     }
+/// });
 /// ```
 #[allow(dead_code)] //remove once the command is used again
 #[tauri::command]
@@ -99,19 +104,19 @@ pub async fn open_in_default_app(path: &str) -> Result<(), String> {
 /// - `Err(String)` - If there was an error during the opening or reading process.
 ///
 /// # Example
-/// ```rust
-/// let result = open_directory("/path/to/directory").await;
-/// match result {
-///    Ok(entries) => {
-///       for dir in entries.directories {
-///          println!("Directory: {}", dir.name);
-///       }
-///      for file in entries.files {
-///         println!("File: {}", file.name);
-///      }
-///   },
-///   Err(err) => println!("Error opening directory: {}", err),
-/// }
+/// ```rust,no_run
+/// use file_explorer::commands::file_system_operation_commands::open_directory;
+///
+/// let rt = tokio::runtime::Runtime::new().unwrap();
+/// rt.block_on(async {
+///     let result = open_directory("/path/to/directory".to_string()).await;
+///     match result {
+///         Ok(entries_json) => {
+///             println!("Entries JSON: {entries_json}");
+///         }
+///         Err(err) => println!("Error opening directory: {}", err),
+///     }
+/// });
 /// ```
 #[tauri::command]
 pub async fn open_directory(path: String) -> Result<String, String> {
@@ -278,12 +283,17 @@ pub async fn open_directory(path: String) -> Result<String, String> {
 /// - `Err(String)` if there was an error during the creation process.
 ///
 /// # Example
-/// ```rust
-/// let result = create_file("/path/to/file.txt").await;
-/// match result {
-///     Ok(_) => println!("File created successfully!"),
-///     Err(err) => println!("Error creating file: {}", err),
-/// }
+/// ```rust,no_run
+/// use file_explorer::commands::file_system_operation_commands::create_file;
+///
+/// let rt = tokio::runtime::Runtime::new().unwrap();
+/// rt.block_on(async {
+///     let result = create_file("/path/to", "file.txt").await;
+///     match result {
+///         Ok(_) => println!("File created successfully!"),
+///         Err(err) => println!("Error creating file: {}", err),
+///     }
+/// });
 /// ```
 #[tauri::command]
 pub async fn create_file(folder_path_abs: &str, file_name: &str) -> Result<(), String> {
@@ -342,12 +352,17 @@ pub async fn create_file(folder_path_abs: &str, file_name: &str) -> Result<(), S
 /// - `Err(String)` if there was an error during the creation process.
 ///
 /// # Example
-/// ```rust
-/// let result = create_directory("/path/to/directory", "new_folder").await;
-/// match result {
-///     Ok(_) => println!("Directory created successfully!"),
-///     Err(err) => println!("Error creating directory: {}", err),
-/// }
+/// ```rust,no_run
+/// use file_explorer::commands::file_system_operation_commands::create_directory;
+///
+/// let rt = tokio::runtime::Runtime::new().unwrap();
+/// rt.block_on(async {
+///     let result = create_directory("/path/to/directory", "new_folder").await;
+///     match result {
+///         Ok(_) => println!("Directory created successfully!"),
+///         Err(err) => println!("Error creating directory: {}", err),
+///     }
+/// });
 /// ```
 #[tauri::command]
 pub async fn create_directory(folder_path_abs: &str, folder_name: &str) -> Result<(), String> {
@@ -406,12 +421,17 @@ pub async fn create_directory(folder_path_abs: &str, folder_name: &str) -> Resul
 /// - `Err(Error)` if there was an error during the operation
 ///
 /// # Example
-/// ```rust
-/// let result = rename_file("/path/to/old_file.txt", "/path/to/new_file.txt").await;
-/// match result {
-///     Ok(_) => println!("File renamed successfully!"),
-///     Err(err) => println!("Error renaming file: {}", err),
-/// }
+/// ```rust,no_run
+/// use file_explorer::commands::file_system_operation_commands::rename;
+///
+/// let rt = tokio::runtime::Runtime::new().unwrap();
+/// rt.block_on(async {
+///     let result = rename("/path/to/old_file.txt", "/path/to/new_file.txt").await;
+///     match result {
+///         Ok(_) => println!("File renamed successfully!"),
+///         Err(err) => println!("Error renaming file: {}", err),
+///     }
+/// });
 /// ```
 #[tauri::command]
 pub async fn rename(old_path: &str, new_path: &str) -> Result<(), String> {
@@ -463,12 +483,17 @@ pub async fn rename(old_path: &str, new_path: &str) -> Result<(), String> {
 /// - `Err(String)` if there was an error during the deletion process.
 ///
 /// # Example
-/// ```rust
-/// let result = delete_file("/path/to/file.txt").await;
-/// match result {
-///   Ok(_) => println!("File deleted successfully!"),
-///   Err(err) => println!("Error deleting file: {}", err),
-/// }
+/// ```rust,no_run
+/// use file_explorer::commands::file_system_operation_commands::move_to_trash;
+///
+/// let rt = tokio::runtime::Runtime::new().unwrap();
+/// rt.block_on(async {
+///     let result = move_to_trash("/path/to/file.txt").await;
+///     match result {
+///         Ok(_) => println!("File deleted successfully!"),
+///         Err(err) => println!("Error deleting file: {}", err),
+///     }
+/// });
 /// ```
 #[tauri::command]
 pub async fn move_to_trash(path: &str) -> Result<(), String> {
@@ -549,12 +574,17 @@ fn generate_unique_path(original_path: &str) -> String {
 /// - `Err(String)` - If there was an error during the copy process.
 ///
 /// # Example
-/// ```rust
-/// let result = copy_file_or_dir("/path/to/source.txt", "/path/to/destination.txt").await;
-/// match result {
-///     Ok(size) => println!("File copied successfully! Size: {} bytes", size),
-///     Err(err) => println!("Error copying file: {}", err),
-/// }
+/// ```rust,no_run
+/// use file_explorer::commands::file_system_operation_commands::copy_file_or_dir;
+///
+/// let rt = tokio::runtime::Runtime::new().unwrap();
+/// rt.block_on(async {
+///     let result = copy_file_or_dir("/path/to/source.txt", "/path/to/destination.txt").await;
+///     match result {
+///         Ok(size) => println!("File copied successfully! Size: {} bytes", size),
+///         Err(err) => println!("Error copying file: {}", err),
+///     }
+/// });
 /// ```
 #[tauri::command]
 pub async fn copy_file_or_dir(source_path: &str, destination_path: &str) -> Result<u64, String> {
@@ -656,15 +686,23 @@ pub async fn copy_file_or_dir(source_path: &str, destination_path: &str) -> Resu
 /// * `Err(String)` - If there was an error during the zipping process
 ///
 /// # Example
-/// ```rust
-/// // Single file/directory with auto destination
-/// let result = zip(vec!["/path/to/file.txt"], None).await;
+/// ```rust,no_run
+/// use file_explorer::commands::file_system_operation_commands::zip as zip_paths;
 ///
-/// // Multiple files to specific destination
-/// let result = zip(
-///     vec!["/path/to/file1.txt", "/path/to/dir1"],
-///     Some("/path/to/archive.zip")
-/// ).await;
+/// let rt = tokio::runtime::Runtime::new().unwrap();
+/// rt.block_on(async {
+///     // Single file/directory with auto destination
+///     let result = zip_paths(vec!["/path/to/file.txt".to_string()], None).await;
+///     let _ = result;
+///
+///     // Multiple files to specific destination
+///     let result = zip_paths(
+///         vec!["/path/to/file1.txt".to_string(), "/path/to/dir1".to_string()],
+///         Some("/path/to/archive.zip".to_string()),
+///     )
+///     .await;
+///     let _ = result;
+/// });
 /// ```
 #[tauri::command]
 pub async fn zip(
@@ -823,15 +861,23 @@ pub async fn zip(
 /// * `Err(String)` - If there was an error during extraction
 ///
 /// # Example
-/// ```rust
-/// // Single zip with auto destination
-/// let result = unzip(vec!["/path/to/archive.zip"], None).await;
+/// ```rust,no_run
+/// use file_explorer::commands::file_system_operation_commands::unzip;
 ///
-/// // Multiple zips to specific destination
-/// let result = unzip(
-///     vec!["/path/to/zip1.zip", "/path/to/zip2.zip"],
-///     Some("/path/to/extracted")
-/// ).await;
+/// let rt = tokio::runtime::Runtime::new().unwrap();
+/// rt.block_on(async {
+///     // Single zip with auto destination
+///     let result = unzip(vec!["/path/to/archive.zip".to_string()], None).await;
+///     let _ = result;
+///
+///     // Multiple zips to specific destination
+///     let result = unzip(
+///         vec!["/path/to/zip1.zip".to_string(), "/path/to/zip2.zip".to_string()],
+///         Some("/path/to/extracted".to_string()),
+///     )
+///     .await;
+///     let _ = result;
+/// });
 /// ```
 #[tauri::command]
 pub async fn unzip(zip_paths: Vec<String>, destination_path: Option<String>) -> Result<(), String> {

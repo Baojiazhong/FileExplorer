@@ -4,6 +4,10 @@ mod lru_cache_v2;
 mod path_cache_wrapper;
 pub mod search_core;
 
+pub use fast_fuzzy_v2::PathMatcher;
+pub use lru_cache_v2::LruPathCache;
+
+
 #[cfg(test)]
 pub mod test_generate_test_data {
     use crate::log_info;

@@ -26,9 +26,9 @@ pub mod meta_data;
 pub mod searchengine_data;
 pub mod settings_data;
 
+pub use searchengine_data::SearchEngineState;
 pub use settings_data::*;
 
-use crate::state::searchengine_data::SearchEngineState;
 use logging::Logger;
 use meta_data::MetaDataState;
 use std::sync::{Arc, Mutex};
