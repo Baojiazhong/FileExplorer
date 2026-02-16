@@ -76,6 +76,12 @@ const MainLayout = () => {
     const isResizingRef = useRef(false);
     const startXRef = useRef(0);
     const startWidthRef = useRef(0);
+    const rightPaneWidthRef = useRef(settings.right_pane_width || 300);
+    const updateSettingRef = useRef(updateSetting);
+
+    useEffect(() => {
+        updateSettingRef.current = updateSetting;
+    }, [updateSetting]);
 
     // UI State - Initialize from settings
     const [rightPaneMode, setRightPaneMode] = useState(settings.right_pane_mode || 'none');
@@ -765,6 +771,11 @@ const MainLayout = () => {
         document.body.style.cursor = 'col-resize';
     }, [rightPaneMode, rightPaneWidth]);
 
+    // Keep refs in sync so window listeners can read latest values.
+    useEffect(() => {
+        rightPaneWidthRef.current = rightPaneWidth;
+    }, [rightPaneWidth]);
+
     useEffect(() => {
         const handleResizeMove = (e) => {
             if (!isResizingRef.current) return;
@@ -787,8 +798,9 @@ const MainLayout = () => {
             document.body.style.userSelect = '';
             document.body.style.cursor = '';
 
+            const widthToPersist = rightPaneWidthRef.current;
             try {
-                await updateSetting('right_pane_width', rightPaneWidth);
+                await updateSettingRef.current('right_pane_width', widthToPersist);
             } catch (error) {
                 console.error('Failed to save pane width setting:', error);
             }
@@ -801,7 +813,7 @@ const MainLayout = () => {
             window.removeEventListener('mousemove', handleResizeMove);
             window.removeEventListener('mouseup', handleResizeEnd);
         };
-    }, [rightPaneWidth, updateSetting]);
+    }, []);
 
 
     /**
