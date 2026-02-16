@@ -191,7 +191,7 @@ export default function ThemeProvider({ children }) {
                 }}>
                     Loading theme...
                 </div>
-                <style jsx global>{`
+                <style>{`
                     @keyframes spin {
                         to { transform: rotate(360deg); }
                     }

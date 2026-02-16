@@ -161,7 +161,7 @@ const PermissionHelper = ({ isOpen, onClose, directoryPath, directoryName, onDir
                 </div>
             </div>
             
-            <style jsx>{`
+            <style>{`
                 .permission-helper {
                     text-align: center;
                     padding: 20px 0;

@@ -69,7 +69,8 @@ const MainLayout = () => {
         showProperties
     } = useContextMenu();
     const { currentPath, navigateTo } = useHistory();
-    const { settings, updateSetting, updateMultipleSettings } = useSettings();
+    const { settings, updateSetting } = useSettings();
+
 
     const containerRef = useRef(null);
     const isResizingRef = useRef(false);
@@ -77,9 +78,9 @@ const MainLayout = () => {
     const startWidthRef = useRef(0);
 
     // UI State - Initialize from settings
-    const [isDetailsPanelOpen, setIsDetailsPanelOpen] = useState(settings.show_details_panel || false);
-    const [isPreviewPaneOpen, setIsPreviewPaneOpen] = useState(settings.show_preview_pane || false);
-    const [rightPaneWidth, setRightPaneWidth] = useState(settings.preview_pane_width || 300);
+    const [rightPaneMode, setRightPaneMode] = useState(settings.right_pane_mode || 'none');
+    const [rightPaneWidth, setRightPaneWidth] = useState(settings.right_pane_width || 300);
+
     const [isTerminalOpen, setIsTerminalOpen] = useState(false);
     const [viewMode, setViewMode] = useState(settings.default_view || 'grid');
     const [searchValue, setSearchValue] = useState('');
@@ -268,7 +269,7 @@ const MainLayout = () => {
         payload: previewPanePayload,
         isLoading: isPreviewPaneLoading,
     } = usePreviewPane({
-        enabled: isPreviewPaneOpen && currentView === 'explorer',
+        enabled: rightPaneMode === 'preview' && currentView === 'explorer',
         selectedItem: selectedItems.length === 1 ? selectedItems[0] : null,
         isMultipleSelection: selectedItems.length > 1,
     });
@@ -278,16 +279,13 @@ const MainLayout = () => {
      * Effect to update UI state when settings change
      */
     useEffect(() => {
-        if (settings.show_details_panel !== undefined) {
-            setIsDetailsPanelOpen(settings.show_details_panel);
+        if (settings.right_pane_mode !== undefined) {
+            setRightPaneMode(settings.right_pane_mode || 'none');
         }
-        if (settings.show_preview_pane !== undefined) {
-            setIsPreviewPaneOpen(settings.show_preview_pane);
+        if (settings.right_pane_width !== undefined) {
+            setRightPaneWidth(settings.right_pane_width || 300);
         }
-        if (settings.preview_pane_width !== undefined) {
-            setRightPaneWidth(settings.preview_pane_width || 300);
-        }
-    }, [settings.show_details_panel, settings.show_preview_pane, settings.preview_pane_width]);
+    }, [settings.right_pane_mode, settings.right_pane_width]);
 
 
     /**
@@ -382,14 +380,11 @@ const MainLayout = () => {
          * Handler for showing properties panel
          */
         const handleShowProperties = (e) => {
-            setIsDetailsPanelOpen(true);
-            setIsPreviewPaneOpen(false);
+            // Properties should show Details pane.
+            setRightPaneMode('details');
 
-            // Persist mutual exclusion so it survives restarts.
-            updateMultipleSettings({
-                show_details_panel: true,
-                show_preview_pane: false,
-            });
+            // Persist so it survives restarts.
+            updateSetting('right_pane_mode', 'details');
         };
 
         /**
@@ -529,7 +524,7 @@ const MainLayout = () => {
             document.removeEventListener('force-explorer-view', handleForceExplorerView);
             console.log('MainLayout: All event listeners removed');
         };
-    }, [navigateTo, updateMultipleSettings]);
+    }, [navigateTo, updateSetting]);
 
 
     /**
@@ -738,52 +733,29 @@ const MainLayout = () => {
      * Handles details panel toggle with settings persistence
      */
     const handleDetailsPanelToggle = useCallback(async () => {
-        const newState = !isDetailsPanelOpen;
-        setIsDetailsPanelOpen(newState);
-        if (newState) {
-            setIsPreviewPaneOpen(false);
-        }
+        const newMode = rightPaneMode === 'details' ? 'none' : 'details';
+        setRightPaneMode(newMode);
 
-        // Save to settings
         try {
-            // When opening one pane, force-close the other (mutually exclusive).
-            if (newState) {
-                await updateMultipleSettings({
-                    show_details_panel: true,
-                    show_preview_pane: false,
-                });
-            } else {
-                await updateSetting('show_details_panel', false);
-            }
+            await updateSetting('right_pane_mode', newMode);
         } catch (error) {
-            console.error('Failed to save details panel setting:', error);
+            console.error('Failed to save right pane mode setting:', error);
         }
-    }, [isDetailsPanelOpen, updateMultipleSettings, updateSetting]);
+    }, [rightPaneMode, updateSetting]);
 
     const handlePreviewPaneToggle = useCallback(async () => {
-        const newState = !isPreviewPaneOpen;
-        setIsPreviewPaneOpen(newState);
-        if (newState) {
-            setIsDetailsPanelOpen(false);
-        }
+        const newMode = rightPaneMode === 'preview' ? 'none' : 'preview';
+        setRightPaneMode(newMode);
 
         try {
-            // When opening one pane, force-close the other (mutually exclusive).
-            if (newState) {
-                await updateMultipleSettings({
-                    show_preview_pane: true,
-                    show_details_panel: false,
-                });
-            } else {
-                await updateSetting('show_preview_pane', false);
-            }
+            await updateSetting('right_pane_mode', newMode);
         } catch (error) {
-            console.error('Failed to save preview pane setting:', error);
+            console.error('Failed to save right pane mode setting:', error);
         }
-    }, [isPreviewPaneOpen, updateMultipleSettings, updateSetting]);
+    }, [rightPaneMode, updateSetting]);
 
     const handleRightPaneResizeStart = useCallback((e) => {
-        if (!isDetailsPanelOpen && !isPreviewPaneOpen) return;
+        if (rightPaneMode === 'none') return;
 
         isResizingRef.current = true;
         startXRef.current = e.clientX;
@@ -791,7 +763,7 @@ const MainLayout = () => {
 
         document.body.style.userSelect = 'none';
         document.body.style.cursor = 'col-resize';
-    }, [isDetailsPanelOpen, isPreviewPaneOpen, rightPaneWidth]);
+    }, [rightPaneMode, rightPaneWidth]);
 
     useEffect(() => {
         const handleResizeMove = (e) => {
@@ -816,7 +788,7 @@ const MainLayout = () => {
             document.body.style.cursor = '';
 
             try {
-                await updateSetting('preview_pane_width', rightPaneWidth);
+                await updateSetting('right_pane_width', rightPaneWidth);
             } catch (error) {
                 console.error('Failed to save pane width setting:', error);
             }
@@ -849,13 +821,9 @@ const MainLayout = () => {
         }
     }, [settings.show_hidden_files_and_folders, updateSetting, currentPath, loadDirectory]);
 
-    // Close any docked pane when leaving explorer view (This PC / Network / Templates).
-    useEffect(() => {
-        if (currentView !== 'explorer') {
-            setIsDetailsPanelOpen(false);
-            setIsPreviewPaneOpen(false);
-        }
-    }, [currentView]);
+    // Hide the right pane outside explorer view (mode is still persisted for restarts).
+    const isRightPaneVisible = currentView === 'explorer' && rightPaneMode !== 'none';
+
 
     const handleCut = useCallback(() => {
         if (selectedItems.length === 0) return;
@@ -885,26 +853,19 @@ const MainLayout = () => {
         deleteItems(selectedItems);
     }, [selectedItems, deleteItems]);
 
-    const handleProperties = useCallback(() => {
+    const handleProperties = useCallback(async () => {
         if (selectedItems.length === 0) return;
 
-        // If preview is open, switch to details.
-        if (isPreviewPaneOpen) {
-            setIsPreviewPaneOpen(false);
-        }
+        // Windows Explorer-like: Properties opens Details pane.
+        showProperties(selectedItems[0]);
+        setRightPaneMode('details');
 
-        // Toggle the details panel: close if open, open if closed
-        if (isDetailsPanelOpen) {
-            setIsDetailsPanelOpen(false);
-        } else {
-            showProperties(selectedItems[0]);
-            setIsDetailsPanelOpen(true);
-            updateMultipleSettings({
-                show_details_panel: true,
-                show_preview_pane: false,
-            });
+        try {
+            await updateSetting('right_pane_mode', 'details');
+        } catch (error) {
+            console.error('Failed to save right pane mode setting:', error);
         }
-    }, [selectedItems, showProperties, isDetailsPanelOpen, isPreviewPaneOpen, updateMultipleSettings]);
+    }, [selectedItems, showProperties, updateSetting]);
 
 
     /**
@@ -1030,7 +991,7 @@ const MainLayout = () => {
                                 </button>
                                 
                                 <button
-                                    className={`icon-button ${isPreviewPaneOpen ? 'active' : ''}`}
+                                    className={`icon-button ${rightPaneMode === 'preview' ? 'active' : ''}`}
                                     onClick={handlePreviewPaneToggle}
                                     title="Preview Pane"
                                     aria-label="Toggle preview pane"
@@ -1039,7 +1000,7 @@ const MainLayout = () => {
                                 </button>
 
                                 <button
-                                    className={`icon-button ${isDetailsPanelOpen ? 'active' : ''}`}
+                                    className={`icon-button ${rightPaneMode === 'details' ? 'active' : ''}`}
                                     onClick={handleDetailsPanelToggle}
                                     title="Details Panel"
                                     aria-label="Toggle details panel"
@@ -1121,7 +1082,7 @@ const MainLayout = () => {
                             {renderMainContent()}
 
                              {/* Right pane: Preview or Details (mutually exclusive) */}
-                             {(isPreviewPaneOpen || isDetailsPanelOpen) && (
+                             {isRightPaneVisible && (
                                  <div
                                      className="panel-resize-handle"
                                      onMouseDown={handleRightPaneResizeStart}
@@ -1131,7 +1092,7 @@ const MainLayout = () => {
                                  ></div>
                              )}
 
-                             {isPreviewPaneOpen && currentView === 'explorer' && (
+                             {isRightPaneVisible && rightPaneMode === 'preview' && (
                                  <PreviewPane
                                      payload={previewPanePayload}
                                      isLoading={isPreviewPaneLoading}
@@ -1139,7 +1100,7 @@ const MainLayout = () => {
                                  />
                              )}
 
-                             {!isPreviewPaneOpen && isDetailsPanelOpen && currentView === 'explorer' && (
+                             {isRightPaneVisible && rightPaneMode === 'details' && (
                                  <DetailsPanel
                                      item={selectedItems[0] || null}
                                      isMultipleSelection={selectedItems.length > 1}

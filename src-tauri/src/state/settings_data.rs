@@ -8,7 +8,7 @@ use std::io::{Error, Write};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
-fn default_preview_pane_width() -> u32 {
+fn default_right_pane_width() -> u32 {
     300
 }
 
@@ -72,6 +72,23 @@ pub enum DoubleClick {
     SelectFilesAndFolders,
 }
 
+/// Right-side pane mode (mutually exclusive).
+///
+/// Controls whether the right pane is hidden, shows Details, or shows Preview.
+#[derive(Debug, Deserialize, Serialize, Clone)]
+#[allow(non_camel_case_types)]
+pub enum RightPaneMode {
+    none,
+    details,
+    preview,
+}
+
+impl Default for RightPaneMode {
+    fn default() -> Self {
+        RightPaneMode::none
+    }
+}
+
 /// Application settings configuration.
 ///
 /// This struct contains all configurable options for the application,
@@ -94,14 +111,12 @@ pub struct Settings {
     pub font_size: FontSize,
     /// Whether to display hidden files and folders
     pub show_hidden_files_and_folders: bool,
-    /// Whether to show the details panel by default
-    pub show_details_panel: bool,
-    /// Whether to show the preview pane by default
+    /// Right pane mode (none/details/preview)
     #[serde(default)]
-    pub show_preview_pane: bool,
-    /// Width of the preview pane in pixels
-    #[serde(default = "default_preview_pane_width")]
-    pub preview_pane_width: u32,
+    pub right_pane_mode: RightPaneMode,
+    /// Width of the right pane in pixels
+    #[serde(default = "default_right_pane_width")]
+    pub right_pane_width: u32,
     /// Primary UI accent color in hex format
     pub accent_color: String,
     /// Whether to prompt for confirmation before deleting files
@@ -147,9 +162,8 @@ impl Default for Settings {
             default_view: DefaultView::grid,
             font_size: FontSize::Medium,
             show_hidden_files_and_folders: false,
-            show_details_panel: false,
-            show_preview_pane: false,
-            preview_pane_width: default_preview_pane_width(),
+            right_pane_mode: RightPaneMode::none,
+            right_pane_width: default_right_pane_width(),
             accent_color: "#000000".to_string(),
             confirm_delete: true,
             auto_refresh_dir: true,

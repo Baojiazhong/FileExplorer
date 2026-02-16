@@ -12,10 +12,10 @@ const defaultSettings = {
     default_view: "grid", // grid, list, details
     font_size: "Medium", // Small, Medium, Large
     show_hidden_files_and_folders: false,
-    show_details_panel: false,
-    show_preview_pane: false,
-    preview_pane_width: 300,
+    right_pane_mode: "none",
+    right_pane_width: 300,
     accent_color: "#0672ef",
+
 
 
     // Behavior settings

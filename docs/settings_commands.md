@@ -24,8 +24,10 @@ The current settings consist of the following fields. A nearer explanation of ea
    "default_view":"Grid",
    "font_size":"Medium",
    "show_hidden_files_and_folders":false,
-   "show_details_panel":false,
+   "right_pane_mode":"none",
+   "right_pane_width":300,
    "accent_color":"#000000",
+
    "confirm_delete":true,
    "auto_refresh_dir":true,
    "sort_direction":"Acscending",
