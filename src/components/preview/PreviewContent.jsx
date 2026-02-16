@@ -69,7 +69,7 @@ export function PreviewContent({ payload }) {
       return (
         <div className="preview-audio-container">
           <div className="preview-audio-player">
-            <div className="preview-audio-icon">\ud83c\udfb5</div>
+            <div className="preview-audio-icon">🎵</div>
             <audio src={convertFileSrc(payload.path)} controls className="preview-audio" preload="metadata">
               Your browser does not support audio preview.
             </audio>
@@ -101,7 +101,7 @@ export function PreviewContent({ payload }) {
     case 'Unknown':
       return (
         <div className="preview-unknown">
-          <div className="preview-unknown-icon">\ud83d\udcc1</div>
+          <div className="preview-unknown-icon">📁</div>
           <p>Preview not available for this item.</p>
         </div>
       );
@@ -109,7 +109,7 @@ export function PreviewContent({ payload }) {
     case 'Error':
       return (
         <div className="preview-error">
-          <div className="preview-error-icon">\u26a0\ufe0f</div>
+          <div className="preview-error-icon">⚠️</div>
           <h3>Preview Error</h3>
           <p>{payload.message}</p>
         </div>
