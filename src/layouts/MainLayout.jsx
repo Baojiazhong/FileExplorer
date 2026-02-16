@@ -996,7 +996,7 @@ const MainLayout = () => {
                                     title="Preview Pane"
                                     aria-label="Toggle preview pane"
                                 >
-                                    <span className="icon icon-eye"></span>
+                                    <span className="icon icon-preview-pane"></span>
                                 </button>
 
                                 <button
