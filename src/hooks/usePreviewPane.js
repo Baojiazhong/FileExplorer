@@ -17,6 +17,9 @@ export function usePreviewPane({ enabled, selectedItem, isMultipleSelection }) {
   const buildPreview = useCallback(
     async (item) => {
       if (!item?.path) {
+        // Selection cleared; invalidate any in-flight request so it can't write back stale payload.
+        requestIdRef.current += 1;
+        setIsLoading(false);
         setPayload(null);
         return;
       }
