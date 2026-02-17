@@ -35,11 +35,14 @@ export function PreviewContent({ payload }) {
     }
 
     case 'Image': {
-      const src =
-        payload.data_uri ||
-        (typeof payload.path === 'string' && payload.path.startsWith('data:')
-          ? payload.path
-          : convertFileSrc(payload.path));
+      const src = payload.src || payload.data_uri || '';
+      if (!src) {
+        return (
+          <div className="preview-unknown">
+            <p>Preview not available for this item.</p>
+          </div>
+        );
+      }
       return (
         <div className="preview-image-container">
           <img src={src} alt={payload.name} className="preview-image" />
@@ -51,11 +54,14 @@ export function PreviewContent({ payload }) {
     }
 
     case 'Pdf': {
-      const src =
-        payload.data_uri ||
-        (typeof payload.path === 'string' && payload.path.startsWith('data:')
-          ? payload.path
-          : convertFileSrc(payload.path));
+      const src = payload.src || payload.data_uri || '';
+      if (!src) {
+        return (
+          <div className="preview-unknown">
+            <p>Preview not available for this item.</p>
+          </div>
+        );
+      }
       return (
         <div className="preview-pdf-container" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
           <iframe title={payload.name} src={src} style={{ flex: 1, width: '100%', height: 0, minHeight: 0, border: 'none' }} />
@@ -67,7 +73,14 @@ export function PreviewContent({ payload }) {
     }
 
     case 'Video': {
-      const url = convertFileSrc(payload.path);
+      const url = payload.src || (payload.path ? convertFileSrc(payload.path) : '');
+      if (!url) {
+        return (
+          <div className="preview-unknown">
+            <p>Preview not available for this item.</p>
+          </div>
+        );
+      }
       return (
         <div className="preview-video-container">
           <video src={url} controls className="preview-video" preload="metadata">
@@ -77,17 +90,26 @@ export function PreviewContent({ payload }) {
       );
     }
 
-    case 'Audio':
+    case 'Audio': {
+      const url = payload.src || (payload.path ? convertFileSrc(payload.path) : '');
+      if (!url) {
+        return (
+          <div className="preview-unknown">
+            <p>Preview not available for this item.</p>
+          </div>
+        );
+      }
       return (
         <div className="preview-audio-container">
           <div className="preview-audio-player">
             <div className="preview-audio-icon">🎵</div>
-            <audio src={convertFileSrc(payload.path)} controls className="preview-audio" preload="metadata">
+            <audio src={url} controls className="preview-audio" preload="metadata">
               Your browser does not support audio preview.
             </audio>
           </div>
         </div>
       );
+    }
 
     case 'Text': {
       const lines = payload.text ? payload.text.split('\n') : [];

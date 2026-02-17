@@ -497,7 +497,8 @@ pub fn build_preview_sftp(
         );
         return Ok(PreviewPayload::Image {
             name,
-            path: data_uri,
+            path: None,
+            data_uri: Some(data_uri),
             bytes,
         });
     }
@@ -527,7 +528,8 @@ pub fn build_preview_sftp(
         );
         return Ok(PreviewPayload::Pdf {
             name,
-            path: data_uri,
+            path: None,
+            data_uri: Some(data_uri),
             bytes,
         });
     }

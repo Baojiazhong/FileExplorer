@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useSftp } from '../providers/SftpProvider';
+import { normalizePreviewPayload } from '../utils/previewPayload';
 
 
 /**
@@ -59,7 +60,7 @@ export function usePreview(getFocusedItem, navigateUp = null, navigateDown = nul
       }
 
       if (requestId === requestIdRef.current) {
-        setPayload(previewPayload);
+        setPayload(normalizePreviewPayload(previewPayload));
       }
     } catch (error) {
       console.error('Failed to build preview:', error);

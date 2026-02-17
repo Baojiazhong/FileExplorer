@@ -11,12 +11,18 @@ use std::{
 pub enum PreviewPayload {
     Image {
         name: String,
-        path: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        path: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        data_uri: Option<String>,
         bytes: usize,
     },
     Pdf {
         name: String,
-        path: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        path: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        data_uri: Option<String>,
         bytes: usize,
     },
     Video {
@@ -142,12 +148,22 @@ pub fn build_preview(path: String) -> Result<PreviewPayload, String> {
     if mime.starts_with("image/") {
         // For local images, return the file path so the frontend can render via convertFileSrc.
         let bytes = meta.len() as usize;
-        return Ok(PreviewPayload::Image { name, path, bytes });
+        return Ok(PreviewPayload::Image {
+            name,
+            path: Some(path),
+            data_uri: None,
+            bytes,
+        });
     }
     if mime == "application/pdf" {
         // For local PDFs, return the file path so the frontend can render via convertFileSrc.
         let bytes = meta.len() as usize;
-        return Ok(PreviewPayload::Pdf { name, path, bytes });
+        return Ok(PreviewPayload::Pdf {
+            name,
+            path: Some(path),
+            data_uri: None,
+            bytes,
+        });
     }
 
     if mime.starts_with("video/") {
@@ -380,10 +396,15 @@ mod preview_tests {
         let result = build_preview(test_file.to_string_lossy().to_string());
 
         match result {
-            Ok(PreviewPayload::Image { name, path, bytes }) => {
+            Ok(PreviewPayload::Image {
+                name,
+                path,
+                data_uri: _,
+                bytes,
+            }) => {
                 log_info!("Image preview generated: name={}, bytes={}", name, bytes);
                 assert_eq!(name, "test.png");
-                assert!(!path.is_empty());
+                assert!(path.is_some());
                 assert_eq!(bytes, png_data.len());
                 log_info!("All image preview assertions passed");
             }
@@ -417,10 +438,15 @@ mod preview_tests {
         let result = build_preview(test_file.to_string_lossy().to_string());
 
         match result {
-            Ok(PreviewPayload::Pdf { name, path, bytes }) => {
+            Ok(PreviewPayload::Pdf {
+                name,
+                path,
+                data_uri: _,
+                bytes,
+            }) => {
                 log_info!("PDF preview generated: name={}, bytes={}", name, bytes);
                 assert_eq!(name, "test.pdf");
-                assert!(!path.is_empty());
+                assert!(path.is_some());
                 // Additional checks for bytes can be added if needed
                 log_info!("All PDF preview assertions passed");
             }

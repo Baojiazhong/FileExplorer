@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSftp } from '../providers/SftpProvider';
+import { normalizePreviewPayload } from '../utils/previewPayload';
 
 /**
  * Docked preview hook for a Preview pane.
@@ -48,7 +49,7 @@ export function usePreviewPane({ enabled, selectedItem, isMultipleSelection }) {
         }
 
         if (requestId === requestIdRef.current) {
-          setPayload(previewPayload);
+          setPayload(normalizePreviewPayload(previewPayload));
         }
       } catch (error) {
         if (requestId === requestIdRef.current) {
