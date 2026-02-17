@@ -472,9 +472,14 @@ pub fn build_preview_sftp(
 
     // Branch by mime top-level type - exactly like original
     if mime.starts_with("image/") {
-        // Encode entire file only if small; else just the head (fast path)
+        // NOTE: For SFTP we can't reliably stream/serve the remote path to the webview.
+        // If the file is too large to embed as a data URI, fall back to Unknown.
         let cap = 6 * 1024 * 1024;
-        let data = if bytes <= cap {
+        if bytes > cap {
+            return Ok(PreviewPayload::Unknown { name });
+        }
+
+        let data = {
             let mut full_file = sftp
                 .open(Path::new(&file_path))
                 .map_err(|e| e.to_string())?;
@@ -483,9 +488,8 @@ pub fn build_preview_sftp(
                 .read_to_end(&mut full_data)
                 .map_err(|e| e.to_string())?;
             full_data
-        } else {
-            head.clone()
         };
+
         let data_uri = format!(
             "data:{};base64,{}",
             mime,
@@ -493,15 +497,19 @@ pub fn build_preview_sftp(
         );
         return Ok(PreviewPayload::Image {
             name,
-            data_uri,
+            path: data_uri,
             bytes,
         });
     }
 
     if mime == "application/pdf" {
-        // Encode entire file only if small; else just the head (fast path)
-        let cap = 12 * 1024 * 1024; // Allow larger PDFs than images
-        let data = if bytes <= cap {
+        // Same limitation as images: avoid returning truncated/broken data.
+        let cap = 12 * 1024 * 1024;
+        if bytes > cap {
+            return Ok(PreviewPayload::Unknown { name });
+        }
+
+        let data = {
             let mut full_file = sftp
                 .open(Path::new(&file_path))
                 .map_err(|e| e.to_string())?;
@@ -510,9 +518,8 @@ pub fn build_preview_sftp(
                 .read_to_end(&mut full_data)
                 .map_err(|e| e.to_string())?;
             full_data
-        } else {
-            head.clone()
         };
+
         let data_uri = format!(
             "data:{};base64,{}",
             mime,
@@ -520,7 +527,7 @@ pub fn build_preview_sftp(
         );
         return Ok(PreviewPayload::Pdf {
             name,
-            data_uri,
+            path: data_uri,
             bytes,
         });
     }

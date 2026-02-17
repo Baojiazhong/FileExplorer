@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useSftp } from '../providers/SftpProvider';
+
 
 /**
  * Hook for managing file/folder preview functionality
@@ -16,18 +17,27 @@ export function usePreview(getFocusedItem, navigateUp = null, navigateDown = nul
   const [payload, setPayload] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const { isSftpPath, parseSftpPath } = useSftp();
+  const requestIdRef = useRef(0);
+
 
   /**
    * Opens preview for the specified path
    * @param {string} path - Path to the file/folder to preview
    */
   const openPreview = useCallback(async (path) => {
-    if (isLoading) return;
+    if (!path) return;
 
+    // Start a new request; any previous in-flight request becomes stale.
+    const requestId = ++requestIdRef.current;
+
+    // Open immediately so user sees loading state.
+    setOpen(true);
     setIsLoading(true);
+    setPayload(null);
+
     try {
       let previewPayload;
-      
+
       // Check if this is an SFTP path
       if (isSftpPath(path)) {
         const parsed = parseSftpPath(path);
@@ -38,7 +48,7 @@ export function usePreview(getFocusedItem, navigateUp = null, navigateDown = nul
             port: parseInt(parsed.connection.port, 10),
             username: parsed.connection.username,
             password: parsed.connection.password,
-            filePath: parsed.remotePath
+            filePath: parsed.remotePath,
           });
         } else {
           throw new Error('Invalid SFTP path or connection not found');
@@ -47,29 +57,38 @@ export function usePreview(getFocusedItem, navigateUp = null, navigateDown = nul
         // Use regular preview command for local files
         previewPayload = await invoke('build_preview', { path });
       }
-      
-      setPayload(previewPayload);
-      setOpen(true);
+
+      if (requestId === requestIdRef.current) {
+        setPayload(previewPayload);
+      }
     } catch (error) {
       console.error('Failed to build preview:', error);
-      setPayload({
-        kind: 'Error',
-        name: path.split(/[/\\]/).pop() || 'Unknown',
-        message: error instanceof Error ? error.message : 'Failed to generate preview'
-      });
-      setOpen(true);
+      if (requestId === requestIdRef.current) {
+        setPayload({
+          kind: 'Error',
+          name: path.split(/[/\\]/).pop() || 'Unknown',
+          message: error instanceof Error ? error.message : 'Failed to generate preview',
+        });
+      }
     } finally {
-      setIsLoading(false);
+      if (requestId === requestIdRef.current) {
+        setIsLoading(false);
+      }
     }
-  }, [isLoading, isSftpPath, parseSftpPath]);
+  }, [isSftpPath, parseSftpPath]);
+
 
   /**
    * Closes the preview modal
    */
   const closePreview = useCallback(() => {
+    // Invalidate any in-flight request so it can't write back after closing.
+    requestIdRef.current += 1;
+    setIsLoading(false);
     setOpen(false);
     setPayload(null);
   }, []);
+
 
   /**
    * Toggles preview for the currently focused item (files and folders)

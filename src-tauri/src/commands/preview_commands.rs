@@ -1,5 +1,4 @@
 use anyhow::Result;
-use base64::Engine;
 use serde::Serialize;
 use std::{
     fs,
@@ -12,12 +11,12 @@ use std::{
 pub enum PreviewPayload {
     Image {
         name: String,
-        data_uri: String,
+        path: String,
         bytes: usize,
     },
     Pdf {
         name: String,
-        data_uri: String,
+        path: String,
         bytes: usize,
     },
     Video {
@@ -141,45 +140,14 @@ pub fn build_preview(path: String) -> Result<PreviewPayload, String> {
 
     // Branch by mime top-level type
     if mime.starts_with("image/") {
-        // Encode entire file only if small; else just the head (fast path)
-        // You can raise this cap depending on your perf goals
-        let cap = 6 * 1024 * 1024;
+        // For local images, return the file path so the frontend can render via convertFileSrc.
         let bytes = meta.len() as usize;
-        let data = if bytes <= cap {
-            fs::read(&p).map_err(|e| e.to_string())?
-        } else {
-            head.clone()
-        };
-        let data_uri = format!(
-            "data:{};base64,{}",
-            mime,
-            base64::engine::general_purpose::STANDARD.encode(data)
-        );
-        return Ok(PreviewPayload::Image {
-            name,
-            data_uri,
-            bytes,
-        });
+        return Ok(PreviewPayload::Image { name, path, bytes });
     }
     if mime == "application/pdf" {
-        // Encode entire file only if small; else just the head (fast path)
-        let cap = 12 * 1024 * 1024; // Allow larger PDFs than images
+        // For local PDFs, return the file path so the frontend can render via convertFileSrc.
         let bytes = meta.len() as usize;
-        let data = if bytes <= cap {
-            fs::read(&p).map_err(|e| e.to_string())?
-        } else {
-            head.clone()
-        };
-        let data_uri = format!(
-            "data:{};base64,{}",
-            mime,
-            base64::engine::general_purpose::STANDARD.encode(data)
-        );
-        return Ok(PreviewPayload::Pdf {
-            name,
-            data_uri,
-            bytes,
-        });
+        return Ok(PreviewPayload::Pdf { name, path, bytes });
     }
 
     if mime.starts_with("video/") {
@@ -412,14 +380,10 @@ mod preview_tests {
         let result = build_preview(test_file.to_string_lossy().to_string());
 
         match result {
-            Ok(PreviewPayload::Image {
-                name,
-                data_uri,
-                bytes,
-            }) => {
+            Ok(PreviewPayload::Image { name, path, bytes }) => {
                 log_info!("Image preview generated: name={}, bytes={}", name, bytes);
                 assert_eq!(name, "test.png");
-                assert!(data_uri.starts_with("data:image/png;base64,"));
+                assert!(!path.is_empty());
                 assert_eq!(bytes, png_data.len());
                 log_info!("All image preview assertions passed");
             }
@@ -453,15 +417,11 @@ mod preview_tests {
         let result = build_preview(test_file.to_string_lossy().to_string());
 
         match result {
-            Ok(PreviewPayload::Pdf {
-                name,
-                data_uri: _,
-                bytes,
-                ..
-            }) => {
+            Ok(PreviewPayload::Pdf { name, path, bytes }) => {
                 log_info!("PDF preview generated: name={}, bytes={}", name, bytes);
                 assert_eq!(name, "test.pdf");
-                // Additional checks for data_uri and bytes can be added if needed
+                assert!(!path.is_empty());
+                // Additional checks for bytes can be added if needed
                 log_info!("All PDF preview assertions passed");
             }
             Ok(other) => {

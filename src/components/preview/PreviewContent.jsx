@@ -34,25 +34,37 @@ export function PreviewContent({ payload }) {
       );
     }
 
-    case 'Image':
+    case 'Image': {
+      const src =
+        payload.data_uri ||
+        (typeof payload.path === 'string' && payload.path.startsWith('data:')
+          ? payload.path
+          : convertFileSrc(payload.path));
       return (
         <div className="preview-image-container">
-          <img src={payload.data_uri} alt={payload.name} className="preview-image" />
+          <img src={src} alt={payload.name} className="preview-image" />
           <div className="preview-image-info">
             <span className="preview-file-size">{formatFileSize(payload.bytes)}</span>
           </div>
         </div>
       );
+    }
 
-    case 'Pdf':
+    case 'Pdf': {
+      const src =
+        payload.data_uri ||
+        (typeof payload.path === 'string' && payload.path.startsWith('data:')
+          ? payload.path
+          : convertFileSrc(payload.path));
       return (
         <div className="preview-pdf-container" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-          <iframe title={payload.name} src={payload.data_uri} style={{ flex: 1, width: '100%', height: 0, minHeight: 0, border: 'none' }} />
+          <iframe title={payload.name} src={src} style={{ flex: 1, width: '100%', height: 0, minHeight: 0, border: 'none' }} />
           <div className="preview-image-info" style={{ alignSelf: 'flex-end', marginTop: 8 }}>
             <span className="preview-file-size">{formatFileSize(payload.bytes)}</span>
           </div>
         </div>
       );
+    }
 
     case 'Video': {
       const url = convertFileSrc(payload.path);
