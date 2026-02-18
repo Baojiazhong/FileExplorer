@@ -1,3 +1,5 @@
+import { registerKeydownHandler, KEYDOWN_PRIORITIES } from './keyboard';
+
 /**
  * Simple notification system to replace browser alerts
  */
@@ -119,6 +121,7 @@ export const showInfo = (message, duration) => showNotification(message, 'info',
 export const showConfirm = (message, title = 'Confirm') => {
     return new Promise((resolve) => {
         const modal = document.createElement('div');
+        modal.setAttribute('data-modal', 'confirm-dialog');
         modal.style.cssText = `
             position: fixed;
             top: 0;
@@ -187,7 +190,47 @@ export const showConfirm = (message, title = 'Confirm') => {
             cursor: pointer;
         `;
 
+        let cleanedUp = false;
+
+        const unregisterKeydown = registerKeydownHandler(
+            (e) => {
+                if (cleanedUp) return true;
+                if (e.defaultPrevented) return false;
+
+                // Let Tab/Shift+Tab work for button focus.
+                if (e.key === 'Tab') return false;
+
+                if (e.key === 'Escape') {
+                    // Stop Escape from also triggering app-level handlers.
+                    e.preventDefault();
+                    cleanup();
+                    resolve(false);
+                    return true;
+                }
+
+                if (e.key === 'Enter') {
+                    // Confirm should be the default action for Enter in this dialog.
+                    e.preventDefault();
+                    cleanup();
+                    resolve(true);
+                    return true;
+                }
+
+                // This confirm dialog is modal: block background keybindings/navigation.
+                e.preventDefault();
+                return true;
+            },
+            {
+                name: 'Confirm dialog keys',
+                priority: KEYDOWN_PRIORITIES.CONFIRM,
+                when: () => document.body.contains(modal),
+            }
+        );
+
         const cleanup = () => {
+            if (cleanedUp) return;
+            cleanedUp = true;
+            unregisterKeydown();
             if (modal.parentNode) {
                 modal.parentNode.removeChild(modal);
             }
@@ -211,14 +254,7 @@ export const showConfirm = (message, title = 'Confirm') => {
         });
 
         // ESC key to cancel
-        const handleKeyDown = (e) => {
-            if (e.key === 'Escape') {
-                cleanup();
-                resolve(false);
-                document.removeEventListener('keydown', handleKeyDown);
-            }
-        };
-        document.addEventListener('keydown', handleKeyDown);
+        // handled by keyboard router
 
         buttonContainer.appendChild(cancelBtn);
         buttonContainer.appendChild(confirmBtn);

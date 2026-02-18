@@ -45,6 +45,15 @@ import { usePreviewPane } from '../hooks/usePreviewPane';
 
 import '../styles/layouts/mainLayout.css';
 import {replaceFileName} from "../utils/pathUtils.js";
+import {
+    computeParentPath,
+    getSystemInfoOnce,
+    KEYMAP_PRESETS,
+    matchesShortcut,
+    resolvePreset,
+    shouldIgnoreKeyEvent,
+} from '../utils/keymap.js';
+import { registerKeydownHandler, KEYDOWN_PRIORITIES } from '../utils/keyboard.js';
 
 /**
  * MainLayout component that serves as the primary layout structure for the application.
@@ -54,7 +63,7 @@ import {replaceFileName} from "../utils/pathUtils.js";
  */
 const MainLayout = () => {
     const { theme, toggleTheme } = useTheme();
-    const { isLoading, currentDirData, selectedItems, loadDirectory, volumes, focusedItem, setFocusedItem, renameItem: fsRenameItem } = useFileSystem();
+    const { isLoading, currentDirData, selectedItems, loadDirectory, volumes, focusedItem, setFocusedItem, renameItem: fsRenameItem, openFile } = useFileSystem();
     const { isSftpPath, parseSftpPath } = useSftp();
     const { 
         isOpen: isContextMenuOpen, 
@@ -68,7 +77,7 @@ const MainLayout = () => {
         deleteItems,
         showProperties
     } = useContextMenu();
-    const { currentPath, navigateTo } = useHistory();
+    const { currentPath, navigateTo, goBack, goForward } = useHistory();
     const { settings, updateSetting } = useSettings();
 
 
@@ -99,6 +108,8 @@ const MainLayout = () => {
     const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
      const [isSettingsOpen, setIsSettingsOpen] = useState(false);
      const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
+
+    const [systemInfo, setSystemInfo] = useState(null);
 
     const [itemToRename, setItemToRename] = useState(null);
 
@@ -196,81 +207,135 @@ const MainLayout = () => {
         return focusedItem;
     };
 
-    // 2D Grid navigation functions using sorted data
     const navigateUp = useCallback(() => {
         const sortedItems = getSortedData();
-        if (!sortedItems.length) return;
-        
+        if (!sortedItems.length) return null;
+
         const currentIndex = focusedItem ? sortedItems.findIndex(item => item.path === focusedItem.path) : -1;
+
+        // If nothing is focused yet, start at the first item.
+        if (currentIndex === -1) {
+            setFocusedItem(sortedItems[0]);
+            return sortedItems[0];
+        }
+
         const newIndex = currentIndex - columnsPerRow;
-        
+
+        let nextItem;
         if (newIndex >= 0) {
-            setFocusedItem(sortedItems[newIndex]);
+            nextItem = sortedItems[newIndex];
         } else {
             // Wrap to bottom row
             const remainder = currentIndex % columnsPerRow;
             const totalRows = Math.ceil(sortedItems.length / columnsPerRow);
             const lastRowStartIndex = (totalRows - 1) * columnsPerRow;
             const targetIndex = Math.min(lastRowStartIndex + remainder, sortedItems.length - 1);
-            setFocusedItem(sortedItems[targetIndex]);
+            nextItem = sortedItems[targetIndex];
         }
+
+        setFocusedItem(nextItem);
+        return nextItem;
     }, [getSortedData, focusedItem, setFocusedItem, columnsPerRow]);
 
     const navigateDown = useCallback(() => {
         const sortedItems = getSortedData();
-        if (!sortedItems.length) return;
-        
+        if (!sortedItems.length) return null;
+
         const currentIndex = focusedItem ? sortedItems.findIndex(item => item.path === focusedItem.path) : -1;
+
+        // If nothing is focused yet, start at the first item.
+        if (currentIndex === -1) {
+            setFocusedItem(sortedItems[0]);
+            return sortedItems[0];
+        }
+
         const newIndex = currentIndex + columnsPerRow;
-        
+
+        let nextItem;
         if (newIndex < sortedItems.length) {
-            setFocusedItem(sortedItems[newIndex]);
+            nextItem = sortedItems[newIndex];
         } else {
             // Wrap to top row
             const remainder = currentIndex % columnsPerRow;
-            setFocusedItem(sortedItems[remainder]);
+            nextItem = sortedItems[remainder];
         }
+
+        setFocusedItem(nextItem);
+        return nextItem;
     }, [getSortedData, focusedItem, setFocusedItem, columnsPerRow]);
 
     const navigateLeft = useCallback(() => {
         const sortedItems = getSortedData();
-        if (!sortedItems.length) return;
-        
+        if (!sortedItems.length) return null;
+
         const currentIndex = focusedItem ? sortedItems.findIndex(item => item.path === focusedItem.path) : -1;
-        
+
+        // If nothing is focused yet, start at the first item.
+        if (currentIndex === -1) {
+            setFocusedItem(sortedItems[0]);
+            return sortedItems[0];
+        }
+
+        let nextItem;
         if (currentIndex % columnsPerRow === 0) {
             // At leftmost column, wrap to rightmost of same row or previous row
             const currentRow = Math.floor(currentIndex / columnsPerRow);
             const nextRowLastIndex = Math.min((currentRow + 1) * columnsPerRow - 1, sortedItems.length - 1);
-            setFocusedItem(sortedItems[nextRowLastIndex]);
+            nextItem = sortedItems[nextRowLastIndex];
         } else {
-            setFocusedItem(sortedItems[currentIndex - 1]);
+            nextItem = sortedItems[currentIndex - 1];
         }
+
+        setFocusedItem(nextItem);
+        return nextItem;
     }, [getSortedData, focusedItem, setFocusedItem, columnsPerRow]);
 
     const navigateRight = useCallback(() => {
         const sortedItems = getSortedData();
-        if (!sortedItems.length) return;
-        
+        if (!sortedItems.length) return null;
+
         const currentIndex = focusedItem ? sortedItems.findIndex(item => item.path === focusedItem.path) : -1;
-        
+
+        // If nothing is focused yet, start at the first item.
+        if (currentIndex === -1) {
+            setFocusedItem(sortedItems[0]);
+            return sortedItems[0];
+        }
+
+        let nextItem;
         if ((currentIndex + 1) % columnsPerRow === 0 || currentIndex === sortedItems.length - 1) {
             // At rightmost column or last item, wrap to leftmost of same row
             const currentRow = Math.floor(currentIndex / columnsPerRow);
             const rowStartIndex = currentRow * columnsPerRow;
-            setFocusedItem(sortedItems[rowStartIndex]);
+            nextItem = sortedItems[rowStartIndex];
         } else {
-            setFocusedItem(sortedItems[currentIndex + 1]);
+            nextItem = sortedItems[currentIndex + 1];
         }
+
+        setFocusedItem(nextItem);
+        return nextItem;
     }, [getSortedData, focusedItem, setFocusedItem, columnsPerRow]);
+
+    const overlayBlocksKeyboard =
+        isGlobalSearchOpen ||
+        isSettingsOpen ||
+        isRenameModalOpen ||
+        isTextViewerOpen ||
+        isHashFileModalOpen ||
+        isHashCompareModalOpen ||
+        isHashDisplayModalOpen ||
+        isContextMenuOpen;
 
     const { 
         open: isPreviewOpen, 
         payload: previewPayload, 
         isLoading: isPreviewLoading,
         closePreview 
-    } = usePreview(getFocusedItem, navigateUp, navigateDown, navigateLeft, navigateRight);
-
+    } = usePreview(getFocusedItem, navigateUp, navigateDown, navigateLeft, navigateRight, {
+        // Allow Space to open Preview Modal only when no other overlay is active.
+        keyHandlingEnabled: !overlayBlocksKeyboard,
+    });
+ 
     const {
         payload: previewPanePayload,
         isLoading: isPreviewPaneLoading,
@@ -302,11 +367,24 @@ const MainLayout = () => {
             setViewMode(settings.default_view);
         }
     }, [settings.default_view]);
+    /**
+     * Load OS/system info once (used for keymap auto preset resolution).
+     */
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            const info = await getSystemInfoOnce();
+            if (!cancelled) setSystemInfo(info);
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
 
     /**
-     * Effect to load default location on first render
-     */
+      * Effect to load default location on first render
+      */
     useEffect(() => {
         if (volumes.length > 0 && !currentDirData && !currentPath) {
             // Show This PC view by default
@@ -572,67 +650,29 @@ const MainLayout = () => {
         }
     }, [currentDirData]);
 
-    /**
-     * Effect to handle keyboard shortcuts
-     */
+    // Keyboard shortcuts effect is defined later (after pane toggle handlers)
+    // so it doesn't reference callbacks before initialization.
+
+
     useEffect(() => {
-        /**
-         * Keyboard event handler for shortcuts
-         * @param {KeyboardEvent} e - The keyboard event
-         */
-        const handleKeyDown = (e) => {
-            // Global search: Ctrl+Shift+F
-            if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'F') {
-                e.preventDefault();
-                setIsGlobalSearchOpen(true);
-            }
-
-            // Settings: Ctrl+,
-            if ((e.ctrlKey || e.metaKey) && e.key === ',') {
-                e.preventDefault();
-                setIsSettingsOpen(true);
-            }
-
-            // New folder: Ctrl+Shift+N
-            if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'N') {
-                e.preventDefault();
-                document.dispatchEvent(new CustomEvent('create-folder'));
-            }
-
-            // New file: Ctrl+N
-            if ((e.ctrlKey || e.metaKey) && e.key === 'n' && !e.shiftKey) {
-                e.preventDefault();
-                document.dispatchEvent(new CustomEvent('create-file'));
-            }
-
-            // Rename: F2
-            if (e.key === 'F2' && selectedItems.length === 1) {
-                e.preventDefault();
-                document.dispatchEvent(new CustomEvent('open-rename-modal', {
-                    detail: { item: selectedItems[0] }
-                }));
-            }
-
-            // Toggle terminal: Ctrl+`
-            if ((e.ctrlKey || e.metaKey) && e.key === '`') {
-                e.preventDefault();
-                setIsTerminalOpen(prev => !prev);
-            }
-
-            // Escape to clear selection
-            if (e.key === 'Escape') {
-                document.dispatchEvent(new CustomEvent('clear-selection'));
-            }
+        const onBack = () => {
+            goBack();
         };
-
-        document.addEventListener('keydown', handleKeyDown);
-        return () => document.removeEventListener('keydown', handleKeyDown);
-    }, [selectedItems]);
+        const onForward = () => {
+            goForward();
+        };
+        document.addEventListener('history-back', onBack);
+        document.addEventListener('history-forward', onForward);
+        return () => {
+            document.removeEventListener('history-back', onBack);
+            document.removeEventListener('history-forward', onForward);
+        };
+    }, [goBack, goForward]);
 
     /**
-     * Copies current path to clipboard
-     * For SFTP paths, copies the standard URL format
-     */
+      * Copies current path to clipboard
+      * For SFTP paths, copies the standard URL format
+      */
     const copyCurrentPath = useCallback(async () => {
         if (!currentPath) return;
 
@@ -759,6 +799,297 @@ const MainLayout = () => {
             console.error('Failed to save right pane mode setting:', error);
         }
     }, [rightPaneMode, updateSetting]);
+
+    /**
+     * Effect to handle keyboard shortcuts (OS-native presets)
+     */
+    useEffect(() => {
+        const resolvedPreset = resolvePreset({
+            selectedPreset: settings.keymap_preset,
+            runningOs: systemInfo?.current_running_os,
+        });
+
+        return registerKeydownHandler(
+            (e) => {
+                if (e.defaultPrevented) return false;
+
+                // Never steal keystrokes while typing.
+                if (shouldIgnoreKeyEvent(e)) return false;
+
+                // Preview modal owns Space/Esc/arrows; avoid triggering actions underneath.
+                if (isPreviewOpen) return false;
+
+                // If global search modal is open, avoid conflicting with its internal key handling.
+                if (isGlobalSearchOpen) return false;
+
+                // If any modal/overlay is open, don't fire app-level shortcuts underneath it.
+                if (
+                    isSettingsOpen ||
+                    isRenameModalOpen ||
+                    isTextViewerOpen ||
+                    isHashFileModalOpen ||
+                    isHashCompareModalOpen ||
+                    isHashDisplayModalOpen ||
+                    isContextMenuOpen
+                ) {
+                    return false;
+                }
+
+                // Settings: Ctrl/Cmd+,
+                if ((e.ctrlKey || e.metaKey) && e.key === ',') {
+                    e.preventDefault();
+                    setIsSettingsOpen(true);
+                    return true;
+                }
+
+                // Global search: Ctrl/Cmd+Shift+F
+                if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'F' || e.key === 'f')) {
+                    e.preventDefault();
+                    setIsGlobalSearchOpen(true);
+                    return true;
+                }
+
+                // Local search focus: Ctrl/Cmd+F
+                if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'F' || e.key === 'f')) {
+                    // Prevent browser find.
+                    e.preventDefault();
+                    // Let PathBreadcrumb decide how to open/focus its local-search input.
+                    document.dispatchEvent(new CustomEvent('open-local-search'));
+                    return true;
+                }
+
+                // New folder: Ctrl/Cmd+Shift+N
+                if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'N' || e.key === 'n')) {
+                    e.preventDefault();
+                    document.dispatchEvent(new CustomEvent('create-folder'));
+                    return true;
+                }
+
+                // New file: Ctrl/Cmd+N
+                if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'N' || e.key === 'n')) {
+                    e.preventDefault();
+                    document.dispatchEvent(new CustomEvent('create-file'));
+                    return true;
+                }
+
+                // Toggle terminal: Ctrl/Cmd+`
+                if ((e.ctrlKey || e.metaKey) && e.key === '`') {
+                    e.preventDefault();
+                    setIsTerminalOpen(prev => !prev);
+                    return true;
+                }
+
+                // Escape: clear selection
+                // Only clear selection when no other overlay is trying to consume Escape.
+                if (e.key === 'Escape') {
+                    if (e.defaultPrevented) return false;
+                    document.dispatchEvent(new CustomEvent('clear-selection'));
+                    return true;
+                }
+
+                // OS-native: rename
+                // - Windows/Linux: F2
+                // - macOS Finder: Enter
+                if (resolvedPreset !== KEYMAP_PRESETS.MACOS) {
+                    if (e.key === 'F2' && selectedItems.length === 1) {
+                        e.preventDefault();
+                        document.dispatchEvent(new CustomEvent('open-rename-modal', {
+                            detail: { item: selectedItems[0] },
+                        }));
+                        return true;
+                    }
+                } else {
+                    if ((e.key === 'Enter' || e.key === 'NumpadEnter') && selectedItems.length === 1) {
+                        e.preventDefault();
+                        document.dispatchEvent(new CustomEvent('open-rename-modal', {
+                            detail: { item: selectedItems[0] },
+                        }));
+                        return true;
+                    }
+                }
+
+                // OS-native: open (macOS uses Cmd+O)
+                if (resolvedPreset === KEYMAP_PRESETS.MACOS) {
+                    if (matchesShortcut(e, { meta: true, code: 'KeyO' })) {
+                        const targetItem = selectedItems.length === 1 ? selectedItems[0] : focusedItem;
+                        if (!targetItem) return false;
+
+                        e.preventDefault();
+                        if (targetItem.isDirectory) {
+                            loadDirectory(targetItem.path);
+                        } else {
+                            openFile(targetItem.path);
+                        }
+                        return true;
+                    }
+                }
+
+                // Trash (no permanent delete shortcut in phase 1)
+                // - Windows/Linux: Delete
+                // - macOS: Cmd+Backspace
+                if (resolvedPreset === KEYMAP_PRESETS.MACOS) {
+                    if (matchesShortcut(e, { meta: true, key: 'Backspace' })) {
+                        if (selectedItems.length === 0) return false;
+                        e.preventDefault();
+                        deleteItems(selectedItems);
+                        return true;
+                    }
+                } else {
+                    if (e.key === 'Delete') {
+                        if (selectedItems.length === 0) return false;
+                        e.preventDefault();
+                        deleteItems(selectedItems);
+                        return true;
+                    }
+                }
+
+                // Copy/Cut/Paste
+                if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'c' || e.key === 'C')) {
+                    if (selectedItems.length === 0) return false;
+                    e.preventDefault();
+                    copyToClipboard(selectedItems);
+                    return true;
+                }
+                if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'x' || e.key === 'X')) {
+                    if (selectedItems.length === 0) return false;
+                    e.preventDefault();
+                    cutToClipboard(selectedItems);
+                    return true;
+                }
+                if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'v' || e.key === 'V')) {
+                    if (!clipboard.items || clipboard.items.length === 0) return false;
+                    e.preventDefault();
+                    pasteFromClipboard();
+                    return true;
+                }
+
+                // Navigation
+                if (resolvedPreset === KEYMAP_PRESETS.MACOS) {
+                    if (matchesShortcut(e, { meta: true, code: 'BracketLeft' })) {
+                        e.preventDefault();
+                        document.dispatchEvent(new CustomEvent('history-back'));
+                        return true;
+                    }
+                    if (matchesShortcut(e, { meta: true, code: 'BracketRight' })) {
+                        e.preventDefault();
+                        document.dispatchEvent(new CustomEvent('history-forward'));
+                        return true;
+                    }
+                    if (matchesShortcut(e, { meta: true, key: 'ArrowUp' })) {
+                        if (!currentPath) return false;
+                        e.preventDefault();
+                        const parent = computeParentPath(currentPath);
+                        if (parent && parent !== currentPath) loadDirectory(parent);
+                        return true;
+                    }
+                } else {
+                    if (matchesShortcut(e, { alt: true, key: 'ArrowLeft' })) {
+                        e.preventDefault();
+                        document.dispatchEvent(new CustomEvent('history-back'));
+                        return true;
+                    }
+                    if (matchesShortcut(e, { alt: true, key: 'ArrowRight' })) {
+                        e.preventDefault();
+                        document.dispatchEvent(new CustomEvent('history-forward'));
+                        return true;
+                    }
+                    if (matchesShortcut(e, { alt: true, key: 'ArrowUp' })) {
+                        if (!currentPath) return false;
+                        e.preventDefault();
+                        const parent = computeParentPath(currentPath);
+                        if (parent && parent !== currentPath) loadDirectory(parent);
+                        return true;
+                    }
+                }
+
+                // Refresh
+                if (resolvedPreset === KEYMAP_PRESETS.WINDOWS) {
+                    if (e.key === 'F5') {
+                        if (!currentPath) return false;
+                        e.preventDefault();
+                        loadDirectory(currentPath);
+                        return true;
+                    }
+                } else if (resolvedPreset === KEYMAP_PRESETS.LINUX) {
+                    if (matchesShortcut(e, { ctrl: true, code: 'KeyR' })) {
+                        if (!currentPath) return false;
+                        e.preventDefault();
+                        loadDirectory(currentPath);
+                        return true;
+                    }
+                } else if (resolvedPreset === KEYMAP_PRESETS.MACOS) {
+                    if (matchesShortcut(e, { meta: true, code: 'KeyR' })) {
+                        if (!currentPath) return false;
+                        e.preventDefault();
+                        loadDirectory(currentPath);
+                        return true;
+                    }
+                }
+
+                // Right pane toggles: intentionally not bound for Linux in phase 1.
+                if (resolvedPreset === KEYMAP_PRESETS.WINDOWS) {
+                    if (matchesShortcut(e, { alt: true, code: 'KeyP' })) {
+                        e.preventDefault();
+                        handlePreviewPaneToggle();
+                        return true;
+                    }
+                }
+                if (resolvedPreset === KEYMAP_PRESETS.MACOS) {
+                    // Finder: Shift+Cmd+P toggles preview pane
+                    if (matchesShortcut(e, { meta: true, shift: true, code: 'KeyP' })) {
+                        e.preventDefault();
+                        handlePreviewPaneToggle();
+                        return true;
+                    }
+                    // Finder: Cmd+I maps well to details pane toggle (Get Info)
+                    if (matchesShortcut(e, { meta: true, code: 'KeyI' })) {
+                        e.preventDefault();
+                        handleDetailsPanelToggle();
+                        return true;
+                    }
+                }
+
+                // Tabs (wired via document events)
+                if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 't' || e.key === 'T')) {
+                    e.preventDefault();
+                    document.dispatchEvent(new CustomEvent('tab-new'));
+                    return true;
+                }
+                if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'w' || e.key === 'W')) {
+                    e.preventDefault();
+                    document.dispatchEvent(new CustomEvent('tab-close'));
+                    return true;
+                }
+
+                return false;
+            },
+            { id: 'mainlayout-keymap', name: 'MainLayout keymap', priority: KEYDOWN_PRIORITIES.APP }
+        );
+    }, [
+        settings.keymap_preset,
+        systemInfo?.current_running_os,
+        selectedItems,
+        focusedItem,
+        clipboard.items,
+        loadDirectory,
+        openFile,
+        deleteItems,
+        copyToClipboard,
+        cutToClipboard,
+        pasteFromClipboard,
+        currentPath,
+        isGlobalSearchOpen,
+        isPreviewOpen,
+        handlePreviewPaneToggle,
+        handleDetailsPanelToggle,
+        isSettingsOpen,
+        isRenameModalOpen,
+        isTextViewerOpen,
+        isHashFileModalOpen,
+        isHashCompareModalOpen,
+        isHashDisplayModalOpen,
+        isContextMenuOpen,
+    ]);
 
     const handleRightPaneResizeStart = useCallback((e) => {
         if (rightPaneMode === 'none') return;
@@ -1028,7 +1359,17 @@ const MainLayout = () => {
                             viewMode={viewMode}
                             isSearching={!!searchValue}
                             searchTerm={searchValue}
-                            disableArrowKeys={isPreviewOpen}
+                            disableArrowKeys={
+                                isPreviewOpen ||
+                                isGlobalSearchOpen ||
+                                isSettingsOpen ||
+                                isRenameModalOpen ||
+                                isTextViewerOpen ||
+                                isHashFileModalOpen ||
+                                isHashCompareModalOpen ||
+                                isHashDisplayModalOpen ||
+                                isContextMenuOpen
+                            }
                             onColumnsChange={setColumnsPerRow}
                         />
                     </div>

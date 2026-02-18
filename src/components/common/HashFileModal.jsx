@@ -87,6 +87,8 @@ const HashFileModal = ({ isOpen, onClose, item }) => {
      */
     const handleKeyDown = (e) => {
         if (e.key === 'Escape') {
+            // Prevent app-level Escape handlers from also firing.
+            e.preventDefault();
             onClose();
         }
     };
@@ -99,6 +101,8 @@ const HashFileModal = ({ isOpen, onClose, item }) => {
             onClose={onClose}
             title="Generate Hash to File"
             size="sm"
+            defaultAction={handleSubmit}
+            defaultActionEnabled={!!fileName.trim() && !isGenerating}
             footer={
                 <>
                     <Button

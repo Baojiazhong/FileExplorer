@@ -99,27 +99,8 @@ const SearchBar = ({ value = '', onChange, onSubmit, placeholder = 'Search files
         }
     };
 
-    /**
-     * Setup keyboard shortcut (Ctrl+F) to focus on search
-     */
-    useEffect(() => {
-        const handleKeyDown = (e) => {
-            if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
-                e.preventDefault();
-                setIsExpanded(true);
+    // Note: keybindings are centralized in MainLayout (keymap.js).
 
-                if (inputRef.current) {
-                    inputRef.current.focus();
-                }
-            }
-        };
-
-        window.addEventListener('keydown', handleKeyDown);
-
-        return () => {
-            window.removeEventListener('keydown', handleKeyDown);
-        };
-    }, []);
 
     /**
      * Handle click outside to collapse search bar

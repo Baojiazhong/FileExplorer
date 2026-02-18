@@ -77,6 +77,8 @@ const HashCompareModal = ({ isOpen, onClose, item }) => {
      */
     const handleKeyDown = (e) => {
         if (e.key === 'Escape') {
+            // Prevent app-level Escape handlers from also firing.
+            e.preventDefault();
             onClose();
         }
     };
@@ -106,6 +108,8 @@ const HashCompareModal = ({ isOpen, onClose, item }) => {
             onClose={onClose}
             title="Compare Hash"
             size="md"
+            defaultAction={handleSubmit}
+            defaultActionEnabled={!!hashValue.trim() && !isComparing}
             footer={
                 <>
                     <Button

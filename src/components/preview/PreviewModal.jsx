@@ -14,7 +14,14 @@ export function PreviewModal({ payload, onClose, isLoading }) {
   if (!payload && !isLoading) return null;
 
   return (
-    <div className="preview-modal-backdrop" onClick={onClose}>
+    <div
+      className="preview-modal-backdrop"
+      onClick={(e) => {
+        // Keep backdrop clicks from bubbling to document-level outside-click handlers.
+        e.stopPropagation();
+        onClose();
+      }}
+    >
       <div className="preview-modal" onClick={(e) => e.stopPropagation()}>
         <header
           className="preview-modal-header"

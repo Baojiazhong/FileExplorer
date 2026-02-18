@@ -340,6 +340,8 @@ const TemplateList = ({ onClose }) => {
                 onClose={() => setIsUseModalOpen(false)}
                 title="Use Template"
                 size="sm"
+                defaultAction={applyTemplate}
+                defaultActionEnabled={!!destinationPath.trim()}
                 footer={
                     <>
                         <Button
@@ -351,6 +353,7 @@ const TemplateList = ({ onClose }) => {
                         <Button
                             variant="primary"
                             onClick={applyTemplate}
+                            disabled={!destinationPath.trim()}
                         >
                             Apply Template
                         </Button>
@@ -392,6 +395,8 @@ const TemplateList = ({ onClose }) => {
                 onClose={() => setIsAddModalOpen(false)}
                 title="Add Template"
                 size="sm"
+                defaultAction={saveNewTemplate}
+                defaultActionEnabled={!!newTemplatePath.trim()}
                 footer={
                     <>
                         <Button

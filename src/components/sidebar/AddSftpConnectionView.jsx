@@ -72,6 +72,8 @@ const AddSftpConnectionView = ({ isOpen, onClose, onAdd }) => {
 			onClose={handleClose}
 			title="Add SFTP Connection"
 			size="sm"
+			defaultAction={handleAdd}
+			defaultActionEnabled={!!name.trim() && !!host.trim() && !!port.trim() && !!username.trim()}
 			footer={
 				<>
 					<Button variant="ghost" onClick={handleClose}>Cancel</Button>

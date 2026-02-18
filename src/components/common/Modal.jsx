@@ -2,57 +2,145 @@ import React, { useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import Icon from './Icon';
 import './common.css';
+import { registerKeydownHandler, KEYDOWN_PRIORITIES } from '../../utils/keyboard';
+
+const isTypingTarget = (target) => {
+    if (!target) return false;
+    if (target instanceof HTMLInputElement) return true;
+    if (target instanceof HTMLTextAreaElement) return true;
+    if (target instanceof HTMLSelectElement) return true;
+
+    // contenteditable elements
+    if (typeof target.closest === 'function') {
+        const editable = target.closest('[contenteditable="true"]');
+        if (editable) return true;
+    }
+
+    return false;
+};
+
+const isNativeClickable = (el) => {
+    if (!el || !(el instanceof HTMLElement)) return false;
+    const tag = el.tagName;
+    if (tag === 'BUTTON' || tag === 'A') return true;
+    if (el.getAttribute('role') === 'button') return true;
+    return false;
+};
 
 /**
  * Modal component
- * @param {Object} props - Component props
- * @param {boolean} props.isOpen - Whether the modal is open
- * @param {Function} props.onClose - Function to call when modal should close
- * @param {string} [props.title] - Modal title
- * @param {React.ReactNode} props.children - Modal content
- * @param {React.ReactNode} [props.footer] - Modal footer content
- * @param {string} [props.size='md'] - Modal size (sm, md, lg, xl, full)
- * @param {boolean} [props.closeOnEsc=true] - Whether to close modal on Escape key
- * @param {boolean} [props.closeOnOverlayClick=true] - Whether to close modal when clicking the overlay
- * @param {boolean} [props.showCloseButton=true] - Whether to show the close button
- * @param {string} [props.className] - Additional CSS class names
- * @returns {React.ReactElement|null} Modal component or null if closed
+ *
+ * Note on keyboard handling:
+ * - Escape is handled here so it doesn't fall through to app-level handlers.
+ * - Optionally, Enter can trigger a provided `defaultAction` (e.g. Create/Rename) so it
+ *   also doesn't fall through to background list navigation.
  */
 const Modal = ({
-                   isOpen,
-                   onClose,
-                   title,
-                   children,
-                   footer,
-                   size = 'md',
-                   closeOnEsc = true,
-                   closeOnOverlayClick = true,
-                   showCloseButton = true,
-                   className = '',
-                   ...rest
-               }) => {
+    isOpen,
+    onClose,
+    title,
+    children,
+    footer,
+    size = 'md',
+    closeOnEsc = true,
+    closeOnOverlayClick = true,
+    showCloseButton = true,
+    className = '',
+    defaultAction = null,
+    defaultActionEnabled = true,
+    consumeEnter = undefined,
+    ...rest
+}) => {
     const modalRef = useRef(null);
 
     // Close modal when Escape key is pressed
     useEffect(() => {
-        const handleKeyDown = (event) => {
-            if (closeOnEsc && event.key === 'Escape' && isOpen) {
-                onClose();
-            }
-        };
-
         if (isOpen) {
-            document.addEventListener('keydown', handleKeyDown);
             // Prevent scrolling of the body when modal is open
             document.body.style.overflow = 'hidden';
         }
 
         return () => {
-            document.removeEventListener('keydown', handleKeyDown);
             // Restore scrolling when modal is closed
             document.body.style.overflow = '';
         };
+    }, [isOpen]);
+
+    useEffect(() => {
+        if (!isOpen) return;
+
+        return registerKeydownHandler(
+            (event) => {
+                // Allow inner components to "claim" Escape (e.g. close dropdowns first).
+                if (event.defaultPrevented) return false;
+
+                if (closeOnEsc && event.key === 'Escape') {
+                    // Claim Escape so app-level handlers (clear-selection, etc.) don't run.
+                    event.preventDefault();
+                    onClose();
+                    return true;
+                }
+
+                return false;
+            },
+            {
+                id: 'modal-escape',
+                name: 'Modal escape',
+                priority: KEYDOWN_PRIORITIES.MODAL,
+                when: () => isOpen,
+            }
+        );
     }, [isOpen, onClose, closeOnEsc]);
+
+    // Optional: Enter triggers modal's primary action (Create/Rename/Save)
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const shouldConsume =
+            typeof consumeEnter === 'boolean'
+                ? consumeEnter
+                : typeof defaultAction === 'function';
+
+        if (!shouldConsume) return;
+
+        return registerKeydownHandler(
+            (event) => {
+                if (event.defaultPrevented) return false;
+
+                // Let Tab/Shift+Tab work for focus movement.
+                if (event.key === 'Tab') return false;
+
+                // Don't steal Enter from form fields; let the form submit normally.
+                if (isTypingTarget(event.target)) return false;
+
+                // If focus is already on a button/link in the modal, let native activation run.
+                const active = document.activeElement;
+                if (modalRef.current && active && modalRef.current.contains(active) && isNativeClickable(active)) {
+                    return false;
+                }
+
+                if (event.key === 'Enter' || event.key === 'NumpadEnter') {
+                    event.preventDefault();
+
+                    if (typeof defaultAction === 'function' && defaultActionEnabled) {
+                        defaultAction();
+                    }
+
+                    // Even when disabled, consume Enter so it doesn't fall through to the background.
+                    return true;
+                }
+
+                return false;
+            },
+            {
+                id: 'modal-default-action',
+                name: 'Modal default action',
+                // Keep under confirm dialogs; above app-level shortcuts.
+                priority: KEYDOWN_PRIORITIES.MODAL - 1,
+                when: () => isOpen,
+            }
+        );
+    }, [isOpen, defaultAction, defaultActionEnabled, consumeEnter]);
 
     // Focus the modal when it opens
     useEffect(() => {
@@ -60,12 +148,12 @@ const Modal = ({
             // Save the currently focused element
             const previouslyFocused = document.activeElement;
 
-            // Focus the modal
+            // Focus the modal (components may move focus to an input afterward)
             modalRef.current.focus();
 
             // Restore focus when modal closes
             return () => {
-                if (previouslyFocused) {
+                if (previouslyFocused instanceof HTMLElement) {
                     previouslyFocused.focus();
                 }
             };
@@ -77,11 +165,7 @@ const Modal = ({
      * @param {React.MouseEvent} event - Mouse-Event
      */
     const handleOverlayClick = (event) => {
-        if (
-            closeOnOverlayClick &&
-            modalRef.current &&
-            !modalRef.current.contains(event.target)
-        ) {
+        if (closeOnOverlayClick && modalRef.current && !modalRef.current.contains(event.target)) {
             onClose();
         }
     };
@@ -90,11 +174,7 @@ const Modal = ({
     if (!isOpen) return null;
 
     // Build class names
-    const modalClasses = [
-        'modal',
-        `modal-${size}`,
-        className
-    ].filter(Boolean).join(' ');
+    const modalClasses = ['modal', `modal-${size}`, className].filter(Boolean).join(' ');
 
     // Create portal to render modal at the body level
     return ReactDOM.createPortal(
@@ -118,11 +198,7 @@ const Modal = ({
                         )}
 
                         {showCloseButton && (
-                            <button
-                                className="modal-close"
-                                onClick={onClose}
-                                aria-label="Close modal"
-                            >
+                            <button className="modal-close" onClick={onClose} aria-label="Close modal">
                                 <Icon name="x" />
                             </button>
                         )}
@@ -130,16 +206,10 @@ const Modal = ({
                 )}
 
                 {/* Modal Content */}
-                <div className="modal-content">
-                    {children}
-                </div>
+                <div className="modal-content">{children}</div>
 
                 {/* Modal Footer */}
-                {footer && (
-                    <div className="modal-footer">
-                        {footer}
-                    </div>
-                )}
+                {footer && <div className="modal-footer">{footer}</div>}
             </div>
         </div>,
         document.body

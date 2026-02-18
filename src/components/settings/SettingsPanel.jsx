@@ -30,6 +30,13 @@ const SettingsPanel = ({ isOpen, onClose }) => {
         { id: 'advanced', label: 'Advanced', icon: 'cog' }
     ];
 
+    const keymapPresets = [
+        { id: 'auto', label: 'Auto (OS default)' },
+        { id: 'windows', label: 'Windows (Explorer)' },
+        { id: 'macos', label: 'macOS (Finder)' },
+        { id: 'linux', label: 'Linux (Ubuntu Files)' },
+    ];
+
     /**
      * Theme options configuration
      * @type {Array<{id: boolean, label: string}>}
@@ -401,6 +408,25 @@ const SettingsPanel = ({ isOpen, onClose }) => {
      */
     const renderAdvancedTab = () => (
         <div className="settings-tab-content">
+            <div className="settings-section">
+                <h3>Keyboard</h3>
+                <div className="form-group">
+                    <label>Shortcut preset:</label>
+                    <select
+                        value={settings.keymap_preset || 'auto'}
+                        onChange={(e) => updateSetting('keymap_preset', e.target.value)}
+                        className="settings-select"
+                    >
+                        {keymapPresets.map(preset => (
+                            <option key={preset.id} value={preset.id}>{preset.label}</option>
+                        ))}
+                    </select>
+                    <div className="input-hint">
+                        Auto uses the current OS default. Changing this affects global shortcuts (e.g. Enter on macOS renames like Finder).
+                    </div>
+                </div>
+            </div>
+
             <div className="settings-section">
                 <h3>Performance</h3>
                 <div className="form-group">

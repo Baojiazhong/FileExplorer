@@ -20,6 +20,24 @@ const TabManager = ({ children }) => {
     const { isSftpPath, parseSftpPath } = useSftp();
 
     /**
+     * Listen for global tab keyboard commands (keymap dispatches these).
+     */
+    useEffect(() => {
+        const onNew = () => createNewTab();
+        const onClose = () => {
+            if (activeTabId) closeTab(activeTabId);
+        };
+        document.addEventListener('tab-new', onNew);
+        document.addEventListener('tab-close', onClose);
+        return () => {
+            document.removeEventListener('tab-new', onNew);
+            document.removeEventListener('tab-close', onClose);
+        };
+        // We intentionally depend on activeTabId/tabs/currentPath.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeTabId, tabs, currentPath]);
+
+    /**
      * Initialize with current path
      */
     useEffect(() => {
@@ -113,6 +131,8 @@ const TabManager = ({ children }) => {
      * Creates a new tab with the current path
      */
     const createNewTab = () => {
+        if (!currentPath) return;
+
         const newTab = {
             id: generateTabId(),
             title: getTabTitle(currentPath),

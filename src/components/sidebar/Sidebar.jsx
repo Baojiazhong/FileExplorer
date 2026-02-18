@@ -722,6 +722,8 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
                 onClose={() => setIsAddSourceModalOpen(false)}
                 title="Add Data Source"
                 size="sm"
+                defaultAction={saveNewSource}
+                defaultActionEnabled={!!newSourcePath.trim()}
                 footer={
                     <>
                         <Button

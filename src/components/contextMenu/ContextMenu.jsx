@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { registerKeydownHandler, KEYDOWN_PRIORITIES } from '../../utils/keyboard';
 import ContextMenuItem from './ContextMenuItem';
 import './contextMenu.css';
 
@@ -66,17 +67,27 @@ const ContextMenu = ({ position, items = [], onClose }) => {
      * Closes menu when Escape key is pressed
      */
     useEffect(() => {
-        const handleKeyDown = (e) => {
-            if (e.key === 'Escape') {
-                if (onClose) onClose();
+        if (!onClose) return;
+
+        return registerKeydownHandler(
+            (e) => {
+                if (e.defaultPrevented) return false;
+
+                if (e.key === 'Escape') {
+                    // Avoid letting global handlers also treat Escape as "clear selection".
+                    e.preventDefault();
+                    onClose();
+                    return true;
+                }
+
+                return false;
+            },
+            {
+                id: 'contextmenu-escape',
+                name: 'Context menu escape',
+                priority: KEYDOWN_PRIORITIES.MENU,
             }
-        };
-
-        document.addEventListener('keydown', handleKeyDown);
-
-        return () => {
-            document.removeEventListener('keydown', handleKeyDown);
-        };
+        );
     }, [onClose]);
 
     /**

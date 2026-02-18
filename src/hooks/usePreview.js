@@ -2,6 +2,8 @@ import { invoke } from '@tauri-apps/api/core';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useSftp } from '../providers/SftpProvider';
 import { normalizePreviewPayload } from '../utils/previewPayload';
+import { shouldIgnoreKeyEvent } from '../utils/keymap';
+import { registerKeydownHandler, KEYDOWN_PRIORITIES } from '../utils/keyboard';
 
 
 /**
@@ -13,12 +15,22 @@ import { normalizePreviewPayload } from '../utils/previewPayload';
  * @param {Function} navigateRight - Function to navigate right one column
  * @returns {Object} Object containing preview state and control functions
  */
-export function usePreview(getFocusedItem, navigateUp = null, navigateDown = null, navigateLeft = null, navigateRight = null) {
+export function usePreview(
+  getFocusedItem,
+  navigateUp = null,
+  navigateDown = null,
+  navigateLeft = null,
+  navigateRight = null,
+  options = {}
+) {
+  const { keyHandlingEnabled = true } = options;
+
   const [open, setOpen] = useState(false);
   const [payload, setPayload] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const { isSftpPath, parseSftpPath } = useSftp();
   const requestIdRef = useRef(0);
+  const openRef = useRef(false);
 
 
   /**
@@ -32,6 +44,7 @@ export function usePreview(getFocusedItem, navigateUp = null, navigateDown = nul
     const requestId = ++requestIdRef.current;
 
     // Open immediately so user sees loading state.
+    openRef.current = true;
     setOpen(true);
     setIsLoading(true);
     setPayload(null);
@@ -83,6 +96,7 @@ export function usePreview(getFocusedItem, navigateUp = null, navigateDown = nul
    * Closes the preview modal
    */
   const closePreview = useCallback(() => {
+    openRef.current = false;
     // Invalidate any in-flight request so it can't write back after closing.
     requestIdRef.current += 1;
     setIsLoading(false);
@@ -94,78 +108,116 @@ export function usePreview(getFocusedItem, navigateUp = null, navigateDown = nul
   /**
    * Toggles preview for the currently focused item (files and folders)
    */
-  const togglePreview = useCallback(() => {
-    if (open) {
-      closePreview();
-      return;
-    }
+   const togglePreview = useCallback(() => {
+     if (open) {
+       closePreview();
+       return;
+     }
+ 
+     const focusedItem = getFocusedItem();
+     if (focusedItem && focusedItem.path) {
+       openPreview(focusedItem.path);
+     }
+   }, [open, closePreview, openPreview, getFocusedItem]);
 
-    const focusedItem = getFocusedItem();
-    if (focusedItem && focusedItem.path) {
-      openPreview(focusedItem.path);
+  const previewFocusedItem = useCallback(() => {
+    const focused = getFocusedItem();
+    if (focused && focused.path) {
+      openPreview(focused.path);
+    } else {
+      closePreview();
     }
-  }, [open, closePreview, openPreview, getFocusedItem]);
+  }, [getFocusedItem, openPreview, closePreview]);
 
   // Keyboard event handler
   useEffect(() => {
     const onKey = (e) => {
+      if (e.defaultPrevented) return;
+
       // Don't trigger if we're typing in an input
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+      if (shouldIgnoreKeyEvent(e)) {
         return;
       }
 
       // Spacebar toggles preview
       if (e.key === ' ') {
+        // If preview is closed, only allow Space when no other overlay is active.
+        if (!open && !keyHandlingEnabled) return;
+
         e.preventDefault();
         togglePreview();
-      } 
+      }
       // Escape closes preview
       else if (e.key === 'Escape' && open) {
         e.preventDefault();
         closePreview();
       }
-      // Arrow keys navigate when preview is open
-      else if (open && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
-        e.preventDefault();
-        let navigationFunction = null;
-        switch (e.key) {
-          case 'ArrowUp':
-            navigationFunction = navigateUp;
-            break;
-          case 'ArrowDown':
-            navigationFunction = navigateDown;
-            break;
-          case 'ArrowLeft':
-            navigationFunction = navigateLeft;
-            break;
-          case 'ArrowRight':
-            navigationFunction = navigateRight;
-            break;
-        }
-        if (navigationFunction) {
-          navigationFunction();
-          // Only preview the newly focused item after navigation
-          setTimeout(() => {
-            const focused = getFocusedItem();
-            if (focused && focused.path) {
-              openPreview(focused.path);
-            } else {
-              closePreview();
-            }
-          }, 0);
-        }
-      }
+       // Arrow keys navigate when preview is open
+       else if (open && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+         e.preventDefault();
+         let navigationFunction = null;
+         switch (e.key) {
+           case 'ArrowUp':
+             navigationFunction = navigateUp;
+             break;
+           case 'ArrowDown':
+             navigationFunction = navigateDown;
+             break;
+           case 'ArrowLeft':
+             navigationFunction = navigateLeft;
+             break;
+           case 'ArrowRight':
+             navigationFunction = navigateRight;
+             break;
+         }
+         if (navigationFunction) {
+           const nextItem = navigationFunction();
+
+           // Prefer the return value (synchronous) so preview stays in sync with focus.
+           if (nextItem && nextItem.path) {
+             openPreview(nextItem.path);
+           } else {
+             // Fallback: focus might update asynchronously; try once on next tick.
+             setTimeout(() => {
+              if (!openRef.current) return;
+              previewFocusedItem();
+             }, 0);
+           }
+         }
+       }
     };
 
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [open, togglePreview, closePreview, navigateUp, navigateDown, navigateLeft, navigateRight, getFocusedItem, openPreview]);
+    return registerKeydownHandler(
+      (e) => {
+        onKey(e);
+        return e.defaultPrevented;
+      },
+      {
+        id: 'preview-modal-keys',
+        name: 'Preview modal keys',
+        priority: KEYDOWN_PRIORITIES.PREVIEW_MODAL,
+      }
+    );
+  }, [
+    open,
+    keyHandlingEnabled,
+    togglePreview,
+    closePreview,
+    navigateUp,
+    navigateDown,
+    navigateLeft,
+    navigateRight,
+    getFocusedItem,
+    openPreview,
+  ]);
+
 
   return { 
     open, 
     payload, 
     isLoading,
     openPreview,
+    previewFocusedItem,
     closePreview, 
     togglePreview 
   };

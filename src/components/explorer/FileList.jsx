@@ -4,6 +4,8 @@ import { useFileSystem } from '../../providers/FileSystemProvider';
 import { useContextMenu } from '../../providers/ContextMenuProvider';
 import { useSettings } from '../../providers/SettingsProvider';
 import { showError } from '../../utils/NotificationSystem';
+import { shouldIgnoreKeyEvent, KEYMAP_PRESETS, resolvePreset } from '../../utils/keymap';
+import { registerKeydownHandler, KEYDOWN_PRIORITIES } from '../../utils/keyboard';
 import FileItem from './FileItem';
 import EmptyState from './EmptyState';
 import './fileList.css';
@@ -248,16 +250,16 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
      */
     useEffect(() => {
         const handleKeyDown = (e) => {
+            if (e.defaultPrevented) return;
+
             setIsShiftKeyPressed(e.shiftKey);
             setIsCtrlKeyPressed(e.ctrlKey || e.metaKey);
 
-            // Don't handle arrow keys if user is typing in an input or textarea
-            if (e.target instanceof HTMLInputElement || 
-                e.target instanceof HTMLTextAreaElement || 
-                e.target.isContentEditable ||
-                disableArrowKeys) {
+            // Don't handle navigation while typing or when disabled.
+            if (shouldIgnoreKeyEvent(e) || disableArrowKeys) {
                 return;
             }
+
 
             // Handle arrow key navigation for focused item
             if (sortedItems && sortedItems.length > 0) {
@@ -359,6 +361,16 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
                         }
                         break;
                     case 'Enter':
+                        const resolvedPreset = resolvePreset({
+                            selectedPreset: settings?.keymap_preset,
+                            // FileList has no backend systemInfo; rely on navigator fallback inside resolvePreset.
+                            runningOs: null,
+                        });
+                        if (resolvedPreset === KEYMAP_PRESETS.MACOS) {
+                            break;
+                        }
+
+
                         if (focusedItem) {
                             e.preventDefault();
                             if (focusedItem.isDirectory) {
@@ -440,14 +452,25 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
 
         // Use passive listeners where possible to improve scroll performance
         // Note: keydown cannot be passive because we need preventDefault for arrow keys
-        window.addEventListener('keydown', handleKeyDown, { passive: false });
+        const unregisterKeydown = registerKeydownHandler(
+            (e) => {
+                handleKeyDown(e);
+                return e.defaultPrevented;
+            },
+            {
+                id: 'filelist-navigation',
+                name: 'FileList navigation',
+                // Let overlays and the preview modal claim keys first.
+                priority: KEYDOWN_PRIORITIES.LIST_NAV,
+            }
+        );
         window.addEventListener('keyup', handleKeyUp, { passive: true });
         window.addEventListener('mousedown', preventDefaultContextMenu, { passive: false });
         document.addEventListener('select-item', handleSelectItem);
         document.addEventListener('clear-selection', handleClearSelection);
 
         return () => {
-            window.removeEventListener('keydown', handleKeyDown);
+            unregisterKeydown();
             window.removeEventListener('keyup', handleKeyUp);
             window.removeEventListener('mousedown', preventDefaultContextMenu);
             document.removeEventListener('select-item', handleSelectItem);

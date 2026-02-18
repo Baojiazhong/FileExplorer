@@ -12,6 +12,10 @@ fn default_right_pane_width() -> u32 {
     300
 }
 
+fn default_keymap_preset() -> String {
+    "auto".to_string()
+}
+
 //In this file we should change everything to lowercase for the json -> first step is done in DefaultView
 /// File view mode for directories.
 ///
@@ -119,6 +123,9 @@ pub struct Settings {
     pub right_pane_width: u32,
     /// Primary UI accent color in hex format
     pub accent_color: String,
+    /// Keyboard shortcut preset. "auto" resolves based on the running OS.
+    #[serde(default = "default_keymap_preset")]
+    pub keymap_preset: String,
     /// Whether to prompt for confirmation before deleting files
     pub confirm_delete: bool,
     /// Whether to automatically refresh directory contents
@@ -165,6 +172,7 @@ impl Default for Settings {
             right_pane_mode: RightPaneMode::none,
             right_pane_width: default_right_pane_width(),
             accent_color: "#000000".to_string(),
+            keymap_preset: "auto".to_string(),
             confirm_delete: true,
             auto_refresh_dir: true,
             sort_direction: SortDirection::Ascending,

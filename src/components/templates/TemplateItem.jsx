@@ -221,6 +221,7 @@ const TemplateItem = ({ template, onUse, onRemove }) => {
                 onClose={() => setIsConfirmDeleteOpen(false)}
                 title="Confirm Delete"
                 size="sm"
+                defaultAction={confirmDelete}
                 footer={
                     <>
                         <Button

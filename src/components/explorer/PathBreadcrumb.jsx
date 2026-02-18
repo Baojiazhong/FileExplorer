@@ -23,6 +23,9 @@ const PathBreadcrumb = ({ onCopyPath, isVisible = true, onSearch }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const inputRef = useRef(null);
     const searchInputRef = useRef(null);
+    const breadcrumbContainerRef = useRef(null);
+
+
 
     /**
      * Parses the current path into segments for breadcrumb navigation
@@ -203,29 +206,26 @@ const PathBreadcrumb = ({ onCopyPath, isVisible = true, onSearch }) => {
         loadDirectory(path);
     };
 
-    /**
-     * Handles search icon click to show/hide search overlay
-     */
-    const handleSearchClick = () => {
-        if (isSearchVisible) {
-            // Clear search completely and return to breadcrumb view
-            setSearchQuery('');
-            if (onSearch) {
-                onSearch('');
-            }
-            setIsSearchVisible(false);
-            setIsEditing(false); // Ensure we're not in editing mode
-        } else {
-            // Show search overlay and focus input
-            setIsEditing(false); // Exit editing mode when starting search
-            setIsSearchVisible(true);
-            setTimeout(() => {
-                if (searchInputRef.current) {
-                    searchInputRef.current.focus();
-                }
-            }, 0);
+    const focusLocalSearchInput = () => {
+        if (searchInputRef.current) {
+            searchInputRef.current.focus();
+            searchInputRef.current.select?.();
         }
     };
+
+    const openAndFocusLocalSearch = () => {
+        // Show search overlay and focus input
+        setIsEditing(false); // Exit editing mode when starting search
+
+        // If already visible, just refocus.
+        if (isSearchVisible) {
+            focusLocalSearchInput();
+            return;
+        }
+
+        setIsSearchVisible(true);
+    };
+
 
     /**
      * Handles search input changes and performs local folder search
@@ -250,16 +250,35 @@ const PathBreadcrumb = ({ onCopyPath, isVisible = true, onSearch }) => {
     };
 
     /**
-     * Handles search input key events
+     * Handles key events in the local search input.
      */
     const handleSearchKeyDown = (e) => {
         if (e.key === 'Escape') {
+            e.preventDefault();
+            setSearchQuery('');
+            if (onSearch) {
+                onSearch('');
+            }
+            setIsSearchVisible(false);
+            setIsEditing(false);
+        }
+    };
+
+
+    /**
+     * Handles search icon click to show/hide search overlay
+     */
+    const handleSearchClick = () => {
+        if (isSearchVisible) {
             // Clear search completely and return to breadcrumb view
             setSearchQuery('');
             if (onSearch) {
                 onSearch('');
             }
             setIsSearchVisible(false);
+            setIsEditing(false); // Ensure we're not in editing mode
+        } else {
+            openAndFocusLocalSearch();
         }
     };
 
@@ -270,6 +289,54 @@ const PathBreadcrumb = ({ onCopyPath, isVisible = true, onSearch }) => {
             inputRef.current.select();
         }
     }, [isEditing]);
+
+    // When local search opens, focus the input once.
+    useEffect(() => {
+        if (!isSearchVisible) return;
+
+        // Focus after the input mounts.
+        setTimeout(() => {
+            focusLocalSearchInput();
+        }, 0);
+    }, [isSearchVisible]);
+
+    // If local search is empty, clicking outside exits search mode.
+    useEffect(() => {
+        if (!isSearchVisible) return;
+
+        const handlePointerDown = (e) => {
+            const root = breadcrumbContainerRef.current;
+            if (!root) return;
+
+            const clickedInside = root.contains(e.target);
+            if (clickedInside) return;
+
+            const currentValue = (searchInputRef.current?.value || '').trim();
+            if (!currentValue) {
+                if (onSearch) onSearch('');
+                setIsSearchVisible(false);
+                setIsEditing(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handlePointerDown);
+        return () => {
+            document.removeEventListener('mousedown', handlePointerDown);
+        };
+    }, [isSearchVisible, onSearch]);
+
+    // Allow app-level keymap to request local-search focus.
+    useEffect(() => {
+        const handleOpenLocalSearch = () => {
+            openAndFocusLocalSearch();
+        };
+
+        document.addEventListener('open-local-search', handleOpenLocalSearch);
+        return () => {
+            document.removeEventListener('open-local-search', handleOpenLocalSearch);
+        };
+    }, []);
+
 
     // Update edit value when path changes
     useEffect(() => {
@@ -282,7 +349,7 @@ const PathBreadcrumb = ({ onCopyPath, isVisible = true, onSearch }) => {
     }
 
     return (
-        <div className="path-breadcrumb-container">
+        <div className="path-breadcrumb-container" ref={breadcrumbContainerRef}>
             <div className={`path-breadcrumb ${isEditing ? 'editing' : ''} ${isSearchVisible ? 'searching' : ''}`} onClick={!isEditing && !isSearchVisible ? (e) => {
                 // Only handle click if it's not on the search icon button
                 if (!e.target.closest('.search-icon-btn')) {

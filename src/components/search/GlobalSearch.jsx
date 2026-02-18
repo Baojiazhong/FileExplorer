@@ -7,6 +7,7 @@ import EmptyState from '../explorer/EmptyState';
 import FileIcon from '../explorer/FileIcon';
 import Modal from '../common/Modal';
 import Button from '../common/Button';
+import { registerKeydownHandler, KEYDOWN_PRIORITIES } from '../../utils/keyboard';
 import './search.css';
 
 const GlobalSearch = ({ isOpen, onClose }) => {
@@ -206,67 +207,93 @@ const GlobalSearch = ({ isOpen, onClose }) => {
         };
     }, []);
 
-    // Close dropdown when clicking outside
+    // Close dropdown when clicking outside (only while modal is open)
     useEffect(() => {
+        if (!isOpen) return;
+
         const handleClickOutside = (event) => {
             if (filtersExpanded && !event.target.closest('.search-input-wrapper') && !event.target.closest('.search-controls-dropdown')) {
                 setFiltersExpanded(false);
             }
         };
 
-        const handleKeyDown = (event) => {
-            if (event.key === 'Escape' && filtersExpanded) {
-                setFiltersExpanded(false);
-                // Refocus the search input after closing dropdown
-                if (searchInputRef.current) {
-                    searchInputRef.current.focus();
+        const unregisterKeydown = registerKeydownHandler(
+            (event) => {
+                // Let higher-priority overlays (confirm dialogs, etc.) claim keys first.
+                if (event.defaultPrevented) return false;
+
+                if (event.key === 'Escape' && filtersExpanded) {
+                    event.preventDefault();
+                    setFiltersExpanded(false);
+                    // Refocus the search input after closing dropdown
+                    if (searchInputRef.current) {
+                        searchInputRef.current.focus();
+                    }
+                    return true;
                 }
-            }
-            // Handle suggestion navigation
-            if (showSuggestions && suggestions.length > 0) {
-                switch (event.key) {
-                    case 'ArrowDown':
-                        event.preventDefault();
-                        setSelectedSuggestionIndex(prev => 
-                            prev < suggestions.length - 1 ? prev + 1 : prev
-                        );
-                        break;
-                    case 'ArrowUp':
-                        event.preventDefault();
-                        setSelectedSuggestionIndex(prev => prev > -1 ? prev - 1 : -1);
-                        break;
-                    case 'Enter':
-                        if (selectedSuggestionIndex >= 0) {
+
+                // Handle suggestion navigation
+                if (showSuggestions && suggestions.length > 0) {
+                    switch (event.key) {
+                        case 'ArrowDown':
                             event.preventDefault();
-                            selectSuggestion(suggestions[selectedSuggestionIndex]);
-                        }
-                        break;
-                    case 'Tab':
-                        if (selectedSuggestionIndex >= 0) {
+                            setSelectedSuggestionIndex((prev) =>
+                                prev < suggestions.length - 1 ? prev + 1 : prev
+                            );
+                            return true;
+                        case 'ArrowUp':
                             event.preventDefault();
-                            selectSuggestion(suggestions[selectedSuggestionIndex]);
-                        } else if (suggestions.length > 0) {
+                            setSelectedSuggestionIndex((prev) => (prev > -1 ? prev - 1 : -1));
+                            return true;
+                        case 'Enter':
+                            if (selectedSuggestionIndex >= 0) {
+                                event.preventDefault();
+                                selectSuggestion(suggestions[selectedSuggestionIndex]);
+                                return true;
+                            }
+                            break;
+                        case 'Tab':
+                            if (selectedSuggestionIndex >= 0) {
+                                event.preventDefault();
+                                selectSuggestion(suggestions[selectedSuggestionIndex]);
+                                return true;
+                            } else if (suggestions.length > 0) {
+                                event.preventDefault();
+                                selectSuggestion(suggestions[0]); // Select first suggestion on Tab
+                                return true;
+                            }
+                            break;
+                        case 'Escape':
+                            // If suggestions are visible, close them first without closing the whole modal.
                             event.preventDefault();
-                            selectSuggestion(suggestions[0]); // Select first suggestion on Tab
-                        }
-                        break;
-                    case 'Escape':
-                        setSelectedSuggestionIndex(-1);
-                        if (searchInputRef.current) {
-                            searchInputRef.current.blur();
-                        }
-                        break;
+                            setSelectedSuggestionIndex(-1);
+                            setShowSuggestions(false);
+                            if (searchInputRef.current) {
+                                searchInputRef.current.focus();
+                            }
+                            return true;
+                    }
                 }
+
+                return false;
+            },
+            {
+                id: 'globalsearch-keys',
+                name: 'GlobalSearch keys',
+                // High priority since this is a modal overlay.
+                // Keep below Dropdown/ContextMenu so those close first.
+                priority: KEYDOWN_PRIORITIES.SEARCH_MODAL,
+                when: () => isOpen,
             }
-        };
+        );
 
         document.addEventListener('mousedown', handleClickOutside);
-        document.addEventListener('keydown', handleKeyDown);
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
-            document.removeEventListener('keydown', handleKeyDown);
+            unregisterKeydown();
         };
-    }, [filtersExpanded, showSuggestions, suggestions, selectedSuggestionIndex]);
+    }, [isOpen, filtersExpanded, showSuggestions, suggestions, selectedSuggestionIndex]);
+
 
     // Start polling for progress when indexing begins
     const startProgressPolling = () => {

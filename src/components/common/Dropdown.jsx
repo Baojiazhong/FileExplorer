@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { registerKeydownHandler, KEYDOWN_PRIORITIES } from '../../utils/keyboard';
 import Icon from './Icon';
 import './common.css';
 
@@ -56,20 +57,34 @@ const Dropdown = ({
     }, [isOpen, onClose]);
 
     // Close dropdown when Escape key is pressed
+    // Note: only attach while open to avoid stacking multiple global listeners.
     useEffect(() => {
-        const handleKeyDown = (event) => {
-            if (event.key === 'Escape' && isOpen) {
-                if (onClose) onClose();
-                setIsOpen(false);
+        if (!isOpen) return;
+
+        return registerKeydownHandler(
+            (event) => {
+                if (event.defaultPrevented) return false;
+
+                if (event.key === 'Escape') {
+                    // Prevent global Escape handlers from also firing.
+                    event.preventDefault();
+                    if (onClose) onClose();
+                    setIsOpen(false);
+                    return true;
+                }
+
+                return false;
+            },
+            {
+                id: 'dropdown-escape',
+                name: 'Dropdown escape',
+                // Keep this fairly high so dropdowns close before app-level handlers.
+                priority: KEYDOWN_PRIORITIES.MENU,
+                when: () => isOpen,
             }
-        };
-
-        document.addEventListener('keydown', handleKeyDown);
-
-        return () => {
-            document.removeEventListener('keydown', handleKeyDown);
-        };
+        );
     }, [isOpen, onClose]);
+
 
     /**
      * Handles click on a dropdown item

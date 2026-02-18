@@ -1632,15 +1632,19 @@ mod tests_search_core {
 
     // Helper function to create a temporary directory structure for testing
     fn create_temp_dir_structure() -> std::path::PathBuf {
-        // Create unique temp directory using timestamp and random number
-        let unique_id = format!(
-            "{}_{}",
-            std::process::id(),
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap_or_default()
-                .as_millis()
-        );
+        use std::sync::atomic::{AtomicUsize, Ordering};
+
+        // Avoid flakiness when async tests run concurrently by ensuring temp dir names
+        // are unique even within the same millisecond.
+        static TEMP_DIR_COUNTER: AtomicUsize = AtomicUsize::new(0);
+
+        let counter = TEMP_DIR_COUNTER.fetch_add(1, Ordering::Relaxed);
+        let now_nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos();
+
+        let unique_id = format!("{}_{}_{}", std::process::id(), now_nanos, counter);
 
         let temp_dir = std::env::temp_dir().join(format!("search_core_test_{}", unique_id));
 
@@ -1833,8 +1837,9 @@ mod tests_search_core {
         engine.add_paths_recursive(temp_dir_str, None).await;
 
         // Ensure the root_file exists before searching for it
+        // (The helper already creates this; keep as best-effort in case of external cleanup.)
         let root_file = temp_dir.join("root_file.txt");
-        std::fs::write(&root_file, "test").unwrap();
+        let _ = std::fs::write(&root_file, "test");
 
         // Test that we can still search and find files in accessible directories - use full filename
         let root_file_results = engine.search("root_file.txt");

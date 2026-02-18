@@ -47,8 +47,9 @@ const RenameModal = ({ isOpen, onClose, item, onRename }) => {
      * @param {React.FormEvent} e - Form event
      */
     const handleSubmit = (e) => {
-        e.preventDefault();
+        e?.preventDefault?.();
         console.log('RenameModal handleSubmit called with:', { newName, itemName: item?.name });
+
         
         if (newName && newName.trim() && newName.trim() !== item.name) {
             console.log('RenameModal: Calling onRename with:', item, newName.trim());
@@ -73,6 +74,8 @@ const RenameModal = ({ isOpen, onClose, item, onRename }) => {
      */
     const handleKeyDown = (e) => {
         if (e.key === 'Escape') {
+            // Prevent app-level Escape handlers from also firing.
+            e.preventDefault();
             onClose();
         }
     };
@@ -87,6 +90,8 @@ const RenameModal = ({ isOpen, onClose, item, onRename }) => {
             onClose={onClose}
             title={`Rename ${isDirectory ? 'Folder' : 'File'}`}
             size="sm"
+            defaultAction={handleSubmit}
+            defaultActionEnabled={!!newName && !!newName.trim() && newName.trim() !== item.name}
             footer={
                 <>
                     <Button

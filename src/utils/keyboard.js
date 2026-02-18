@@ -1,5 +1,9 @@
 /**
- * Keyboard utility functions for the file explorer
+ * Keyboard utility functions for the file explorer.
+ *
+ * This module also provides a centralized keydown router so we can avoid stacking
+ * multiple global `document.addEventListener('keydown', ...)` listeners across
+ * components. Overlays can register higher-priority handlers to "claim" keys.
  */
 
 /**
@@ -18,50 +22,6 @@ export const isMultiSelectKey = (event) => {
  */
 export const isRangeSelectKey = (event) => {
     return event.shiftKey;
-};
-
-/**
- * Register global keyboard shortcuts.
- * @param {Object} handlers - An object mapping key combinations to handler functions.
- * @returns {Function} - A cleanup function to remove the event listeners.
- *
- * @example
- * // Usage
- * const cleanup = registerShortcuts({
- *   'Control+f': () => console.log('Search'),
- *   'Control+c': () => console.log('Copy'),
- *   'Delete': () => console.log('Delete'),
- * });
- *
- * // Later, to clean up
- * cleanup();
- */
-export const registerShortcuts = (handlers) => {
-    const handleKeyDown = (event) => {
-        // Build the key combination string
-        let combo = '';
-
-        if (event.ctrlKey) combo += 'Control+';
-        if (event.metaKey) combo += 'Meta+';
-        if (event.altKey) combo += 'Alt+';
-        if (event.shiftKey) combo += 'Shift+';
-
-        // Add the key itself
-        combo += event.key;
-
-        // Check if we have a handler for this combination
-        if (handlers[combo]) {
-            event.preventDefault();
-            handlers[combo](event);
-        }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-
-    // Return a cleanup function
-    return () => {
-        document.removeEventListener('keydown', handleKeyDown);
-    };
 };
 
 /**
@@ -182,4 +142,157 @@ export const handleNavigation = (event, items, currentIndex, options = {}) => {
     }
 
     return newIndex;
+};
+
+// ---------------------------------------------------------------------------
+// Centralized keydown routing
+// ---------------------------------------------------------------------------
+
+/**
+ * Priority bands (higher runs first).
+ *
+ * Guidelines:
+ * - Overlay UIs (confirm dialogs, preview modal, dropdowns, context menus, modals) should be
+ *   higher priority than app-level shortcuts.
+ * - App-level shortcuts should be higher priority than list navigation.
+ * - If a handler "owns" a key for its current state, it should either `return true` or call
+ *   `event.preventDefault()` to claim it (the router will stop dispatching).
+ */
+export const KEYDOWN_PRIORITIES = {
+    CONFIRM: 900,
+    PREVIEW_MODAL: 700,
+    MENU: 650, // dropdown/context menu
+    SEARCH_MODAL: 640,
+    MODAL: 620,
+    APP: 0,
+    LIST_NAV: -10,
+    LEGACY_SHORTCUTS: -100,
+};
+
+let keydownListenerAttached = false;
+let nextHandlerId = 1;
+let nextHandlerOrder = 1;
+
+/** @type {Array<{id: string, name: string, priority: number, order: number, when: Function | null, handler: Function}>} */
+const keydownHandlers = [];
+
+const sortKeydownHandlers = () => {
+    keydownHandlers.sort((a, b) => {
+        if (a.priority !== b.priority) return b.priority - a.priority;
+        return b.order - a.order; // later registrations win within same priority
+    });
+};
+
+const dispatchKeydown = (event) => {
+    for (const entry of keydownHandlers) {
+        if (event.defaultPrevented) return;
+
+        if (entry.when) {
+            let ok = false;
+            try {
+                ok = !!entry.when(event);
+            } catch (err) {
+                console.error('keyboard: when() threw', entry.name || entry.id, err);
+                ok = false;
+            }
+            if (!ok) continue;
+        }
+
+        let consumed = false;
+        try {
+            consumed = entry.handler(event) === true;
+        } catch (err) {
+            console.error('keyboard: handler threw', entry.name || entry.id, err);
+            consumed = false;
+        }
+
+        if (consumed || event.defaultPrevented) {
+            if (!event.defaultPrevented) event.preventDefault();
+            return;
+        }
+    }
+};
+
+const ensureKeydownListener = () => {
+    if (keydownListenerAttached) return;
+    document.addEventListener('keydown', dispatchKeydown);
+    keydownListenerAttached = true;
+};
+
+const maybeDetachKeydownListener = () => {
+    if (!keydownListenerAttached) return;
+    if (keydownHandlers.length > 0) return;
+    document.removeEventListener('keydown', dispatchKeydown);
+    keydownListenerAttached = false;
+};
+
+export const registerKeydownHandler = (handler, options = {}) => {
+    const id = options.id || `kd_${nextHandlerId++}`;
+    const entry = {
+        id,
+        name: options.name || '',
+        priority: typeof options.priority === 'number' ? options.priority : 0,
+        order: nextHandlerOrder++,
+        when: typeof options.when === 'function' ? options.when : null,
+        handler,
+    };
+
+    keydownHandlers.push(entry);
+    sortKeydownHandlers();
+    ensureKeydownListener();
+
+    return () => {
+        // Prefer removing by object identity so duplicate ids can't remove the wrong handler.
+        let idx = keydownHandlers.indexOf(entry);
+        if (idx === -1) {
+            idx = keydownHandlers.findIndex((h) => h.id === id);
+        }
+
+        if (idx !== -1) {
+            keydownHandlers.splice(idx, 1);
+            maybeDetachKeydownListener();
+        }
+    };
+};
+
+/**
+ * Register global keyboard shortcuts.
+ * @param {Object} handlers - An object mapping key combinations to handler functions.
+ * @returns {Function} - A cleanup function to remove the handler.
+ *
+ * @example
+ * const cleanup = registerShortcuts({
+ *   'Control+f': () => console.log('Search'),
+ *   'Control+c': () => console.log('Copy'),
+ *   'Delete': () => console.log('Delete'),
+ * });
+ * cleanup();
+ */
+export const registerShortcuts = (handlers) => {
+    return registerKeydownHandler(
+        (event) => {
+            // Build the key combination string
+            let combo = '';
+
+            if (event.ctrlKey) combo += 'Control+';
+            if (event.metaKey) combo += 'Meta+';
+            if (event.altKey) combo += 'Alt+';
+            if (event.shiftKey) combo += 'Shift+';
+
+            // Add the key itself
+            combo += event.key;
+
+            // Check if we have a handler for this combination
+            if (handlers[combo]) {
+                handlers[combo](event);
+                return true;
+            }
+
+            return false;
+        },
+        {
+            name: 'registerShortcuts',
+            priority: KEYDOWN_PRIORITIES.LEGACY_SHORTCUTS,
+        }
+    );
 };

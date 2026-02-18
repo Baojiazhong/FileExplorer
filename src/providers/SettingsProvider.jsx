@@ -16,7 +16,9 @@ const defaultSettings = {
     right_pane_width: 300,
     accent_color: "#0672ef",
 
-
+    // Keyboard settings
+    // auto | windows | macos | linux
+    keymap_preset: "auto",
 
     // Behavior settings
     confirm_delete: true,

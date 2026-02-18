@@ -57,6 +57,8 @@ const HashDisplayModal = ({ isOpen, onClose, hash, fileName }) => {
      */
     const handleKeyDown = (e) => {
         if (e.key === 'Escape') {
+            // Prevent app-level Escape handlers from also firing.
+            e.preventDefault();
             onClose();
         } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
             copyToClipboard();
