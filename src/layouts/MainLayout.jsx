@@ -907,13 +907,41 @@ const MainLayout = () => {
                         return true;
                     }
                 }
+ 
+                // OS-native: properties / get info
+                // - Windows Explorer: Alt+Enter
+                // - Ubuntu Files (Nautilus): Alt+Enter
+                // - macOS Finder: Cmd+I
+                if (selectedItems.length === 1) {
+                    if (resolvedPreset === KEYMAP_PRESETS.MACOS) {
+                        if (matchesShortcut(e, { meta: true, code: 'KeyI' })) {
+                            e.preventDefault();
+                            setRightPaneMode('details');
+                            showProperties(selectedItems[0]);
+                            updateSetting('right_pane_mode', 'details').catch((error) => {
+                                console.error('Failed to save right pane mode setting:', error);
+                            });
+                            return true;
+                        }
+                    } else {
+                        if (e.altKey && (e.key === 'Enter' || e.key === 'NumpadEnter')) {
+                            e.preventDefault();
+                            setRightPaneMode('details');
+                            showProperties(selectedItems[0]);
+                            updateSetting('right_pane_mode', 'details').catch((error) => {
+                                console.error('Failed to save right pane mode setting:', error);
+                            });
+                            return true;
+                        }
+                    }
+                }
 
                 // OS-native: open (macOS uses Cmd+O)
                 if (resolvedPreset === KEYMAP_PRESETS.MACOS) {
                     if (matchesShortcut(e, { meta: true, code: 'KeyO' })) {
                         const targetItem = selectedItems.length === 1 ? selectedItems[0] : focusedItem;
                         if (!targetItem) return false;
-
+ 
                         e.preventDefault();
                         if (targetItem.isDirectory) {
                             loadDirectory(targetItem.path);
@@ -1034,20 +1062,15 @@ const MainLayout = () => {
                         return true;
                     }
                 }
-                if (resolvedPreset === KEYMAP_PRESETS.MACOS) {
-                    // Finder: Shift+Cmd+P toggles preview pane
-                    if (matchesShortcut(e, { meta: true, shift: true, code: 'KeyP' })) {
-                        e.preventDefault();
-                        handlePreviewPaneToggle();
-                        return true;
-                    }
-                    // Finder: Cmd+I maps well to details pane toggle (Get Info)
-                    if (matchesShortcut(e, { meta: true, code: 'KeyI' })) {
-                        e.preventDefault();
-                        handleDetailsPanelToggle();
-                        return true;
-                    }
-                }
+                 if (resolvedPreset === KEYMAP_PRESETS.MACOS) {
+                     // Finder: Shift+Cmd+P toggles preview pane
+                     if (matchesShortcut(e, { meta: true, shift: true, code: 'KeyP' })) {
+                         e.preventDefault();
+                         handlePreviewPaneToggle();
+                         return true;
+                     }
+                 }
+
 
                 // Tabs (wired via document events)
                 if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 't' || e.key === 'T')) {
