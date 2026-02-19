@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node --test",
+    "test": "npm run test:node && npm run test:vitest",
+    "test:node": "node --test test/*.test.js",
+    "test:vitest": "vitest run",
     "tauri": "tauri",
     "tauri:build:macos": "cargo tauri build --target aarch64-apple-darwin && cd src-tauri/scripts && ./post-build.sh",
     "tauri:build:intel": "cargo tauri build --target x86_64-apple-darwin && cd src-tauri/scripts && ./post-build.sh",
@@ -23,8 +25,12 @@
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2",
+    "@testing-library/jest-dom": "^6.8.0",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
     "@vitejs/plugin-react": "^4.3.4",
     "jsdom": "^24.1.3",
-    "vite": "^6.3.6"
+    "vite": "^6.3.6",
+    "vitest": "^2.1.9"
   }
 }
