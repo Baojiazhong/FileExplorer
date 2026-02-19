@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 
 import Modal from '../../src/components/common/Modal.jsx';
+import Dropdown from '../../src/components/common/Dropdown.jsx';
 import ContextMenu from '../../src/components/contextMenu/ContextMenu.jsx';
 import { showConfirm } from '../../src/utils/NotificationSystem.js';
 import { usePreview } from '../../src/hooks/usePreview.js';
@@ -52,6 +53,19 @@ function ModalWithContextMenu({ calls }) {
         />
       )}
     </>
+  );
+}
+
+function ModalWithDropdown({ calls }) {
+  return (
+    <Modal isOpen={true} onClose={() => calls.push('modal-close')} title="Test">
+      <Dropdown
+        trigger={<button type="button">Open</button>}
+        items={[{ id: 'x', label: 'X', onClick: () => {} }]}
+        onOpen={() => calls.push('dropdown-open')}
+        onClose={() => calls.push('dropdown-close')}
+      />
+    </Modal>
   );
 }
 
@@ -113,6 +127,32 @@ describe('Overlay key priority (real overlays)', () => {
     });
 
     expect(calls).toEqual(['menu-close']);
+  });
+
+  it('Dropdown consumes Escape before Modal', async () => {
+    const calls = [];
+
+    render(<ModalWithDropdown calls={calls} />);
+    await tick();
+
+    // Open dropdown.
+    const triggerButton = screen.getByRole('button', { name: 'Open' });
+    triggerButton.click();
+
+    await waitFor(() => {
+      expect(calls).toContain('dropdown-open');
+    });
+
+    const e = fireKey({ key: 'Escape', code: 'Escape' });
+
+    expect(e.defaultPrevented).toBe(true);
+
+    await waitFor(() => {
+      expect(calls).toContain('dropdown-close');
+    });
+
+    // Modal should remain open; its onClose should not run.
+    expect(calls).not.toContain('modal-close');
   });
 
   it('Preview modal consumes Space before App handler', async () => {

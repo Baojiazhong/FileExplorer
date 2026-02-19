@@ -190,7 +190,6 @@ const CreateFileButton = () => {
                                 >
                                     <span className="icon icon-file"></span>
                                     <span>Text File</span>
-                                    <span className="shortcut">Ctrl/Cmd+N</span>
                                 </button>
                             </li>
                             <li>
@@ -200,7 +199,6 @@ const CreateFileButton = () => {
                                 >
                                     <span className="icon icon-folder"></span>
                                     <span>Folder</span>
-                                    <span className="shortcut">Ctrl/Cmd+Shift+N</span>
                                 </button>
                             </li>
                             <li className="create-divider"></li>
