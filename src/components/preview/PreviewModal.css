@@ -47,15 +47,18 @@
   align-items: center;
   justify-content: center;
   padding: 1rem;
+  /* If the modal ever exceeds the viewport, allow the backdrop to scroll. */
+  overflow: auto;
 }
+
 
 /* Preview Modal Container */
 .preview-modal {
   background: var(--background, #ffffff);
   border-radius: 12px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-  max-width: 95vw;
-  max-height: 95vh;
+  max-width: calc(100vw - 2rem);
+  max-height: calc(100vh - 2rem);
   min-width: 400px;
   min-height: 300px;
   display: flex;
@@ -63,6 +66,7 @@
   overflow: hidden;
   /* Remove fixed width/height to allow content-based sizing */
 }
+
 
 /* Preview Modal Header */
 .preview-modal-header {
@@ -117,7 +121,10 @@
   flex: 1;
   overflow: auto;
   position: relative;
+  /* Allow flex child to shrink so scroll works correctly */
+  min-height: 0;
 }
+
 
 /* Loading State */
 .preview-loading {
@@ -154,9 +161,9 @@
   align-items: center;
   justify-content: center;
   min-height: 300px;
-  max-height: 85vh;
   padding: 1rem;
 }
+
 
 .preview-image {
   max-width: 100%;
@@ -166,6 +173,7 @@
   object-fit: contain;
   background: repeating-conic-gradient(#f0f0f0 0% 25%, transparent 0% 50%) 50% / 20px 20px;
 }
+
 
 .preview-image-info {
   position: absolute;
@@ -178,12 +186,20 @@
   font-size: 0.875rem;
 }
 
+/* In the preview modal, cap media by the viewport (accounts for backdrop padding + header). */
+.preview-modal .preview-image,
+.preview-modal .preview-video {
+  max-width: calc(100vw - 4rem);
+  max-height: calc(100vh - 32px - 4rem);
+}
+
 /* PDF Preview */
 .preview-pdf-container {
   min-height: 700px;
   max-height: 90vh;
   position: relative;
 }
+
 
 .preview-pdf {
   width: 100%;
@@ -209,16 +225,18 @@
   justify-content: center;
   background: #000;
   min-height: 300px;
-  max-height: 85vh;
   padding: 1rem;
 }
+
 
 .preview-video {
   max-width: 100%;
   max-height: 100%;
   width: auto;
   height: auto;
+  object-fit: contain;
 }
+
 
 /* Audio Preview */
 .preview-audio-container {
