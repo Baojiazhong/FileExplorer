@@ -3,6 +3,7 @@ import Icon from '../common/Icon';
 import Modal from '../common/Modal';
 import Button from '../common/Button';
 import { useI18n } from '../../i18n';
+import { formatFileSize } from '../../utils/formatters';
 import './templates.css';
 
 /**
@@ -32,6 +33,7 @@ const TemplateItem = ({ template, onUse, onRemove }) => {
     // Provide defaults for required properties
     const safeName = template.name || t('templates.item.unknownName');
     const safeType = template.type || 'file';
+    const safeSize = template.size;
 
     /**
      * Determines the appropriate icon based on template type and file extension
@@ -101,25 +103,11 @@ const TemplateItem = ({ template, onUse, onRemove }) => {
         }
     };
 
-    /**
-     * Formats file size into human-readable format
-     * @param {number} bytes - Size in bytes
-     * @returns {string} Formatted size string
-     */
+    // Keep template sizing consistent with explorer/preview and localize units.
     const formatSize = (bytes) => {
         if (!bytes && bytes !== 0) return t('templates.item.unknownSize');
         if (typeof bytes !== 'number') return t('templates.item.unknownSize');
-
-        const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-        let size = bytes;
-        let unitIndex = 0;
-
-        while (size >= 1024 && unitIndex < units.length - 1) {
-            size /= 1024;
-            unitIndex++;
-        }
-
-        return `${size.toFixed(1)} ${units[unitIndex]}`;
+        return formatFileSize(bytes);
     };
 
     /**
@@ -187,8 +175,8 @@ const TemplateItem = ({ template, onUse, onRemove }) => {
                         <span className="template-type">
                             {safeType === 'folder' ? t('templates.item.type.folder') : t('templates.item.type.file')}
                         </span>
-                        {template.size && (
-                            <span className="template-size">{formatSize(template.size)}</span>
+                        {(safeSize || safeSize === 0) && (
+                            <span className="template-size">{formatSize(safeSize)}</span>
                         )}
                         {template.createdAt && (
                             <span className="template-date">{formatDate(template.createdAt)}</span>

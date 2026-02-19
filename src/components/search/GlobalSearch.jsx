@@ -62,18 +62,18 @@ const GlobalSearch = ({ isOpen, onClose }) => {
 
     // Common file extensions for filtering
     const commonExtensions = [
-        { value: 'txt', label: 'Text Files (.txt)' },
-        { value: 'pdf', label: 'PDF Files (.pdf)' },
-        { value: 'doc', label: 'Word Documents (.doc)' },
-        { value: 'docx', label: 'Word Documents (.docx)' },
-        { value: 'jpg', label: 'JPEG Images (.jpg)' },
-        { value: 'png', label: 'PNG Images (.png)' },
-        { value: 'mp3', label: 'MP3 Audio (.mp3)' },
-        { value: 'mp4', label: 'MP4 Video (.mp4)' },
-        { value: 'zip', label: 'ZIP Archives (.zip)' },
-        { value: 'js', label: 'JavaScript (.js)' },
-        { value: 'css', label: 'CSS Files (.css)' },
-        { value: 'html', label: 'HTML Files (.html)' }
+        { value: 'txt', label: `${t('fileTypes.documents.text')} (.txt)` },
+        { value: 'pdf', label: `${t('fileTypes.documents.pdf')} (.pdf)` },
+        { value: 'doc', label: `${t('fileTypes.documents.word')} (.doc)` },
+        { value: 'docx', label: `${t('fileTypes.documents.word')} (.docx)` },
+        { value: 'jpg', label: `${t('fileTypes.images.jpeg')} (.jpg)` },
+        { value: 'png', label: `${t('fileTypes.images.png')} (.png)` },
+        { value: 'mp3', label: `${t('fileTypes.audio.mp3')} (.mp3)` },
+        { value: 'mp4', label: `${t('fileTypes.video.mp4')} (.mp4)` },
+        { value: 'zip', label: `${t('fileTypes.archives.zip')} (.zip)` },
+        { value: 'js', label: `${t('fileTypes.code.js')} (.js)` },
+        { value: 'css', label: `${t('fileTypes.code.css')} (.css)` },
+        { value: 'html', label: `${t('fileTypes.code.html')} (.html)` }
     ];
 
     // Load search engine info when modal opens
@@ -1311,7 +1311,7 @@ const GlobalSearch = ({ isOpen, onClose }) => {
 
                             {/* Filter Controls */}
                             <div className="search-control-section">
-                                <h4 style={{ margin: 'var(--space-md) 0 var(--space-sm) 0', fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-medium)' }}>Filter Options</h4>
+                                <h4 style={{ margin: 'var(--space-md) 0 var(--space-sm) 0', fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-medium)' }}>{t('search.filterOptionsTitle')}</h4>
                                 <div className="filter-controls">
                                     <label className="checkbox-option">
                                         <input
@@ -1320,7 +1320,7 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                                             onChange={(e) => setShowDirectoriesOnly(e.target.checked)}
                                             disabled={isSearching}
                                         />
-                                        <span>Show directories only</span>
+                                        <span>{t('search.filterDirectoriesOnly')}</span>
                                     </label>
                                     <label className="checkbox-option">
                                         <input
@@ -1329,14 +1329,14 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                                             onChange={(e) => setShowHiddenFiles(e.target.checked)}
                                             disabled={isSearching}
                                         />
-                                        <span>Show hidden files</span>
+                                        <span>{t('search.filterShowHidden')}</span>
                                     </label>
                                 </div>
                             </div>
 
                             {/* Extension Filters */}
                             <div className="search-control-section">
-                                <h4 style={{ margin: 'var(--space-md) 0 var(--space-sm) 0', fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-medium)' }}>File Type Filters</h4>
+                                <h4 style={{ margin: 'var(--space-md) 0 var(--space-sm) 0', fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-medium)' }}>{t('search.fileTypeFiltersTitle')}</h4>
                                 <div className="extension-filters">
                                     <div className="extension-checkboxes">
                                         {commonExtensions.map(ext => (
@@ -1353,14 +1353,14 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                                     </div>
                                     {selectedExtensions.length > 0 && (
                                         <div className="selected-extensions">
-                                            Selected: {selectedExtensions.join(', ')}
+                                            {t('search.selectedExtensions', { list: selectedExtensions.join(', ') })}
                                             <button
                                                 type="button"
                                                 onClick={() => setSelectedExtensions([])}
                                                 className="clear-extensions"
                                                 disabled={isSearching}
                                             >
-                                                Clear
+                                                {t('search.clear')}
                                             </button>
                                         </div>
                                     )}
@@ -1370,7 +1370,7 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                             {/* Recent Searches */}
                             {recentSearches.length > 0 && (
                                 <div className="search-control-section">
-                                    <h4 style={{ margin: 'var(--space-md) 0 var(--space-sm) 0', fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-medium)' }}>Recent Searches</h4>
+                                    <h4 style={{ margin: 'var(--space-md) 0 var(--space-sm) 0', fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-medium)' }}>{t('search.recentSearchesTitle')}</h4>
                                     <div className="recent-searches">
                                         {recentSearches.slice(0, 5).map((recentQuery, index) => (
                                             <button
@@ -1381,7 +1381,7 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                                                     setFiltersExpanded(false);
                                                 }}
                                                 disabled={isSearching}
-                                                title={`Search for: ${recentQuery}`}
+                                                title={t('search.searchForTitle', { query: recentQuery })}
                                             >
                                                 "{recentQuery}"
                                             </button>
@@ -1393,7 +1393,7 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                             {/* Most Accessed Paths */}
                             {mostAccessedPaths.length > 0 && (
                                 <div className="search-control-section">
-                                    <h4 style={{ margin: 'var(--space-md) 0 var(--space-sm) 0', fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-medium)' }}>Most Accessed Paths</h4>
+                                    <h4 style={{ margin: 'var(--space-md) 0 var(--space-sm) 0', fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-medium)' }}>{t('search.mostAccessedPathsTitle')}</h4>
                                     <div className="most-accessed-paths">
                                         {mostAccessedPaths.slice(0, 5).map((path, index) => (
                                             <button
@@ -1403,7 +1403,7 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                                                     navigateToAccessedPath(path);
                                                     setFiltersExpanded(false);
                                                 }}
-                                                title={`Navigate to: ${path}`}
+                                                title={t('search.navigateToTitle', { path })}
                                             >
                                                 <span className="path-name">
                                                     {path.split('/').pop() || path}
@@ -1420,7 +1420,7 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                             {/* Engine Statistics & Performance */}
                             {searchEngineInfo && (
                                 <div className="search-control-section">
-                                    <h4 style={{ margin: 'var(--space-md) 0 var(--space-sm) 0', fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-medium)' }}>Engine Statistics & Performance</h4>
+                                    <h4 style={{ margin: 'var(--space-md) 0 var(--space-sm) 0', fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-medium)' }}>{t('search.engineStatsTitle')}</h4>
                                     <div className="search-engine-info-compact">
                                         <div className="info-grid">
                                             <div className="info-item">

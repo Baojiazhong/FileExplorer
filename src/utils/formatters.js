@@ -14,15 +14,44 @@ const dictionaries = {
  * @returns {string} The formatted file size.
  */
 export const formatFileSize = (bytes, decimals = 1) => {
-    if (bytes === 0) return '0 Bytes';
+    const t = getTranslator();
 
+    if (bytes === null || bytes === undefined) return t('common.notAvailableShort');
+    if (typeof bytes !== 'number' || !Number.isFinite(bytes) || bytes < 0) return t('common.notAvailableShort');
+
+    // Keep byte values as integers; apply decimals only to KB+.
     const k = 1024;
     const dm = decimals < 0 ? 0 : decimals;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+    const unitKeys = ['bytes', 'kb', 'mb', 'gb', 'tb', 'pb', 'eb', 'zb', 'yb'];
 
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    if (bytes === 0) {
+        return t('fileSize.format', {
+            value: '0',
+            unit: t('fileSize.units.bytes'),
+        });
+    }
 
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+    let i = Math.floor(Math.log(bytes) / Math.log(k));
+    if (!Number.isFinite(i) || i < 0) i = 0;
+    if (i >= unitKeys.length) i = unitKeys.length - 1;
+
+    const usedDecimals = i === 0 ? 0 : dm;
+    const rawValue = bytes / Math.pow(k, i);
+    const roundedValue = parseFloat(rawValue.toFixed(usedDecimals));
+
+    let unit;
+    if (i === 0) {
+        unit = bytes === 1 ? t('fileSize.units.byte') : t('fileSize.units.bytes');
+    } else {
+        unit = t(`fileSize.units.${unitKeys[i]}`);
+    }
+
+    const value = new Intl.NumberFormat(getPreferredLocale(), {
+        minimumFractionDigits: usedDecimals,
+        maximumFractionDigits: usedDecimals,
+    }).format(roundedValue);
+
+    return t('fileSize.format', { value, unit });
 };
 
 const getPreferredLocale = () => {
@@ -102,104 +131,110 @@ export const formatDate = (dateString, includeTime = false) => {
  * @returns {string} The human-readable file type.
  */
 export const getFileType = (filename) => {
-    if (!filename || !filename.includes('.')) {
-        return 'File';
+    const t = getTranslator();
+
+    if (!filename || typeof filename !== 'string' || !filename.includes('.')) {
+        return t('fileTypes.file');
     }
 
     const extension = filename.split('.').pop().toLowerCase();
 
     const fileTypes = {
         // Documents
-        'pdf': 'PDF Document',
-        'doc': 'Word Document',
-        'docx': 'Word Document',
-        'xls': 'Excel Spreadsheet',
-        'xlsx': 'Excel Spreadsheet',
-        'ppt': 'PowerPoint Presentation',
-        'pptx': 'PowerPoint Presentation',
-        'txt': 'Text Document',
-        'rtf': 'Rich Text Document',
-        'odt': 'OpenDocument Text',
-        'ods': 'OpenDocument Spreadsheet',
-        'odp': 'OpenDocument Presentation',
-        'csv': 'CSV File',
-        'md': 'Markdown Document',
+        'pdf': 'fileTypes.documents.pdf',
+        'doc': 'fileTypes.documents.word',
+        'docx': 'fileTypes.documents.word',
+        'xls': 'fileTypes.documents.excel',
+        'xlsx': 'fileTypes.documents.excel',
+        'ppt': 'fileTypes.documents.powerpoint',
+        'pptx': 'fileTypes.documents.powerpoint',
+        'txt': 'fileTypes.documents.text',
+        'rtf': 'fileTypes.documents.richText',
+        'odt': 'fileTypes.documents.openDocumentText',
+        'ods': 'fileTypes.documents.openDocumentSpreadsheet',
+        'odp': 'fileTypes.documents.openDocumentPresentation',
+        'csv': 'fileTypes.documents.csv',
+        'md': 'fileTypes.documents.markdown',
 
         // Images
-        'jpg': 'JPEG Image',
-        'jpeg': 'JPEG Image',
-        'png': 'PNG Image',
-        'gif': 'GIF Image',
-        'bmp': 'Bitmap Image',
-        'svg': 'SVG Image',
-        'webp': 'WebP Image',
-        'tiff': 'TIFF Image',
-        'ico': 'Icon File',
+        'jpg': 'fileTypes.images.jpeg',
+        'jpeg': 'fileTypes.images.jpeg',
+        'png': 'fileTypes.images.png',
+        'gif': 'fileTypes.images.gif',
+        'bmp': 'fileTypes.images.bmp',
+        'svg': 'fileTypes.images.svg',
+        'webp': 'fileTypes.images.webp',
+        'tiff': 'fileTypes.images.tiff',
+        'ico': 'fileTypes.images.ico',
 
         // Audio
-        'mp3': 'MP3 Audio',
-        'wav': 'WAV Audio',
-        'ogg': 'OGG Audio',
-        'flac': 'FLAC Audio',
-        'm4a': 'M4A Audio',
-        'aac': 'AAC Audio',
+        'mp3': 'fileTypes.audio.mp3',
+        'wav': 'fileTypes.audio.wav',
+        'ogg': 'fileTypes.audio.ogg',
+        'flac': 'fileTypes.audio.flac',
+        'm4a': 'fileTypes.audio.m4a',
+        'aac': 'fileTypes.audio.aac',
 
         // Video
-        'mp4': 'MP4 Video',
-        'avi': 'AVI Video',
-        'mov': 'QuickTime Video',
-        'wmv': 'Windows Media Video',
-        'mkv': 'Matroska Video',
-        'webm': 'WebM Video',
+        'mp4': 'fileTypes.video.mp4',
+        'avi': 'fileTypes.video.avi',
+        'mov': 'fileTypes.video.mov',
+        'wmv': 'fileTypes.video.wmv',
+        'mkv': 'fileTypes.video.mkv',
+        'webm': 'fileTypes.video.webm',
 
         // Archives
-        'zip': 'ZIP Archive',
-        'rar': 'RAR Archive',
-        '7z': '7-Zip Archive',
-        'tar': 'TAR Archive',
-        'gz': 'GZip Archive',
-        'bz2': 'BZip2 Archive',
+        'zip': 'fileTypes.archives.zip',
+        'rar': 'fileTypes.archives.rar',
+        '7z': 'fileTypes.archives.sevenZip',
+        'tar': 'fileTypes.archives.tar',
+        'gz': 'fileTypes.archives.gz',
+        'bz2': 'fileTypes.archives.bz2',
 
         // Programming
-        'html': 'HTML File',
-        'css': 'CSS File',
-        'js': 'JavaScript File',
-        'jsx': 'React JSX File',
-        'ts': 'TypeScript File',
-        'tsx': 'React TSX File',
-        'json': 'JSON File',
-        'xml': 'XML File',
-        'yaml': 'YAML File',
-        'toml': 'TOML File',
-        'py': 'Python File',
-        'java': 'Java File',
-        'c': 'C File',
-        'cpp': 'C++ File',
-        'h': 'C Header File',
-        'cs': 'C# File',
-        'php': 'PHP File',
-        'rb': 'Ruby File',
-        'go': 'Go File',
-        'rs': 'Rust File',
-        'swift': 'Swift File',
-        'kt': 'Kotlin File',
-        'sql': 'SQL File',
+        'html': 'fileTypes.code.html',
+        'css': 'fileTypes.code.css',
+        'js': 'fileTypes.code.js',
+        'jsx': 'fileTypes.code.jsx',
+        'ts': 'fileTypes.code.ts',
+        'tsx': 'fileTypes.code.tsx',
+        'json': 'fileTypes.code.json',
+        'xml': 'fileTypes.code.xml',
+        'yaml': 'fileTypes.code.yaml',
+        'yml': 'fileTypes.code.yaml',
+        'toml': 'fileTypes.code.toml',
+        'py': 'fileTypes.code.py',
+        'java': 'fileTypes.code.java',
+        'c': 'fileTypes.code.c',
+        'cpp': 'fileTypes.code.cpp',
+        'h': 'fileTypes.code.h',
+        'cs': 'fileTypes.code.cs',
+        'php': 'fileTypes.code.php',
+        'rb': 'fileTypes.code.rb',
+        'go': 'fileTypes.code.go',
+        'rs': 'fileTypes.code.rs',
+        'swift': 'fileTypes.code.swift',
+        'kt': 'fileTypes.code.kt',
+        'sql': 'fileTypes.code.sql',
 
         // Executables
-        'exe': 'Windows Executable',
-        'msi': 'Windows Installer',
-        'app': 'macOS Application',
-        'dmg': 'macOS Disk Image',
-        'deb': 'Debian Package',
-        'rpm': 'Red Hat Package',
-        'apk': 'Android Package',
+        'exe': 'fileTypes.executables.exe',
+        'msi': 'fileTypes.executables.msi',
+        'app': 'fileTypes.executables.app',
+        'dmg': 'fileTypes.executables.dmg',
+        'deb': 'fileTypes.executables.deb',
+        'rpm': 'fileTypes.executables.rpm',
+        'apk': 'fileTypes.executables.apk',
 
         // Other
-        'iso': 'Disk Image',
-        'torrent': 'Torrent File',
+        'iso': 'fileTypes.other.iso',
+        'torrent': 'fileTypes.other.torrent',
     };
 
-    return fileTypes[extension] || `${extension.toUpperCase()} File`;
+    const key = fileTypes[extension];
+    if (key) return t(key, { ext: extension.toUpperCase() });
+
+    return t('fileTypes.byExtension', { ext: extension.toUpperCase() });
 };
 
 /**

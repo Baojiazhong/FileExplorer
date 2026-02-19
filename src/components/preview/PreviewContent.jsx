@@ -2,6 +2,7 @@ import React from 'react';
 import Icon from '../common/Icon';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { useI18n } from '../../i18n';
+import { formatFileSize, formatDate } from '../../utils/formatters';
 
 export function PreviewContent({ payload }) {
   const { t } = useI18n();
@@ -23,15 +24,15 @@ export function PreviewContent({ payload }) {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: 8 }}>
                 <div style={{ fontSize: '0.95rem', color: 'var(--text-secondary, #666)' }}>
                   <span style={{ fontWeight: 500 }}>{t('preview.folderSizeLabel')}</span>{' '}
-                  {typeof payload.size === 'number' ? formatFileSize(payload.size) : '—'}
+                  {typeof payload.size === 'number' ? formatFileSize(payload.size) : t('common.notAvailableShort')}
                 </div>
                 <div style={{ fontSize: '0.95rem', color: 'var(--text-secondary, #666)' }}>
                   <span style={{ fontWeight: 500 }}>{t('preview.folderItemsLabel')}</span>{' '}
-                  {typeof payload.item_count === 'number' ? payload.item_count : '—'}
+                  {typeof payload.item_count === 'number' ? payload.item_count : t('common.notAvailableShort')}
                 </div>
                 <div style={{ fontSize: '0.95rem', color: 'var(--text-secondary, #666)' }}>
                   <span style={{ fontWeight: 500 }}>{t('preview.folderLastModifiedLabel')}</span>{' '}
-                  {payload.modified ? new Date(payload.modified).toLocaleString() : '—'}
+                  {payload.modified ? formatDate(payload.modified, true) : t('common.unknownDate')}
                 </div>
               </div>
             </div>
@@ -162,16 +163,6 @@ export function PreviewContent({ payload }) {
         </div>
       );
   }
-}
-
-function formatFileSize(bytes) {
-  if (bytes === 0) return '0 Bytes';
-
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
 export default PreviewContent;
