@@ -1,6 +1,8 @@
 import React from 'react';
-import SettingsProvider from './providers/SettingsProvider';
 import I18nProvider from './i18n/I18nProvider.jsx';
+import { LOCALES, normalizeLocale } from './i18n';
+import { useI18n } from './i18n';
+import SettingsProvider, { useSettings } from './providers/SettingsProvider';
 import ThemeProvider from './providers/ThemeProvider';
 import AppStateProvider from './providers/AppStateProvider';
 import HistoryProvider from './providers/HistoryProvider';
@@ -8,6 +10,72 @@ import SftpProvider from './providers/SftpProvider';
 import FileSystemProvider from './providers/FileSystemProvider';
 import ContextMenuProvider from './providers/ContextMenuProvider';
 import MainLayout from './layouts/MainLayout';
+
+const LANGUAGE_STORAGE_KEY = 'fileExplorerLanguage';
+
+const readStoredLanguageSetting = () => {
+    try {
+        const raw = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+        if (!raw) return LOCALES.AUTO;
+        if (raw === LOCALES.AUTO) return LOCALES.AUTO;
+        return normalizeLocale(raw);
+    } catch {
+        return LOCALES.AUTO;
+    }
+};
+
+function I18nSettingsSync() {
+    const { settings } = useSettings();
+    const { languageSetting, setLanguage } = useI18n();
+
+    const settingsLanguage = settings?.language;
+
+    React.useEffect(() => {
+        if (!settingsLanguage) return;
+        if (settingsLanguage === languageSetting) return;
+
+        // Keep i18n in sync with persisted settings.language.
+        setLanguage(settingsLanguage);
+    }, [settingsLanguage, languageSetting, setLanguage]);
+
+    return null;
+}
+
+function AppProviders() {
+    const [languageSetting, setLanguageSetting] = React.useState(() => readStoredLanguageSetting());
+
+    const setLanguageSettingPersisted = React.useCallback((value) => {
+        const next = value === LOCALES.AUTO ? LOCALES.AUTO : normalizeLocale(value);
+        setLanguageSetting(next);
+
+        try {
+            localStorage.setItem(LANGUAGE_STORAGE_KEY, next);
+        } catch {
+            // ignore
+        }
+    }, []);
+
+    return (
+        <I18nProvider languageSetting={languageSetting} setLanguageSetting={setLanguageSettingPersisted}>
+            <SettingsProvider>
+                <I18nSettingsSync />
+                <ThemeProvider>
+                    <AppStateProvider>
+                        <HistoryProvider>
+                            <SftpProvider>
+                                <FileSystemProvider>
+                                    <ContextMenuProvider>
+                                        <MainLayout />
+                                    </ContextMenuProvider>
+                                </FileSystemProvider>
+                            </SftpProvider>
+                        </HistoryProvider>
+                    </AppStateProvider>
+                </ThemeProvider>
+            </SettingsProvider>
+        </I18nProvider>
+    );
+}
 
 // Simple fallback for error cases
 function ErrorFallback() {
@@ -69,32 +137,16 @@ class App extends React.Component {
         // Render normal application with all providers
         // IMPORTANT: Provider order matters for proper initialization:
         // 1. SettingsProvider should be first as other providers may depend on settings
-        // 2. ThemeProvider depends on settings and should come second
-        // 3. AppStateProvider provides general app state
-        // 4. HistoryProvider should come before FileSystemProvider since navigation depends on history
-        // 5. SftpProvider should come before FileSystemProvider to provide SFTP operations
-        // 6. FileSystemProvider provides file system operations
-        // 7. ContextMenuProvider should come after FileSystemProvider to access selected items
+        // 2. I18nProvider depends on settings (language)
+        // 3. ThemeProvider depends on settings and should come next
+        // 4. AppStateProvider provides general app state
+        // 5. HistoryProvider should come before FileSystemProvider since navigation depends on history
+        // 6. SftpProvider should come before FileSystemProvider to provide SFTP operations
+        // 7. FileSystemProvider provides file system operations
+        // 8. ContextMenuProvider should come after FileSystemProvider to access selected items
         return (
             <div className="app-container">
-                <SettingsProvider>
-                    <I18nProvider>
-                        <ThemeProvider>
-                            <AppStateProvider>
-                                <HistoryProvider>
-                                    <SftpProvider>
-                                        <FileSystemProvider>
-                                            <ContextMenuProvider>
-                                                <MainLayout />
-                                            </ContextMenuProvider>
-                                        </FileSystemProvider>
-                                    </SftpProvider>
-                                </HistoryProvider>
-                            </AppStateProvider>
-                        </ThemeProvider>
-                    </I18nProvider>
-                </SettingsProvider>
-
+                <AppProviders />
             </div>
         );
     }

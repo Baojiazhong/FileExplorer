@@ -1,5 +1,4 @@
-import React, { createContext, useContext, useEffect, useMemo } from 'react';
-import { useSettings } from '../providers/SettingsProvider';
+import React, { createContext, useContext, useEffect, useMemo, useCallback } from 'react';
 import enUS from './locales/en-US';
 import zhCN from './locales/zh-CN';
 import { createTranslator, LOCALES, resolveEffectiveLocale } from './core';
@@ -17,10 +16,17 @@ const dictionaries = {
     [LOCALES.ZH_CN]: zhCN,
 };
 
-export default function I18nProvider({ children }) {
-    const { settings, updateSetting } = useSettings();
-
-    const languageSetting = settings?.language || LOCALES.AUTO;
+/**
+ * Pure i18n provider.
+ *
+ * IMPORTANT: This module intentionally does not import SettingsProvider to avoid
+ * circular-dependency risks (i18n is used widely across the app).
+ */
+export default function I18nProvider({
+    children,
+    languageSetting = LOCALES.AUTO,
+    setLanguageSetting,
+}) {
     const locale = resolveEffectiveLocale(languageSetting);
 
     const t = useMemo(() => {
@@ -35,9 +41,19 @@ export default function I18nProvider({ children }) {
         }
     }, [locale]);
 
-    const setLanguage = (value) => updateSetting('language', value);
+    const setLanguage = useCallback(
+        (value) => {
+            if (typeof setLanguageSetting === 'function') {
+                setLanguageSetting(value);
+            }
+        },
+        [setLanguageSetting]
+    );
 
-    const value = useMemo(() => ({ t, locale, languageSetting, setLanguage, LOCALES }), [t, locale, languageSetting]);
+    const value = useMemo(
+        () => ({ t, locale, languageSetting, setLanguage, LOCALES }),
+        [t, locale, languageSetting, setLanguage]
+    );
 
     return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }
