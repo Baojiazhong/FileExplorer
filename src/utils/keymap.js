@@ -2,7 +2,7 @@
 // Phase 1: preset switching (auto/windows/macos/linux) without per-command customization.
 
 import { invoke } from '@tauri-apps/api/core';
-import { getDirectoryPath, isRootPath } from './pathUtils';
+import { getDirectoryPath, isRootPath } from './pathUtils.js';
 
 export const KEYMAP_PRESETS = {
   AUTO: 'auto',
@@ -14,8 +14,10 @@ export const KEYMAP_PRESETS = {
 const normalizeOs = (os) => {
   if (!os || typeof os !== 'string') return null;
   const value = os.toLowerCase();
-  if (value.includes('win')) return KEYMAP_PRESETS.WINDOWS;
-  if (value.includes('mac') || value.includes('darwin')) return KEYMAP_PRESETS.MACOS;
+
+  // Order matters: "darwin" contains "win".
+  if (value.includes('mac') || value.includes('darwin') || value.includes('osx')) return KEYMAP_PRESETS.MACOS;
+  if (value.includes('windows') || value === 'win32' || value === 'win64' || value === 'win') return KEYMAP_PRESETS.WINDOWS;
   if (value.includes('linux')) return KEYMAP_PRESETS.LINUX;
   return null;
 };
