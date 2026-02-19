@@ -94,6 +94,56 @@ pub async fn open_in_default_app(path: &str) -> Result<(), String> {
     })
 }
 
+#[tauri::command]
+pub async fn open_with_dialog(path: &str) -> Result<(), String> {
+    let path_obj = Path::new(path);
+
+    if !path_obj.exists() {
+        log_error!("File does not exist: {}", path);
+        return Err(Error::new(
+            ErrorCode::ResourceNotFound,
+            format!("File does not exist: {}", path),
+        )
+        .to_json());
+    }
+
+    if !path_obj.is_file() {
+        log_error!("Path is not a file: {}", path);
+        return Err(Error::new(
+            ErrorCode::InvalidInput,
+            format!("Path is not a file: {}", path),
+        )
+        .to_json());
+    }
+
+    // Windows: show the system "Open with" dialog (Explorer-like).
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("rundll32.exe")
+            .arg("shell32.dll,OpenAs_RunDLL")
+            .arg(path)
+            .spawn()
+            .map_err(|err| {
+                Error::new(
+                    ErrorCode::InternalError,
+                    format!("Failed to open 'Open with' dialog: {}", err),
+                )
+                .to_json()
+            })?;
+
+        return Ok(());
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        return Err(Error::new(
+            ErrorCode::NotImplementedForOS,
+            "Open with dialog is only implemented for Windows".to_string(),
+        )
+        .to_json());
+    }
+}
+
 /// Opens a directory at the given path and returns its contents as a json string.
 ///
 /// # Arguments

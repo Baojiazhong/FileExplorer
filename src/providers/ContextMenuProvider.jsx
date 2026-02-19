@@ -756,6 +756,15 @@ export default function ContextMenuProvider({ children }) {
         const hasClipboard = clipboard.items.length > 0;
         const isZipFile = contextTarget && contextTarget.name.toLowerCase().endsWith('.zip');
 
+        // Windows-only feature: rely on runtime platform; avoid backend roundtrips.
+        let isWindowsRuntime = false;
+        try {
+            // eslint-disable-next-line no-undef
+            isWindowsRuntime = String(navigator?.platform || '').toLowerCase().includes('win');
+        } catch {
+            isWindowsRuntime = false;
+        }
+
         // Empty space context menu
         if (!contextTarget) {
             return [
@@ -827,6 +836,34 @@ export default function ContextMenuProvider({ children }) {
                             console.error('Failed to open file:', error);
                             showError(`Failed to open file: ${error.message || error}`);
                         }
+                    }
+                }
+            },
+            {
+                id: 'open-with',
+                label: 'Open with...',
+                icon: 'open-with',
+                disabled: selectedItems.length > 1 || isDirectory || isProcessing || !isWindowsRuntime,
+                action: async () => {
+                    setIsProcessing(true);
+                    try {
+                        let pathToOpen = contextTarget.path;
+
+                        // For SFTP files, download to a temp path first.
+                        if (isSftpPath(contextTarget.path)) {
+                            const tempPath = await downloadAndOpenSftpFile(contextTarget.path, false);
+                            if (!tempPath) {
+                                throw new Error('Failed to download SFTP file');
+                            }
+                            pathToOpen = tempPath;
+                        }
+
+                        await invoke('open_with_dialog', { path: pathToOpen });
+                    } catch (error) {
+                        console.error('Failed to open file with dialog:', error);
+                        showError(`Failed to open with...: ${error.message || error}`);
+                    } finally {
+                        setIsProcessing(false);
                     }
                 }
             },
