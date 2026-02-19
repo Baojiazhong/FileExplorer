@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useI18n } from '../../i18n';
 import { getFileType } from '../../utils/formatters';
 import { useFileSystem } from '../../providers/FileSystemProvider';
 import { useContextMenu } from '../../providers/ContextMenuProvider';
@@ -23,6 +24,7 @@ import './fileList.css';
  * @returns {React.ReactElement} File list component
  */
 const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, searchTerm = '', disableArrowKeys = false, onColumnsChange }) => {
+    const { t } = useI18n();
     const { selectedItems, selectItem, loadDirectory, clearSelection, focusedItem, setFocusedItem, openFile } = useFileSystem();
     const { settings } = useSettings();
     const { openContextMenu } = useContextMenu();
@@ -187,8 +189,8 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
                 bValue = b.isDirectory ? -1 : b.size_in_bytes || 0;
             } else if (key === 'type') {
                 // Folders: always 'Folder', Files: use getFileType
-                aValue = a.isDirectory ? 'Folder' : (a.name ? getFileType(a.name) : '');
-                bValue = b.isDirectory ? 'Folder' : (b.name ? getFileType(b.name) : '');
+                aValue = a.isDirectory ? t('details.folderType') : (a.name ? getFileType(a.name) : '');
+                bValue = b.isDirectory ? t('details.folderType') : (b.name ? getFileType(b.name) : '');
                 aValue = aValue.toLowerCase();
                 bValue = bValue.toLowerCase();
             } else if (key === 'created' || key === 'last_modified' || key === 'accessed') {
@@ -509,7 +511,7 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
             <div className="file-list-container">
                 <div className="loading-state">
                     <div className="loading-spinner"></div>
-                    <p>Loading...</p>
+                    <p>{t('common.loading')}</p>
                 </div>
             </div>
         );
@@ -629,7 +631,7 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
                             className={`file-list-column column-name ${sortConfig.key === 'name' ? `sorted-${sortConfig.direction}` : ''}`}
                             onClick={() => handleSort('name')}
                         >
-                            Name
+                            {t('settings.behavior.defaultSort.name')}
                             {sortConfig.key === 'name' && (
                                 <span className={`sort-icon sort-${sortConfig.direction}`}></span>
                             )}
@@ -638,7 +640,7 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
                             className={`file-list-column column-size ${sortConfig.key === 'size_in_bytes' ? `sorted-${sortConfig.direction}` : ''}`}
                             onClick={() => handleSort('size_in_bytes')}
                         >
-                            Size
+                            {t('settings.behavior.defaultSort.size')}
                             {sortConfig.key === 'size_in_bytes' && (
                                 <span className={`sort-icon sort-${sortConfig.direction}`}></span>
                             )}
@@ -647,7 +649,7 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
                             className={`file-list-column column-type ${sortConfig.key === 'type' ? `sorted-${sortConfig.direction}` : ''}`}
                             onClick={() => handleSort('type')}
                         >
-                            Type
+                            {t('settings.behavior.defaultSort.type')}
                             {sortConfig.key === 'type' && (
                                 <span className={`sort-icon sort-${sortConfig.direction}`}></span>
                             )}
@@ -656,7 +658,7 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
                             className={`file-list-column column-modified ${sortConfig.key === 'last_modified' ? `sorted-${sortConfig.direction}` : ''}`}
                             onClick={() => handleSort('last_modified')}
                         >
-                            Modified
+                            {t('settings.behavior.defaultSort.dateModified')}
                             {sortConfig.key === 'last_modified' && (
                                 <span className={`sort-icon sort-${sortConfig.direction}`}></span>
                             )}

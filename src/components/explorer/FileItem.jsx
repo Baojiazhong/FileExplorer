@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useI18n } from '../../i18n';
 import FileIcon from './FileIcon';
 import { formatFileSize, formatDate, getFileType } from '../../utils/formatters';
 import { replaceFileName } from '../../utils/pathUtils.js';
@@ -30,14 +31,18 @@ const FileItem = ({
                       onDoubleClick,
                       onContextMenu
                   }) => {
+    const { t } = useI18n();
     const { loadDirectory } = useFileSystem();
     const { currentPath } = useHistory();
     const { clipboard } = useContextMenu();
 
     const isDirectory = item.isDirectory || 'sub_file_count' in item;
-    const fileType = isDirectory ? 'Folder' : getFileType(item.name);
+    const fileType = isDirectory ? t('details.folderType') : getFileType(item.name);
     const size = isDirectory
-        ? `${item.sub_file_count || 0} files, ${item.sub_dir_count || 0} folders`
+        ? t('details.sizeSummary', {
+            files: item.sub_file_count || 0,
+            folders: item.sub_dir_count || 0,
+        })
         : formatFileSize(item.size_in_bytes);
 
     // Check if this item is cut (in clipboard with cut operation)

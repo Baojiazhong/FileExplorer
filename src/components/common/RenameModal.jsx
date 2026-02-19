@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useI18n } from '../../i18n';
 import Modal from '../common/Modal';
 import Button from '../common/Button';
 
@@ -14,6 +15,7 @@ import Button from '../common/Button';
  * @returns {React.ReactElement|null} Rename modal or null if no item provided
  */
 const RenameModal = ({ isOpen, onClose, item, onRename }) => {
+    const { t } = useI18n();
     const [newName, setNewName] = useState('');
     const inputRef = useRef(null);
 
@@ -88,7 +90,7 @@ const RenameModal = ({ isOpen, onClose, item, onRename }) => {
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title={`Rename ${isDirectory ? 'Folder' : 'File'}`}
+            title={t('contextMenu.items.rename')}
             size="sm"
             defaultAction={handleSubmit}
             defaultActionEnabled={!!newName && !!newName.trim() && newName.trim() !== item.name}
@@ -98,7 +100,7 @@ const RenameModal = ({ isOpen, onClose, item, onRename }) => {
                         variant="ghost"
                         onClick={onClose}
                     >
-                        Cancel
+                        {t('common.cancel')}
                     </Button>
                     <Button
                         type="submit"
@@ -106,7 +108,7 @@ const RenameModal = ({ isOpen, onClose, item, onRename }) => {
                         disabled={!newName || !newName.trim() || newName.trim() === item.name}
                         onClick={handleSubmit}
                     >
-                        Rename
+                        {t('contextMenu.items.rename')}
                     </Button>
                 </>
             }
@@ -114,7 +116,7 @@ const RenameModal = ({ isOpen, onClose, item, onRename }) => {
             <form onSubmit={handleSubmit}>
                 <div className="form-group">
                     <label htmlFor="new-name">
-                        {isDirectory ? 'Folder name:' : 'File name:'}
+                        {isDirectory ? t('explorer.create.folderName') : t('explorer.create.fileName')}
                     </label>
                     <input
                         ref={inputRef}
@@ -124,12 +126,12 @@ const RenameModal = ({ isOpen, onClose, item, onRename }) => {
                         onChange={handleChange}
                         onKeyDown={handleKeyDown}
                         className="input"
-                        placeholder={`Enter new ${isDirectory ? 'folder' : 'file'} name`}
+                        placeholder={isDirectory ? t('explorer.create.namePlaceholderFolder') : t('explorer.create.namePlaceholderFile')}
                     />
                     <div className="input-hint">
                         {isDirectory
-                            ? 'Choose a descriptive name for your folder'
-                            : 'Include the file extension (e.g., .txt, .jpg, .pdf)'
+                            ? t('explorer.create.folderHint')
+                            : t('explorer.create.fileHint')
                         }
                     </div>
                 </div>

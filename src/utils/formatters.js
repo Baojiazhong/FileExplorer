@@ -1,3 +1,12 @@
+import enUS from '../i18n/locales/en-US';
+import zhCN from '../i18n/locales/zh-CN';
+import { createTranslator } from '../i18n/core';
+
+const dictionaries = {
+    'en-US': enUS,
+    'zh-CN': zhCN,
+};
+
 /**
  * Format a file size in bytes to a human-readable string.
  * @param {number} bytes - The file size in bytes.
@@ -16,6 +25,40 @@ export const formatFileSize = (bytes, decimals = 1) => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 };
 
+const getPreferredLocale = () => {
+    try {
+        // I18nProvider sets document.documentElement.lang to the current locale.
+        const fromDom = document?.documentElement?.lang;
+        if (fromDom && typeof fromDom === 'string') {
+            const trimmed = fromDom.trim();
+            if (trimmed) return trimmed;
+        }
+    } catch {
+        // ignore
+    }
+
+    try {
+        // Fallback for non-DOM contexts (or if lang wasn't set yet).
+        return (Array.isArray(navigator.languages) ? navigator.languages[0] : navigator.language) || 'en-US';
+    } catch {
+        return 'en-US';
+    }
+};
+
+let cachedTranslatorLocale = null;
+let cachedTranslator = null;
+
+const getTranslator = () => {
+    const locale = getPreferredLocale();
+    if (cachedTranslator && cachedTranslatorLocale === locale) {
+        return cachedTranslator;
+    }
+
+    cachedTranslatorLocale = locale;
+    cachedTranslator = createTranslator({ dictionaries, locale });
+    return cachedTranslator;
+};
+
 /**
  * Format a date string to a human-readable format.
  * @param {string} dateString - The date string to format.
@@ -23,14 +66,16 @@ export const formatFileSize = (bytes, decimals = 1) => {
  * @returns {string} The formatted date.
  */
 export const formatDate = (dateString, includeTime = false) => {
-    if (!dateString) return 'Unknown';
+    const t = getTranslator();
+
+    if (!dateString) return t('common.unknownDate');
 
     try {
         const date = new Date(dateString);
 
         // Check if the date is valid
         if (isNaN(date.getTime())) {
-            return 'Invalid date';
+            return t('common.invalidDate');
         }
 
         const options = {
@@ -42,13 +87,12 @@ export const formatDate = (dateString, includeTime = false) => {
         if (includeTime) {
             options.hour = '2-digit';
             options.minute = '2-digit';
-            options.hour12 = true;
         }
 
-        return new Intl.DateTimeFormat('en-US', options).format(date);
+        return new Intl.DateTimeFormat(getPreferredLocale(), options).format(date);
     } catch (error) {
         console.error('Error formatting date:', error);
-        return 'Invalid date';
+        return t('common.invalidDate');
     }
 };
 
@@ -164,7 +208,9 @@ export const getFileType = (filename) => {
  * @returns {string} The elapsed time as a human-readable string.
  */
 export const calculateTimeElapsed = (dateString) => {
-    if (!dateString) return 'Unknown';
+    const t = getTranslator();
+
+    if (!dateString) return t('common.unknownDate');
 
     try {
         const date = new Date(dateString);
@@ -172,39 +218,44 @@ export const calculateTimeElapsed = (dateString) => {
 
         // Check if the date is valid
         if (isNaN(date.getTime())) {
-            return 'Invalid date';
+            return t('common.invalidDate');
         }
 
         const seconds = Math.floor((now - date) / 1000);
 
         if (seconds < 60) {
-            return 'Just now';
+            return t('common.relativeTime.justNow');
         }
 
         const minutes = Math.floor(seconds / 60);
         if (minutes < 60) {
-            return `${minutes} minute${minutes === 1 ? '' : 's'} ago`;
+            if (minutes === 1) return t('common.relativeTime.minuteAgo', { count: minutes });
+            return t('common.relativeTime.minutesAgo', { count: minutes });
         }
 
         const hours = Math.floor(minutes / 60);
         if (hours < 24) {
-            return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+            if (hours === 1) return t('common.relativeTime.hourAgo', { count: hours });
+            return t('common.relativeTime.hoursAgo', { count: hours });
         }
 
         const days = Math.floor(hours / 24);
         if (days < 30) {
-            return `${days} day${days === 1 ? '' : 's'} ago`;
+            if (days === 1) return t('common.relativeTime.dayAgo', { count: days });
+            return t('common.relativeTime.daysAgo', { count: days });
         }
 
         const months = Math.floor(days / 30);
         if (months < 12) {
-            return `${months} month${months === 1 ? '' : 's'} ago`;
+            if (months === 1) return t('common.relativeTime.monthAgo', { count: months });
+            return t('common.relativeTime.monthsAgo', { count: months });
         }
 
         const years = Math.floor(months / 12);
-        return `${years} year${years === 1 ? '' : 's'} ago`;
+        if (years === 1) return t('common.relativeTime.yearAgo', { count: years });
+        return t('common.relativeTime.yearsAgo', { count: years });
     } catch (error) {
         console.error('Error calculating time elapsed:', error);
-        return 'Unknown';
+        return t('common.invalidDate');
     }
 };

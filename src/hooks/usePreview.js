@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { useI18n } from '../i18n';
 import { useSftp } from '../providers/SftpProvider';
 import { normalizePreviewPayload } from '../utils/previewPayload';
 import { shouldIgnoreKeyEvent } from '../utils/keymap';
@@ -23,6 +24,7 @@ export function usePreview(
   navigateRight = null,
   options = {}
 ) {
+  const { t } = useI18n();
   const { keyHandlingEnabled = true } = options;
 
   const [open, setOpen] = useState(false);
@@ -80,8 +82,8 @@ export function usePreview(
       if (requestId === requestIdRef.current) {
         setPayload({
           kind: 'Error',
-          name: path.split(/[/\\]/).pop() || 'Unknown',
-          message: error instanceof Error ? error.message : 'Failed to generate preview',
+           name: path.split(/[/\\]/).pop() || t('common.unknown'),
+           message: error instanceof Error ? error.message : t('preview.failedToGenerate'),
         });
       }
     } finally {

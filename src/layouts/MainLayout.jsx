@@ -175,8 +175,8 @@ const MainLayout = () => {
                 aValue = a.isDirectory ? -1 : a.size_in_bytes || 0;
                 bValue = b.isDirectory ? -1 : b.size_in_bytes || 0;
             } else if (key === 'type') {
-                aValue = a.isDirectory ? 'Folder' : (a.name ? getFileType(a.name) : '');
-                bValue = b.isDirectory ? 'Folder' : (b.name ? getFileType(b.name) : '');
+                aValue = a.isDirectory ? t('details.folderType') : (a.name ? getFileType(a.name) : '');
+                bValue = b.isDirectory ? t('details.folderType') : (b.name ? getFileType(b.name) : '');
                 aValue = aValue.toLowerCase();
                 bValue = bValue.toLowerCase();
             } else if (key === 'created' || key === 'last_modified' || key === 'accessed') {
@@ -570,7 +570,7 @@ const MainLayout = () => {
         const handleSftpFileOpened = (e) => {
             console.log('SFTP File Opened:', e.detail);
             if (e.detail?.path && e.detail?.content !== undefined) {
-                const fileName = e.detail.path.split('/').pop() || 'Unknown File';
+                const fileName = e.detail.path.split('/').pop() || t('common.unknownFile');
                 setTextViewerFileName(fileName);
                 setTextViewerContent(e.detail.content);
                 setIsTextViewerOpen(true);

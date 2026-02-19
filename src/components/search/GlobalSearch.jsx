@@ -1220,7 +1220,7 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                             }}>
                                 Suggestions
                                 {isLoadingSuggestions && (
-                                    <span style={{ marginLeft: '8px', fontStyle: 'italic' }}>Loading...</span>
+                                    <span style={{ marginLeft: '8px', fontStyle: 'italic' }}>{t('common.loading')}</span>
                                 )}
                             </div>
                             {suggestions.map((suggestion, index) => (
@@ -1245,7 +1245,7 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                                         color: 'var(--text-secondary)', 
                                         marginLeft: '8px' 
                                     }}>
-                                        Press Tab or click to use
+                                        {t('search.suggestions.useHint')}
                                     </span>
                                 </div>
                             ))}
@@ -1425,7 +1425,7 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                                         <div className="info-grid">
                                             <div className="info-item">
                                                 <span className="info-label">Engine Status:</span>
-                                                <span className="info-value">{searchEngineInfo.status || 'Unknown'}</span>
+                                                <span className="info-value">{searchEngineInfo.status || t('common.unknown')}</span>
                                             </div>
                                             <div className="info-item">
                                                 <span className="info-label">Indexed Files:</span>
@@ -1447,8 +1447,8 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                                                 <span className="info-label">Cache Hit Rate:</span>
                                                 <span className="info-value">
                                                     {searchMetrics.cache_hit_rate ? 
-                                                        `${(searchMetrics.cache_hit_rate * 100).toFixed(1)}%` : 
-                                                        'N/A'
+                                                        `${(searchMetrics.cache_hit_rate * 100).toFixed(1)}%` :
+                                                        t('common.notAvailableShort')
                                                     }
                                                 </span>
                                             </div>
@@ -1542,7 +1542,7 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                             backgroundColor: '#f0f0f0',
                             borderRadius: '4px'
                         }}>
-                            Type at least 3 characters to start searching...
+                            {t('search.typeMoreToSearch')}
                         </div>
                     )}
 
@@ -1551,26 +1551,26 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                         <div className="indexing-progress">
                             {isLoadingStatus && !isIndexing && (
                                 <div className="progress-header">
-                                    <h3>Indexing</h3>
-                                    <span className="progress-percentage">Please wait...</span>
+                                    <h3>{t('search.indexing')}</h3>
+                                    <span className="progress-percentage">{t('common.loading')}</span>
                                 </div>
                             )}
                             
                             {isIndexing && (
                                 <>
                                     <div className="progress-header">
-                                        <h3>
-                                            {indexingProgress.files_discovered === 0 ? 
-                                                'Starting Discovery...' : 
-                                                indexingProgress.files_indexed === 0 ? 'Discovering Files...' :
-                                                indexingProgress.files_indexed < indexingProgress.files_discovered ? 'Indexing Files...' :
-                                                'Finalizing...'
-                                            }
-                                        </h3>
+                                    <h3>
+                                        {indexingProgress.files_discovered === 0 ?
+                                            t('search.status.startingDiscovery') :
+                                            indexingProgress.files_indexed === 0 ? t('search.status.discoveringFiles') :
+                                            indexingProgress.files_indexed < indexingProgress.files_discovered ? t('search.status.indexingFiles') :
+                                            t('search.status.finalizing')
+                                        }
+                                    </h3>
                                         <span className="progress-percentage">
-                                            {indexingProgress.files_discovered === 0 ? 
-                                                'Starting...' : 
-                                                indexingProgress.files_indexed === 0 ? `${indexingProgress.files_discovered} found` :
+                                            {indexingProgress.files_discovered === 0 ?
+                                                t('search.searching') :
+                                                indexingProgress.files_indexed === 0 ? t('search.foundCount', { count: indexingProgress.files_discovered }) :
                                                 `${indexingProgress.percentage_complete.toFixed(1)}%`
                                             }
                                         </span>
@@ -1597,7 +1597,8 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                                             </span>
                                             {indexingProgress.estimated_time_remaining && indexingProgress.files_indexed > 0 && (
                                                 <span>
-                                                    {formatTimeRemaining(indexingProgress.estimated_time_remaining)} remaining
+                                                    {formatTimeRemaining(indexingProgress.estimated_time_remaining)} {t('search.timeRemaining')}
+
                                                 </span>
                                             )}
                                         </div>
@@ -1605,8 +1606,9 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                                         {indexingProgress.current_path && (
                                             <div className="current-file">
                                                 <span className="current-file-label">
-                                                    {indexingProgress.files_discovered === 0 ? 'Starting:' : 
-                                                     indexingProgress.files_indexed === 0 ? 'Discovering:' : 'Processing:'}
+                                                    {indexingProgress.files_discovered === 0 ? t('search.status.startingDiscovery') :
+                                                     indexingProgress.files_indexed === 0 ? t('search.status.discoveringFiles') : t('search.status.indexingFiles')}
+
                                                 </span>
                                                 <span className="current-file-path" title={indexingProgress.current_path}>
                                                     {indexingProgress.current_path.split('/').pop() || indexingProgress.current_path}
@@ -1615,21 +1617,21 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                                         )}
                                     </div>
 
-                                    <button
-                                        onClick={async () => {
-                                            try {
-                                                await invoke('stop_indexing');
-                                                setIsIndexing(false);
-                                                stopProgressPolling();
-                                                loadSearchEngineInfo(); // Refresh info after stopping
-                                            } catch (error) {
-                                                console.error('Failed to stop indexing:', error);
-                                            }
-                                        }}
-                                        className="stop-indexing-btn"
-                                    >
-                                        Stop Indexing
-                                    </button>
+                                            <button
+                                                onClick={async () => {
+                                                    try {
+                                                        await invoke('stop_indexing');
+                                                        setIsIndexing(false);
+                                                        stopProgressPolling();
+                                                        loadSearchEngineInfo(); // Refresh info after stopping
+                                                    } catch (error) {
+                                                        console.error('Failed to stop indexing:', error);
+                                                    }
+                                                }}
+                                                className="stop-indexing-btn"
+                                            >
+                                                {t('search.stopIndexing')}
+                                            </button>
                                 </>
                             )}
 
@@ -1647,7 +1649,7 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                                             display: 'inline-block'
                                         }}></span>
                                     </div>
-                                    Background indexing has started, please wait...
+                                    {t('search.backgroundIndexingStarted')}
                                 </div>
                             )}
                         </div>
@@ -1658,7 +1660,7 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                     {isSearching && (
                         <div className="search-progress-container">
                             <div className="progress-spinner"></div>
-                            <span>Searching indexed files...</span>
+                            <span>{t('search.searchingIndexedFiles')}</span>
                         </div>
                     )}
 

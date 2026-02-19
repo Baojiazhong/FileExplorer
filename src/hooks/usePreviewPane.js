@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useI18n } from '../i18n';
 import { useSftp } from '../providers/SftpProvider';
 import { normalizePreviewPayload } from '../utils/previewPayload';
 
@@ -10,6 +11,7 @@ import { normalizePreviewPayload } from '../utils/previewPayload';
  * - Uses a "latest request wins" guard to avoid stale results.
  */
 export function usePreviewPane({ enabled, selectedItem, isMultipleSelection }) {
+  const { t } = useI18n();
   const { isSftpPath, parseSftpPath } = useSftp();
   const [payload, setPayload] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -55,8 +57,8 @@ export function usePreviewPane({ enabled, selectedItem, isMultipleSelection }) {
         if (requestId === requestIdRef.current) {
           setPayload({
             kind: 'Error',
-            name: item?.name || (item?.path ? item.path.split(/[/\\]/).pop() : 'Unknown'),
-            message: error instanceof Error ? error.message : 'Failed to generate preview',
+            name: item?.name || (item?.path ? item.path.split(/[/\\]/).pop() : t('common.unknown')),
+            message: error instanceof Error ? error.message : t('preview.failedToGenerate'),
           });
         }
       } finally {

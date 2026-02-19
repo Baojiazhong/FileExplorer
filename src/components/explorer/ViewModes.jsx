@@ -1,4 +1,5 @@
 import React from 'react';
+import { useI18n } from '../../i18n';
 import './viewModes.css';
 
 /**
@@ -9,14 +10,15 @@ import './viewModes.css';
  * @returns {React.ReactElement} ViewModes component
  */
 const ViewModes = ({ currentMode = 'grid', onChange }) => {
+    const { t } = useI18n();
     /**
      * Available view modes configuration
      * @type {Array<{id: string, label: string, icon: string}>}
      */
     const viewModes = [
-        { id: 'grid', label: 'Grid View', icon: 'grid' },
-        { id: 'list', label: 'List View', icon: 'list' },
-        { id: 'details', label: 'Details View', icon: 'details' },
+        { id: 'grid', label: t('settings.appearance.defaultView.grid'), icon: 'grid' },
+        { id: 'list', label: t('settings.appearance.defaultView.list'), icon: 'list' },
+        { id: 'details', label: t('settings.appearance.defaultView.details'), icon: 'details' },
     ];
 
     /**
