@@ -215,6 +215,46 @@ describe('MainLayout OS-native properties shortcut', () => {
     expect(screen.queryByTestId('details-panel')).toBeNull();
   });
 
+  it('Windows: Alt+Enter shows properties for single selection', async () => {
+    mocks.settings = { ...mocks.settings, keymap_preset: 'windows' };
+    mocks.selectedItems = [{ name: 'a.txt', path: 'C:\\tmp\\a.txt', isDirectory: false }];
+
+    const { default: MainLayout } = await import('../../src/layouts/MainLayout.jsx');
+
+    render(<MainLayout />);
+    await tick();
+
+    const e = fireKey({ key: 'Enter', code: 'Enter', altKey: true });
+
+    expect(e.defaultPrevented).toBe(true);
+
+    await waitFor(() => {
+      expect(mocks.showProperties).toHaveBeenCalledTimes(1);
+    });
+
+    expect(mocks.showProperties).toHaveBeenCalledWith(mocks.selectedItems[0]);
+    expect(mocks.updateSetting).toHaveBeenCalledWith('right_pane_mode', 'details');
+  });
+
+  it('Windows: Alt+Enter does nothing for multi-select', async () => {
+    mocks.settings = { ...mocks.settings, keymap_preset: 'windows' };
+    mocks.selectedItems = [
+      { name: 'a.txt', path: 'C:\\tmp\\a.txt', isDirectory: false },
+      { name: 'b.txt', path: 'C:\\tmp\\b.txt', isDirectory: false },
+    ];
+
+    const { default: MainLayout } = await import('../../src/layouts/MainLayout.jsx');
+
+    render(<MainLayout />);
+    await tick();
+
+    fireKey({ key: 'Enter', code: 'Enter', altKey: true });
+
+    expect(mocks.showProperties).not.toHaveBeenCalled();
+    expect(mocks.updateSetting).not.toHaveBeenCalledWith('right_pane_mode', 'details');
+    expect(screen.queryByTestId('details-panel')).toBeNull();
+  });
+
   it('macOS: Cmd+I shows get info for single selection', async () => {
     mocks.settings = { ...mocks.settings, keymap_preset: 'macos' };
     mocks.selectedItems = [{ name: 'a.txt', path: '/tmp/a.txt', isDirectory: false }];
