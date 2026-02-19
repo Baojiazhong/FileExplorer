@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { showError, showSuccess } from '../../utils/NotificationSystem';
 import Modal from '../common/Modal';
 import Button from '../common/Button';
+import { useI18n } from '../../i18n';
 
 /**
  * Modal component for comparing file or directory hash with a provided hash value
@@ -15,6 +16,8 @@ import Button from '../common/Button';
  * @returns {React.ReactElement|null} Hash comparison modal or null if no item provided
  */
 const HashCompareModal = ({ isOpen, onClose, item }) => {
+    const { t } = useI18n();
+
     const [hashValue, setHashValue] = useState('');
     const [isComparing, setIsComparing] = useState(false);
     const inputRef = useRef(null);
@@ -50,14 +53,14 @@ const HashCompareModal = ({ isOpen, onClose, item }) => {
             });
 
             if (matches) {
-                showSuccess('✓ Hash matches! File integrity verified.');
+                showSuccess(t('hashCompareModal.toast.match'));
             } else {
-                showError('✗ Hash does not match! File may be corrupted or modified.');
+                showError(t('hashCompareModal.toast.mismatch'));
             }
             onClose();
         } catch (error) {
             console.error('Hash comparison failed:', error);
-            showError(`Failed to compare hash: ${error.message || error}`);
+            showError(t('hashCompareModal.toast.compareFailed', { message: error?.message || error }));
         } finally {
             setIsComparing(false);
         }
@@ -106,7 +109,7 @@ const HashCompareModal = ({ isOpen, onClose, item }) => {
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title="Compare Hash"
+            title={t('hashCompareModal.title')}
             size="md"
             defaultAction={handleSubmit}
             defaultActionEnabled={!!hashValue.trim() && !isComparing}
@@ -117,7 +120,7 @@ const HashCompareModal = ({ isOpen, onClose, item }) => {
                         onClick={onClose}
                         disabled={isComparing}
                     >
-                        Cancel
+                        {t('common.cancel')}
                     </Button>
                     <Button
                         type="submit"
@@ -125,7 +128,7 @@ const HashCompareModal = ({ isOpen, onClose, item }) => {
                         disabled={!hashValue.trim() || isComparing}
                         onClick={handleSubmit}
                     >
-                        {isComparing ? 'Comparing...' : 'Compare Hash'}
+                        {isComparing ? t('hashCompareModal.comparing') : t('hashCompareModal.compare')}
                     </Button>
                 </>
             }
@@ -133,7 +136,7 @@ const HashCompareModal = ({ isOpen, onClose, item }) => {
             <form onSubmit={handleSubmit}>
                 <div className="form-group">
                     <label htmlFor="hash-value">
-                        Hash value to compare:
+                        {t('hashCompareModal.hashLabel')}
                     </label>
                     <textarea
                         ref={inputRef}
@@ -143,14 +146,13 @@ const HashCompareModal = ({ isOpen, onClose, item }) => {
                         onKeyDown={handleKeyDown}
                         onPaste={handlePaste}
                         className="input"
-                        placeholder="Enter or paste the hash value to compare against"
+                        placeholder={t('hashCompareModal.hashPlaceholder')}
                         rows={4}
                         disabled={isComparing}
                         style={{ resize: 'vertical', fontFamily: 'monospace', fontSize: '13px' }}
                     />
                     <div className="input-hint">
-                        Enter the hash value you want to compare "{item.name}" against.
-                        The comparison will verify the file's integrity.
+                        {t('hashCompareModal.hint', { name: item.name })}
                     </div>
                 </div>
             </form>

@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { invoke } from '@tauri-apps/api/core';
 import Button from '../common/Button';
-import IconButton from '../common/IconButton';
 import Modal from '../common/Modal';
 import TemplateItem from './TemplateItem';
 import EmptyState from '../explorer/EmptyState';
@@ -9,6 +7,7 @@ import { useHistory } from '../../providers/HistoryProvider';
 import { useFileSystem } from '../../providers/FileSystemProvider';
 import { getTemplatePaths, useTemplate, removeTemplate, addTemplate } from '../../utils/fileOperations';
 import { showError, showSuccess } from '../../utils/NotificationSystem';
+import { useI18n } from '../../i18n';
 import './templates.css';
 
 /**
@@ -20,6 +19,8 @@ import './templates.css';
  * @returns {React.ReactElement} TemplateList component
  */
 const TemplateList = ({ onClose }) => {
+    const { t } = useI18n();
+
     const [templates, setTemplates] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -56,7 +57,7 @@ const TemplateList = ({ onClose }) => {
             }
 
             const pathSegments = path.split(/[/\\]/);
-            const name = pathSegments[pathSegments.length - 1] || `Template ${index + 1}`;
+            const name = pathSegments[pathSegments.length - 1] || t('templates.item.defaultName', { index: index + 1 });
 
             // Determine if it's a file or folder based on extension
             const hasExtension = name.includes('.') && !name.startsWith('.');
@@ -82,43 +83,13 @@ const TemplateList = ({ onClose }) => {
             setError(null);
 
             try {
-                console.log('Loading templates from backend...');
                 const templatePaths = await getTemplatePaths();
-                console.log('Raw template paths from backend:', templatePaths);
-
                 const templateObjects = convertPathsToTemplates(templatePaths);
-                console.log('Converted template objects:', templateObjects);
-
                 setTemplates(templateObjects);
             } catch (err) {
                 console.error('Failed to load templates:', err);
-                setError('Failed to load templates. Please try again.');
-
-                // Mock data for development - properly structured
-                const mockTemplates = [
-                    {
-                        name: 'Project Template',
-                        path: '/templates/project-template',
-                        type: 'folder',
-                        size: 2048,
-                        createdAt: '2023-04-15'
-                    },
-                    {
-                        name: 'Document Template.docx',
-                        path: '/templates/document-template.docx',
-                        type: 'file',
-                        size: 1024,
-                        createdAt: '2023-03-20'
-                    },
-                    {
-                        name: 'Web Project',
-                        path: '/templates/web-project',
-                        type: 'folder',
-                        size: 4096,
-                        createdAt: '2023-05-10'
-                    }
-                ];
-                setTemplates(mockTemplates);
+                setError(t('templates.errors.loadFailed'));
+                setTemplates([]);
             } finally {
                 setIsLoading(false);
             }
@@ -136,7 +107,7 @@ const TemplateList = ({ onClose }) => {
         return () => {
             window.removeEventListener('templates-updated', handleTemplatesUpdated);
         };
-    }, []);
+    }, [t]);
 
     /**
      * Opens the modal to use/apply a template
@@ -145,7 +116,7 @@ const TemplateList = ({ onClose }) => {
     const handleUseTemplate = (template) => {
         if (!template || !template.path) {
             console.error('Invalid template for use:', template);
-            showError('Invalid template selected.');
+            showError(t('templates.errors.invalidSelected'));
             return;
         }
 
@@ -171,10 +142,12 @@ const TemplateList = ({ onClose }) => {
             setIsUseModalOpen(false);
 
             // Show success message
-            showSuccess(`Template "${selectedTemplate.name}" applied successfully!`);
+            showSuccess(t('templates.toast.applied', { name: selectedTemplate.name }));
         } catch (err) {
             console.error('Failed to apply template:', err);
-            setError('Failed to apply template. Please try again.');
+            const message = t('templates.errors.applyFailed');
+            setError(message);
+            showError(message);
         }
     };
 
@@ -186,7 +159,7 @@ const TemplateList = ({ onClose }) => {
     const handleRemoveTemplate = async (template) => {
         if (!template || !template.path) {
             console.error('Invalid template for removal:', template);
-            showError('Invalid template selected.');
+            showError(t('templates.errors.invalidSelected'));
             return;
         }
 
@@ -194,11 +167,11 @@ const TemplateList = ({ onClose }) => {
             await removeTemplate(template.path);
 
             // Update the template list
-            setTemplates(prev => prev.filter(t => t.path !== template.path));
-            showSuccess(`Template "${template.name}" removed successfully.`);
+            setTemplates(prev => prev.filter(tpl => tpl.path !== template.path));
+            showSuccess(t('templates.toast.removed', { name: template.name }));
         } catch (err) {
             console.error('Failed to remove template:', err);
-            showError('Failed to remove template. Please try again.');
+            showError(t('templates.errors.removeFailed'));
         }
     };
 
@@ -235,10 +208,10 @@ const TemplateList = ({ onClose }) => {
             setIsAddModalOpen(false);
             setNewTemplatePath('');
 
-            showSuccess('Template added successfully!');
+            showSuccess(t('templates.toast.added'));
         } catch (err) {
             console.error('Failed to add template:', err);
-            showError(`Failed to add template: ${err.message || err}`);
+            showError(t('templates.errors.addFailedWithMessage', { message: err?.message || err }));
         }
     };
 
@@ -273,11 +246,12 @@ const TemplateList = ({ onClose }) => {
         <div className="template-list-container">
             <div className="template-list-header">
                 <div className="template-header-left">
-                    <h2>Templates</h2>
+                    <h2>{t('templates.title')}</h2>
                     <button
                         className="template-close-btn"
                         onClick={onClose}
-                        title="Close Templates"
+                        title={t('templates.closeTitle')}
+                        aria-label={t('templates.closeTitle')}
                     >
                         <span className="icon icon-x"></span>
                     </button>
@@ -287,7 +261,7 @@ const TemplateList = ({ onClose }) => {
                         variant="primary"
                         onClick={handleAddTemplate}
                     >
-                        Add Template
+                        {t('templates.add')}
                     </Button>
                 </div>
             </div>
@@ -296,7 +270,7 @@ const TemplateList = ({ onClose }) => {
                 {isLoading ? (
                     <div className="template-list-loading">
                         <div className="spinner"></div>
-                        <p>Loading templates...</p>
+                        <p>{t('templates.loading')}</p>
                     </div>
                 ) : error ? (
                     <div className="template-list-error">
@@ -307,11 +281,7 @@ const TemplateList = ({ onClose }) => {
                         </div>
                     </div>
                 ) : templates.length === 0 ? (
-                    <EmptyState
-                        type="no-templates"
-                        title="No Templates"
-                        message="You haven't saved any templates yet. Templates help you create files and folders with predefined structures."
-                    />
+                    <EmptyState type="no-templates" />
                 ) : (
                     <div className="template-grid">
                         {templates.map((template, index) => {
@@ -338,7 +308,7 @@ const TemplateList = ({ onClose }) => {
             <Modal
                 isOpen={isUseModalOpen}
                 onClose={() => setIsUseModalOpen(false)}
-                title="Use Template"
+                title={t('templates.use')}
                 size="sm"
                 defaultAction={applyTemplate}
                 defaultActionEnabled={!!destinationPath.trim()}
@@ -348,21 +318,21 @@ const TemplateList = ({ onClose }) => {
                             variant="ghost"
                             onClick={() => setIsUseModalOpen(false)}
                         >
-                            Cancel
+                            {t('common.cancel')}
                         </Button>
                         <Button
                             variant="primary"
                             onClick={applyTemplate}
                             disabled={!destinationPath.trim()}
                         >
-                            Apply Template
+                            {t('templates.apply')}
                         </Button>
                     </>
                 }
             >
                 <div className="template-use-form">
                     <div className="form-group">
-                        <label htmlFor="template-name">Template</label>
+                        <label htmlFor="template-name">{t('templates.template')}</label>
                         <input
                             type="text"
                             id="template-name"
@@ -373,17 +343,17 @@ const TemplateList = ({ onClose }) => {
                     </div>
 
                     <div className="form-group">
-                        <label htmlFor="destination-path">Destination</label>
+                        <label htmlFor="destination-path">{t('templates.destination')}</label>
                         <input
                             type="text"
                             id="destination-path"
                             className="input"
                             value={destinationPath}
                             onChange={(e) => setDestinationPath(e.target.value)}
-                            placeholder="Enter destination path"
+                            placeholder={t('templates.destinationPlaceholder')}
                         />
                         <div className="input-hint">
-                            This is where the template will be applied.
+                            {t('templates.destinationHint')}
                         </div>
                     </div>
                 </div>
@@ -393,7 +363,7 @@ const TemplateList = ({ onClose }) => {
             <Modal
                 isOpen={isAddModalOpen}
                 onClose={() => setIsAddModalOpen(false)}
-                title="Add Template"
+                title={t('templates.addTitle')}
                 size="sm"
                 defaultAction={saveNewTemplate}
                 defaultActionEnabled={!!newTemplatePath.trim()}
@@ -403,14 +373,14 @@ const TemplateList = ({ onClose }) => {
                             variant="ghost"
                             onClick={() => setIsAddModalOpen(false)}
                         >
-                            Cancel
+                            {t('common.cancel')}
                         </Button>
                         <Button
                             variant="primary"
                             onClick={saveNewTemplate}
                             disabled={!newTemplatePath.trim()}
                         >
-                            Add Template
+                            {t('templates.add')}
                         </Button>
                     </>
                 }
@@ -418,7 +388,7 @@ const TemplateList = ({ onClose }) => {
                 <form onSubmit={handleAddTemplateSubmit}>
                     <div className="template-add-form">
                         <div className="form-group">
-                            <label htmlFor="template-path">Template Path</label>
+                            <label htmlFor="template-path">{t('templates.templatePath')}</label>
                             <input
                                 ref={addTemplateInputRef}
                                 type="text"
@@ -427,10 +397,10 @@ const TemplateList = ({ onClose }) => {
                                 value={newTemplatePath}
                                 onChange={handleAddTemplateInputChange}
                                 onKeyDown={handleAddTemplateKeyDown}
-                                placeholder="Enter path to file or folder to save as template"
+                                placeholder={t('templates.templatePathPlaceholder')}
                             />
                             <div className="input-hint">
-                                Enter the full path to a file or folder that you want to save as a template.
+                                {t('templates.templatePathHint')}
                             </div>
                         </div>
                     </div>

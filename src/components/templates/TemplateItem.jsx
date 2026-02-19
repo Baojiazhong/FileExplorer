@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import Icon from '../common/Icon';
-import IconButton from '../common/IconButton';
 import Modal from '../common/Modal';
 import Button from '../common/Button';
+import { useI18n } from '../../i18n';
 import './templates.css';
 
 /**
@@ -20,6 +20,7 @@ import './templates.css';
  * @returns {React.ReactElement} TemplateItem component
  */
 const TemplateItem = ({ template, onUse, onRemove }) => {
+    const { t } = useI18n();
     const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
 
     // Safety check for template object
@@ -29,8 +30,7 @@ const TemplateItem = ({ template, onUse, onRemove }) => {
     }
 
     // Provide defaults for required properties
-    const safeName = template.name || 'Unknown Template';
-    const safePath = template.path || '';
+    const safeName = template.name || t('templates.item.unknownName');
     const safeType = template.type || 'file';
 
     /**
@@ -107,8 +107,8 @@ const TemplateItem = ({ template, onUse, onRemove }) => {
      * @returns {string} Formatted size string
      */
     const formatSize = (bytes) => {
-        if (!bytes && bytes !== 0) return 'Unknown size';
-        if (typeof bytes !== 'number') return 'Unknown size';
+        if (!bytes && bytes !== 0) return t('templates.item.unknownSize');
+        if (typeof bytes !== 'number') return t('templates.item.unknownSize');
 
         const units = ['B', 'KB', 'MB', 'GB', 'TB'];
         let size = bytes;
@@ -128,12 +128,12 @@ const TemplateItem = ({ template, onUse, onRemove }) => {
      * @returns {string} Formatted date string
      */
     const formatDate = (dateStr) => {
-        if (!dateStr) return 'Unknown date';
+        if (!dateStr) return t('templates.item.unknownDate');
 
         try {
             const date = new Date(dateStr);
             if (isNaN(date.getTime())) {
-                return 'Invalid date';
+                return t('templates.item.invalidDate');
             }
             return date.toLocaleDateString(undefined, {
                 year: 'numeric',
@@ -141,7 +141,7 @@ const TemplateItem = ({ template, onUse, onRemove }) => {
                 day: 'numeric'
             });
         } catch (err) {
-            return 'Invalid date';
+            return t('templates.item.invalidDate');
         }
     };
 
@@ -185,7 +185,7 @@ const TemplateItem = ({ template, onUse, onRemove }) => {
 
                     <div className="template-meta">
                         <span className="template-type">
-                            {safeType === 'folder' ? 'Folder' : 'File'}
+                            {safeType === 'folder' ? t('templates.item.type.folder') : t('templates.item.type.file')}
                         </span>
                         {template.size && (
                             <span className="template-size">{formatSize(template.size)}</span>
@@ -200,8 +200,8 @@ const TemplateItem = ({ template, onUse, onRemove }) => {
                     <button
                         className="template-delete-btn"
                         onClick={handleDeleteClick}
-                        title="Delete template"
-                        aria-label="Delete template"
+                        title={t('templates.item.deleteTitle')}
+                        aria-label={t('templates.item.deleteTitle')}
                     >
                         <span className="icon icon-delete"></span>
                     </button>
@@ -210,7 +210,7 @@ const TemplateItem = ({ template, onUse, onRemove }) => {
                         size="sm"
                         onClick={handleUseClick}
                     >
-                        Use
+                        {t('templates.item.use')}
                     </Button>
                 </div>
             </div>
@@ -219,7 +219,7 @@ const TemplateItem = ({ template, onUse, onRemove }) => {
             <Modal
                 isOpen={isConfirmDeleteOpen}
                 onClose={() => setIsConfirmDeleteOpen(false)}
-                title="Confirm Delete"
+                title={t('templates.item.confirmDelete.title')}
                 size="sm"
                 defaultAction={confirmDelete}
                 footer={
@@ -228,20 +228,21 @@ const TemplateItem = ({ template, onUse, onRemove }) => {
                             variant="ghost"
                             onClick={() => setIsConfirmDeleteOpen(false)}
                         >
-                            Cancel
+                            {t('common.cancel')}
                         </Button>
                         <Button
                             variant="danger"
                             onClick={confirmDelete}
                         >
-                            Delete
+                            {t('templates.item.confirmDelete.delete')}
                         </Button>
                     </>
                 }
             >
                 <p>
-                    Are you sure you want to delete the template "{safeName}"?
-                    This action cannot be undone.
+                    {t('templates.item.confirmDelete.body', { name: safeName })}
+                    {' '}
+                    {t('templates.item.confirmDelete.note')}
                 </p>
             </Modal>
         </>

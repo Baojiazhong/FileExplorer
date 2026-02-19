@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { showError, showSuccess } from '../utils/NotificationSystem';
+import { useI18n } from '../i18n';
 
 const SftpContext = createContext({
     sftpConnections: [],
@@ -26,6 +27,7 @@ const SftpContext = createContext({
 export const useSftp = () => useContext(SftpContext);
 
 export default function SftpProvider({ children }) {
+    const { t } = useI18n();
     const [sftpConnections, setSftpConnections] = useState([]);
     const [currentSftpConnection, setCurrentSftpConnection] = useState(null);
     const [currentSftpPath, setCurrentSftpPath] = useState(null);
@@ -204,10 +206,10 @@ export default function SftpProvider({ children }) {
             return transformedData;
         } catch (error) {
             console.error('Failed to load SFTP directory:', error);
-            showError(`Failed to connect to ${connection.name}: ${error.message || error}`);
+            showError(t('sftpProvider.connectFailed', { name: connection.name, message: error.message || error }));
             return null;
         }
-    }, [createSftpUrl]);
+    }, [createSftpUrl, t]);
 
     // Load SFTP directory
     const loadSftpDirectory = useCallback(async (sftpPath) => {
@@ -217,7 +219,7 @@ export default function SftpProvider({ children }) {
         
         if (!parsed || !parsed.connection) {
             console.error('Invalid SFTP path or connection not found', { parsed, sftpPath });
-            showError('Invalid SFTP path or connection not found');
+            showError(t('sftpProvider.invalidPath'));
             return null;
         }
         
@@ -227,10 +229,10 @@ export default function SftpProvider({ children }) {
             return result;
         } catch (error) {
             console.error('Error in loadSftpDirectory:', error);
-            showError(`Failed to load SFTP directory: ${error.message || error}`);
+            showError(t('sftpProvider.loadDirFailed', { message: error.message || error }));
             return null;
         }
-    }, [parseSftpPath, navigateToSftpConnection]);
+    }, [parseSftpPath, navigateToSftpConnection, t]);
 
     // SFTP file operations
     const createSftpFile = useCallback(async (sftpPath, fileName) => {
@@ -247,14 +249,14 @@ export default function SftpProvider({ children }) {
                 filePath: filePath
             });
             
-            showSuccess(`File "${fileName}" created successfully`);
+            showSuccess(t('sftpProvider.fileCreated', { name: fileName }));
             return true;
         } catch (error) {
             console.error('Failed to create SFTP file:', error);
-            showError(`Failed to create file: ${error.message || error}`);
+            showError(t('sftpProvider.createFileFailed', { message: error.message || error }));
             return false;
         }
-    }, [parseSftpPath]);
+    }, [parseSftpPath, t]);
 
     const createSftpDirectory = useCallback(async (sftpPath, dirName) => {
         const parsed = parseSftpPath(sftpPath);
@@ -270,14 +272,14 @@ export default function SftpProvider({ children }) {
                 directoryPath: dirPath
             });
             
-            showSuccess(`Directory "${dirName}" created successfully`);
+            showSuccess(t('sftpProvider.dirCreated', { name: dirName }));
             return true;
         } catch (error) {
             console.error('Failed to create SFTP directory:', error);
-            showError(`Failed to create directory: ${error.message || error}`);
+            showError(t('sftpProvider.createDirFailed', { message: error.message || error }));
             return false;
         }
-    }, [parseSftpPath]);
+    }, [parseSftpPath, t]);
 
     const deleteSftpItem = useCallback(async (sftpPath) => {
         const parsed = parseSftpPath(sftpPath);
@@ -294,7 +296,7 @@ export default function SftpProvider({ children }) {
                     password: parsed.connection.password,
                     filePath: parsed.remotePath
                 });
-                showSuccess(`File deleted successfully`);
+                showSuccess(t('sftpProvider.fileDeleted'));
                 return true;
             } catch (fileError) {
                 // Try as directory if file deletion failed
@@ -305,15 +307,15 @@ export default function SftpProvider({ children }) {
                     password: parsed.connection.password,
                     directoryPath: parsed.remotePath
                 });
-                showSuccess(`Directory deleted successfully`);
+                showSuccess(t('sftpProvider.dirDeleted'));
                 return true;
             }
         } catch (error) {
             console.error('Failed to delete SFTP item:', error);
-            showError(`Failed to delete item: ${error.message || error}`);
+            showError(t('sftpProvider.deleteFailed', { message: error.message || error }));
             return false;
         }
-    }, [parseSftpPath]);
+    }, [parseSftpPath, t]);
 
     const renameSftpItem = useCallback(async (sftpPath, newName) => {
         const parsed = parseSftpPath(sftpPath);
@@ -345,14 +347,14 @@ export default function SftpProvider({ children }) {
                 });
             }
             
-            showSuccess(`Item renamed to "${newName}" successfully`);
+            showSuccess(t('sftpProvider.renamed', { name: newName }));
             return true;
         } catch (error) {
             console.error('Failed to rename SFTP item:', error);
-            showError(`Failed to rename item: ${error.message || error}`);
+            showError(t('sftpProvider.renameFailed', { message: error.message || error }));
             return false;
         }
-    }, [parseSftpPath]);
+    }, [parseSftpPath, t]);
 
     const copySftpItem = useCallback(async (sftpPath, targetPath) => {
         const sourceParsed = parseSftpPath(sftpPath);
@@ -365,7 +367,7 @@ export default function SftpProvider({ children }) {
 
         // Only support copying within the same connection for now
         if (sourceParsed.connection.name !== targetParsed.connection.name) {
-            showError('Copying between different SFTP connections is not yet supported');
+            showError(t('sftpProvider.copyBetweenConnectionsUnsupported'));
             return false;
         }
 
@@ -391,14 +393,14 @@ export default function SftpProvider({ children }) {
                 });
             }
             
-            showSuccess(`Item copied successfully`);
+            showSuccess(t('sftpProvider.copied'));
             return true;
         } catch (error) {
             console.error('Failed to copy SFTP item:', error);
-            showError(`Failed to copy item: ${error.message || error}`);
+            showError(t('sftpProvider.copyFailed', { message: error.message || error }));
             return false;
         }
-    }, [parseSftpPath]);
+    }, [parseSftpPath, t]);
 
     const moveSftpItem = useCallback(async (sftpPath, targetPath) => {
         const sourceParsed = parseSftpPath(sftpPath);
@@ -411,7 +413,7 @@ export default function SftpProvider({ children }) {
 
         // Only support moving within the same connection for now
         if (sourceParsed.connection.name !== targetParsed.connection.name) {
-            showError('Moving between different SFTP connections is not yet supported');
+            showError(t('sftpProvider.moveBetweenConnectionsUnsupported'));
             return false;
         }
 
@@ -437,14 +439,14 @@ export default function SftpProvider({ children }) {
                 });
             }
             
-            showSuccess(`Item moved successfully`);
+            showSuccess(t('sftpProvider.moved'));
             return true;
         } catch (error) {
             console.error('Failed to move SFTP item:', error);
-            showError(`Failed to move item: ${error.message || error}`);
+            showError(t('sftpProvider.moveFailed', { message: error.message || error }));
             return false;
         }
-    }, [parseSftpPath]);
+    }, [parseSftpPath, t]);
 
     const openSftpFile = useCallback(async (sftpPath) => {
         const parsed = parseSftpPath(sftpPath);
@@ -462,15 +464,15 @@ export default function SftpProvider({ children }) {
             return content;
         } catch (error) {
             console.error('Failed to open SFTP file:', error);
-            showError(`Failed to open file: ${error.message || error}`);
+            showError(t('sftpProvider.openFileFailed', { message: error.message || error }));
             return null;
         }
-    }, [parseSftpPath]);
+    }, [parseSftpPath, t]);
 
     const downloadAndOpenSftpFile = useCallback(async (sftpPath, openFile = true) => {
         const parsed = parseSftpPath(sftpPath);
         if (!parsed || !parsed.connection) {
-            showError('Invalid SFTP path or connection not found');
+            showError(t('sftpProvider.invalidPath'));
             return null;
         }
 
@@ -485,18 +487,18 @@ export default function SftpProvider({ children }) {
             });
             
             if (openFile) {
-                showSuccess('File opened successfully');
+                showSuccess(t('sftpProvider.fileOpened'));
             } else {
-                showSuccess('File downloaded successfully');
+                showSuccess(t('sftpProvider.fileDownloaded'));
             }
             
             return result;
         } catch (error) {
             console.error('Failed to download SFTP file:', error);
-            showError(`Failed to download file: ${error.message || error}`);
+            showError(t('sftpProvider.downloadFailed', { message: error.message || error }));
             return null;
         }
-    }, [parseSftpPath]);
+    }, [parseSftpPath, t]);
 
     const disconnectSftp = useCallback(() => {
         setCurrentSftpConnection(null);

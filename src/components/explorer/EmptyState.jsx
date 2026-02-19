@@ -1,4 +1,5 @@
 import React from 'react';
+import { useI18n } from '../../i18n';
 import './emptyState.css';
 
 /**
@@ -11,32 +12,38 @@ import './emptyState.css';
  * @returns {React.ReactElement} Empty state component
  */
 const EmptyState = ({ type = 'empty-folder', searchTerm = null, title = null, message = null }) => {
+    const { t } = useI18n();
+
+    const noResultsTitle = searchTerm
+        ? t('explorer.emptyState.noResults.titleWithQuery', { query: searchTerm })
+        : t('explorer.emptyState.noResults.title');
+
     // Different empty states
     const emptyStates = {
         'empty-folder': {
             icon: 'folder-empty',
-            title: 'This folder is empty',
-            message: 'Drag and drop files here or use the Create button to add content',
+            title: t('explorer.emptyState.emptyFolder.title'),
+            message: t('explorer.emptyState.emptyFolder.message'),
         },
         'no-results': {
             icon: 'search-empty',
-            title: `No results found${searchTerm ? ` for "${searchTerm}"` : ''}`,
-            message: 'Try different keywords or check your spelling',
+            title: noResultsTitle,
+            message: t('explorer.emptyState.noResults.message'),
         },
         'no-favorites': {
             icon: 'star-empty',
-            title: 'No favorites yet',
-            message: 'Right-click on folders and files to add them to favorites',
+            title: t('explorer.emptyState.noFavorites.title'),
+            message: t('explorer.emptyState.noFavorites.message'),
         },
         'no-templates': {
             icon: 'template-empty',
-            title: 'No templates',
-            message: 'You haven\'t saved any templates yet. Templates help you create files and folders with predefined structures.',
+            title: t('explorer.emptyState.noTemplates.title'),
+            message: t('explorer.emptyState.noTemplates.message'),
         },
-        'error': {
+        error: {
             icon: 'error',
-            title: 'Something went wrong',
-            message: 'Please try again or check your connection',
+            title: t('explorer.emptyState.error.title'),
+            message: t('explorer.emptyState.error.message'),
         },
     };
 

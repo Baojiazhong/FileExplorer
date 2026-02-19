@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useI18n } from '../../i18n';
 import './searchBar.css';
 
 /**
@@ -11,7 +12,10 @@ import './searchBar.css';
  * @param {string} [props.placeholder='Search files and folders'] - Placeholder text for the input
  * @returns {React.ReactElement} SearchBar component
  */
-const SearchBar = ({ value = '', onChange, onSubmit, placeholder = 'Search files and folders' }) => {
+const SearchBar = ({ value = '', onChange, onSubmit, placeholder }) => {
+    const { t } = useI18n();
+
+    const resolvedPlaceholder = placeholder ?? t('search.placeholder');
     const [inputValue, setInputValue] = useState(value);
     const [isFocused, setIsFocused] = useState(false);
     const [isExpanded, setIsExpanded] = useState(true); // Always expanded
@@ -101,7 +105,6 @@ const SearchBar = ({ value = '', onChange, onSubmit, placeholder = 'Search files
 
     // Note: keybindings are centralized in MainLayout (keymap.js).
 
-
     /**
      * Handle click outside to collapse search bar
      */
@@ -127,7 +130,7 @@ const SearchBar = ({ value = '', onChange, onSubmit, placeholder = 'Search files
             <button
                 className="search-icon"
                 onClick={handleSearchIconClick}
-                aria-label="Search"
+                aria-label={t('search.searchEnter')}
             >
                 <span className="icon icon-search"></span>
             </button>
@@ -137,12 +140,12 @@ const SearchBar = ({ value = '', onChange, onSubmit, placeholder = 'Search files
                     ref={inputRef}
                     type="text"
                     className="search-input"
-                    placeholder={placeholder}
+                    placeholder={resolvedPlaceholder}
                     value={inputValue}
                     onChange={handleChange}
                     onFocus={handleFocus}
                     onBlur={handleBlur}
-                    aria-label="Search input"
+                    aria-label={t('search.placeholder')}
                 />
 
                 {inputValue && (
@@ -150,7 +153,7 @@ const SearchBar = ({ value = '', onChange, onSubmit, placeholder = 'Search files
                         type="button"
                         className="clear-button"
                         onClick={handleClear}
-                        aria-label="Clear search"
+                        aria-label={t('search.clearSearch')}
                     >
                         <span className="icon icon-x"></span>
                     </button>

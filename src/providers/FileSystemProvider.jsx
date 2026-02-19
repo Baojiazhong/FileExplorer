@@ -4,6 +4,7 @@ import { useHistory } from './HistoryProvider';
 import { useSettings } from './SettingsProvider';
 import { useSftp } from './SftpProvider';
 import { getDirectoryPath } from '../utils/pathUtils';
+import { useI18n } from '../i18n';
 
 // Create file system context
 const FileSystemContext = createContext({
@@ -29,6 +30,7 @@ const FileSystemContext = createContext({
 });
 
 export default function FileSystemProvider({ children }) {
+    const { t } = useI18n();
     const [currentDirData, setCurrentDirData] = useState(null);
     const [isLoading, setIsLoading] = useState(true); // Starten Sie mit isLoading=true
     const [selectedItems, setSelectedItems] = useState([]);
@@ -91,7 +93,7 @@ export default function FileSystemProvider({ children }) {
             return volumesData; // Zurückgeben zur weiteren Verwendung
         } catch (err) {
             console.error('Failed to load volumes:', err);
-            setError(`Failed to load volumes: ${err.message || err}`);
+            setError(t('fileSystem.loadVolumesFailed', { message: err.message || err }));
             // Fallback to mock data for development
             const mockVolumes = [
                 {
@@ -172,12 +174,12 @@ export default function FileSystemProvider({ children }) {
                 );
                 
                 if (isUserDir) {
-                    setError(`Access denied to "${folderName}". This app needs permission to access your ${folderName} folder. Please grant permission in System Preferences > Security & Privacy > Privacy > Files and Folders.`);
+                    setError(t('fileSystem.accessDeniedUserDir', { name: folderName }));
                 } else {
-                    setError(`Permission denied: Cannot access "${folderName}". You may need to grant additional permissions to this application.`);
+                    setError(t('fileSystem.permissionDenied', { name: folderName }));
                 }
             } else {
-                setError(`Failed to load directory: ${errorMessage}`);
+                setError(t('fileSystem.loadDirFailed', { message: errorMessage }));
             }
             return false;
         } finally {
@@ -242,7 +244,7 @@ export default function FileSystemProvider({ children }) {
         let timeoutId = setTimeout(() => {
             console.error("Directory initialization timed out");
             setIsLoading(false);
-            setError("Failed to initialize directory within the time limit");
+            setError(t('fileSystem.initTimeout'));
         }, 10000);
 
         try {
@@ -271,7 +273,7 @@ export default function FileSystemProvider({ children }) {
             }
         } catch (err) {
             console.error('Failed to initialize directory:', err);
-            setError('Failed to load any directory. Please check file system permissions.');
+            setError(t('fileSystem.loadAnyDirFailed'));
         } finally {
             // Cleanup Timeout und stelle sicher, dass der Ladezustand beendet wird
             clearTimeout(timeoutId);
@@ -313,7 +315,7 @@ export default function FileSystemProvider({ children }) {
             }
         } catch (err) {
             console.error(`Failed to open file: ${filePath}`, err);
-            setError(`Failed to open file: ${err.message || err}`);
+            setError(t('fileSystem.openFileFailed', { message: err.message || err }));
         } finally {
             setIsLoading(false);
         }
@@ -339,7 +341,7 @@ export default function FileSystemProvider({ children }) {
             }
         } catch (err) {
             console.error(`Failed to create file: ${fileName}`, err);
-            setError(`Failed to create file: ${err.message || err}`);
+            setError(t('fileSystem.createFileFailed', { message: err.message || err }));
         } finally {
             setIsLoading(false);
         }
@@ -365,7 +367,7 @@ export default function FileSystemProvider({ children }) {
             }
         } catch (err) {
             console.error(`Failed to create directory: ${directoryName}`, err);
-            setError(`Failed to create directory: ${err.message || err}`);
+            setError(t('fileSystem.createDirFailed', { message: err.message || err }));
         } finally {
             setIsLoading(false);
         }
@@ -398,7 +400,7 @@ export default function FileSystemProvider({ children }) {
             console.log('FileSystemProvider: Rename operation completed successfully');
         } catch (err) {
             console.error(`Failed to rename item: ${oldPath}`, err);
-            setError(`Failed to rename item: ${err.message || err}`);
+            setError(t('fileSystem.renameFailed', { message: err.message || err }));
         } finally {
             setIsLoading(false);
         }
@@ -433,7 +435,7 @@ export default function FileSystemProvider({ children }) {
             }
         } catch (err) {
             console.error(`Failed to move item to trash: ${path}`, err);
-            setError(`Failed to move item to trash: ${err.message || err}`);
+            setError(t('fileSystem.trashFailed', { message: err.message || err }));
         } finally {
             setIsLoading(false);
         }
@@ -456,7 +458,7 @@ export default function FileSystemProvider({ children }) {
             }
         } catch (err) {
             console.error('Failed to create zip:', err);
-            setError(`Failed to create zip: ${err.message || err}`);
+            setError(t('fileSystem.zipFailed', { message: err.message || err }));
         } finally {
             setIsLoading(false);
         }
@@ -479,7 +481,7 @@ export default function FileSystemProvider({ children }) {
             }
         } catch (err) {
             console.error(`Failed to extract zip: ${zipPath}`, err);
-            setError(`Failed to extract zip: ${err.message || err}`);
+            setError(t('fileSystem.unzipFailed', { message: err.message || err }));
         } finally {
             setIsLoading(false);
         }
