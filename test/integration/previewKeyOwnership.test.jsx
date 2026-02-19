@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 
@@ -13,13 +13,16 @@ vi.mock('@tauri-apps/api/core', () => {
 
 const tick = () => new Promise((r) => setTimeout(r, 0));
 
-const fireKey = (init, target = document) => {
-  const e = new KeyboardEvent('keydown', {
-    bubbles: true,
-    cancelable: true,
-    ...init,
+const fireKey = async (init, target = document) => {
+  let e;
+  await act(async () => {
+    e = new KeyboardEvent('keydown', {
+      bubbles: true,
+      cancelable: true,
+      ...init,
+    });
+    target.dispatchEvent(e);
   });
-  target.dispatchEvent(e);
   return e;
 };
 
@@ -54,7 +57,7 @@ describe('Preview modal key ownership', () => {
 
     await tick();
 
-    const e = fireKey({ key: ' ', code: 'Space' });
+    const e = await fireKey({ key: ' ', code: 'Space' });
 
     expect(e.defaultPrevented).toBe(true);
     expect(calls).toEqual([]);
@@ -82,7 +85,7 @@ describe('Preview modal key ownership', () => {
 
     await tick();
 
-    const e = fireKey({ key: ' ', code: 'Space' });
+    const e = await fireKey({ key: ' ', code: 'Space' });
 
     expect(e.defaultPrevented).toBe(true);
     expect(calls).toEqual(['app-space']);
@@ -115,7 +118,7 @@ describe('Preview modal key ownership', () => {
     const input = document.querySelector('input');
     input.focus();
 
-    fireKey({ key: ' ', code: 'Space' }, input);
+    await fireKey({ key: ' ', code: 'Space' }, input);
 
     expect(calls).toEqual(['app-space']);
     expect(screen.getByTestId('open').textContent).toBe('false');

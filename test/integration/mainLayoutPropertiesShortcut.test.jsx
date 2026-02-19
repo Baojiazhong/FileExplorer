@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { act } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 
@@ -142,13 +142,23 @@ vi.mock('../../src/components/tabs/TabManager.jsx', () => ({
 
 const tick = () => new Promise((r) => setTimeout(r, 0));
 
-const fireKey = (init) => {
-  const e = new KeyboardEvent('keydown', {
-    bubbles: true,
-    cancelable: true,
-    ...init,
+const flush = async () => {
+  // MainLayout triggers async effects; let them settle without act() warnings.
+  await act(async () => {
+    await tick();
   });
-  document.dispatchEvent(e);
+};
+
+const fireKey = async (init) => {
+  let e;
+  await act(async () => {
+    e = new KeyboardEvent('keydown', {
+      bubbles: true,
+      cancelable: true,
+      ...init,
+    });
+    document.dispatchEvent(e);
+  });
   return e;
 };
 
@@ -180,9 +190,9 @@ describe('MainLayout OS-native properties shortcut', () => {
     const { default: MainLayout } = await import('../../src/layouts/MainLayout.jsx');
 
     render(<MainLayout />);
-    await tick();
+    await flush();
 
-    const e = fireKey({ key: 'Enter', code: 'Enter', altKey: true });
+    const e = await fireKey({ key: 'Enter', code: 'Enter', altKey: true });
 
     expect(e.defaultPrevented).toBe(true);
 
@@ -206,9 +216,9 @@ describe('MainLayout OS-native properties shortcut', () => {
     const { default: MainLayout } = await import('../../src/layouts/MainLayout.jsx');
 
     render(<MainLayout />);
-    await tick();
+    await flush();
 
-    fireKey({ key: 'Enter', code: 'Enter', altKey: true });
+    await fireKey({ key: 'Enter', code: 'Enter', altKey: true });
 
     expect(mocks.showProperties).not.toHaveBeenCalled();
     expect(mocks.updateSetting).not.toHaveBeenCalledWith('right_pane_mode', 'details');
@@ -222,9 +232,9 @@ describe('MainLayout OS-native properties shortcut', () => {
     const { default: MainLayout } = await import('../../src/layouts/MainLayout.jsx');
 
     render(<MainLayout />);
-    await tick();
+    await flush();
 
-    const e = fireKey({ key: 'Enter', code: 'Enter', altKey: true });
+    const e = await fireKey({ key: 'Enter', code: 'Enter', altKey: true });
 
     expect(e.defaultPrevented).toBe(true);
 
@@ -246,9 +256,9 @@ describe('MainLayout OS-native properties shortcut', () => {
     const { default: MainLayout } = await import('../../src/layouts/MainLayout.jsx');
 
     render(<MainLayout />);
-    await tick();
+    await flush();
 
-    fireKey({ key: 'Enter', code: 'Enter', altKey: true });
+    await fireKey({ key: 'Enter', code: 'Enter', altKey: true });
 
     expect(mocks.showProperties).not.toHaveBeenCalled();
     expect(mocks.updateSetting).not.toHaveBeenCalledWith('right_pane_mode', 'details');
@@ -262,9 +272,9 @@ describe('MainLayout OS-native properties shortcut', () => {
     const { default: MainLayout } = await import('../../src/layouts/MainLayout.jsx');
 
     render(<MainLayout />);
-    await tick();
+    await flush();
 
-    const e = fireKey({ key: 'i', code: 'KeyI', metaKey: true });
+    const e = await fireKey({ key: 'i', code: 'KeyI', metaKey: true });
 
     expect(e.defaultPrevented).toBe(true);
 

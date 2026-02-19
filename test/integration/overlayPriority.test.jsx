@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { act, useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 
@@ -17,13 +17,16 @@ vi.mock('@tauri-apps/api/core', () => {
 
 const tick = () => new Promise((r) => setTimeout(r, 0));
 
-const fireKey = (init, target = document) => {
-  const e = new KeyboardEvent('keydown', {
-    bubbles: true,
-    cancelable: true,
-    ...init,
+const fireKey = async (init, target = document) => {
+  let e;
+  await act(async () => {
+    e = new KeyboardEvent('keydown', {
+      bubbles: true,
+      cancelable: true,
+      ...init,
+    });
+    target.dispatchEvent(e);
   });
-  target.dispatchEvent(e);
   return e;
 };
 
@@ -101,7 +104,7 @@ describe('Overlay key priority (real overlays)', () => {
 
     expect(document.querySelector('[data-modal="confirm-dialog"]')).toBeTruthy();
 
-    const e = fireKey({ key: 'Escape', code: 'Escape' });
+    const e = await fireKey({ key: 'Escape', code: 'Escape' });
 
     expect(e.defaultPrevented).toBe(true);
     await expect(confirmPromise).resolves.toBe(false);
@@ -118,7 +121,7 @@ describe('Overlay key priority (real overlays)', () => {
     render(<ModalWithContextMenu calls={calls} />);
     await tick();
 
-    const e = fireKey({ key: 'Escape', code: 'Escape' });
+    const e = await fireKey({ key: 'Escape', code: 'Escape' });
 
     expect(e.defaultPrevented).toBe(true);
 
@@ -137,13 +140,15 @@ describe('Overlay key priority (real overlays)', () => {
 
     // Open dropdown.
     const triggerButton = screen.getByRole('button', { name: 'Open' });
-    triggerButton.click();
+    await act(async () => {
+      triggerButton.click();
+    });
 
     await waitFor(() => {
       expect(calls).toContain('dropdown-open');
     });
 
-    const e = fireKey({ key: 'Escape', code: 'Escape' });
+    const e = await fireKey({ key: 'Escape', code: 'Escape' });
 
     expect(e.defaultPrevented).toBe(true);
 
@@ -170,7 +175,7 @@ describe('Overlay key priority (real overlays)', () => {
     render(<PreviewHarness />);
     await tick();
 
-    const e = fireKey({ key: ' ', code: 'Space' });
+    const e = await fireKey({ key: ' ', code: 'Space' });
 
     expect(e.defaultPrevented).toBe(true);
     expect(calls).toEqual([]);
@@ -187,7 +192,7 @@ describe('Overlay key priority (real overlays)', () => {
     await tick();
 
     // Open preview.
-    fireKey({ key: ' ', code: 'Space' });
+    await fireKey({ key: ' ', code: 'Space' });
 
     await waitFor(() => {
       expect(screen.getByTestId('preview-open').textContent).toBe('true');
@@ -195,7 +200,7 @@ describe('Overlay key priority (real overlays)', () => {
 
     const confirmPromise = showConfirm('Are you sure?', 'Confirm');
 
-    fireKey({ key: 'Escape', code: 'Escape' });
+    await fireKey({ key: 'Escape', code: 'Escape' });
 
     await expect(confirmPromise).resolves.toBe(false);
 
