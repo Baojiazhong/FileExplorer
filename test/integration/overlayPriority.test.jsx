@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 
 import Modal from '../../src/components/common/Modal.jsx';
+import ContextMenu from '../../src/components/contextMenu/ContextMenu.jsx';
+import { showConfirm } from '../../src/utils/NotificationSystem.js';
 import { usePreview } from '../../src/hooks/usePreview.js';
 import { registerKeydownHandler, KEYDOWN_PRIORITIES } from '../../src/utils/keyboard.js';
 
@@ -14,13 +16,13 @@ vi.mock('@tauri-apps/api/core', () => {
 
 const tick = () => new Promise((r) => setTimeout(r, 0));
 
-const fireKey = (init) => {
+const fireKey = (init, target = document) => {
   const e = new KeyboardEvent('keydown', {
     bubbles: true,
     cancelable: true,
     ...init,
   });
-  document.dispatchEvent(e);
+  target.dispatchEvent(e);
   return e;
 };
 
@@ -30,12 +32,38 @@ function PreviewHarness() {
   return <div data-testid="preview-open">{String(open)}</div>;
 }
 
-describe('Overlay key priority', () => {
+function ModalWithContextMenu({ calls }) {
+  const [menuOpen, setMenuOpen] = useState(true);
+
+  return (
+    <>
+      <Modal isOpen={true} onClose={() => calls.push('modal-close')} title="Test">
+        <div>Body</div>
+      </Modal>
+
+      {menuOpen && (
+        <ContextMenu
+          position={{ x: 10, y: 10 }}
+          items={[{ id: 'x', label: 'X', action: () => {} }]}
+          onClose={() => {
+            calls.push('menu-close');
+            setMenuOpen(false);
+          }}
+        />
+      )}
+    </>
+  );
+}
+
+describe('Overlay key priority (real overlays)', () => {
   afterEach(() => {
     cleanup();
+
+    // Defensive: if a confirm dialog test fails mid-way, remove it.
+    document.querySelectorAll('[data-modal="confirm-dialog"]').forEach((el) => el.remove());
   });
 
-  it('Confirm dialog (highest) consumes Escape before Modal and App', async () => {
+  it('Confirm dialog consumes Escape before Modal and App', async () => {
     const calls = [];
 
     const unregisterApp = registerKeydownHandler(
@@ -55,53 +83,39 @@ describe('Overlay key priority', () => {
 
     await tick();
 
-    const unregisterConfirm = registerKeydownHandler(
-      (e) => {
-        if (e.key !== 'Escape') return false;
-        calls.push('confirm');
-        return true;
-      },
-      { id: 'confirm', priority: KEYDOWN_PRIORITIES.CONFIRM }
-    );
+    const confirmPromise = showConfirm('Are you sure?', 'Confirm');
+
+    expect(document.querySelector('[data-modal="confirm-dialog"]')).toBeTruthy();
 
     const e = fireKey({ key: 'Escape', code: 'Escape' });
 
     expect(e.defaultPrevented).toBe(true);
-    expect(calls).toEqual(['confirm']);
+    await expect(confirmPromise).resolves.toBe(false);
 
-    unregisterConfirm();
+    expect(calls).toEqual([]);
+    expect(document.querySelector('[data-modal="confirm-dialog"]')).toBeNull();
+
     unregisterApp();
   });
 
-  it('Menu consumes Escape before Modal', async () => {
+  it('ContextMenu consumes Escape before Modal', async () => {
     const calls = [];
 
-    render(
-      <Modal isOpen={true} onClose={() => calls.push('modal-close')} title="Test">
-        <div>Body</div>
-      </Modal>
-    );
-
+    render(<ModalWithContextMenu calls={calls} />);
     await tick();
-
-    const unregisterMenu = registerKeydownHandler(
-      (e) => {
-        if (e.key !== 'Escape') return false;
-        calls.push('menu-close');
-        return true;
-      },
-      { id: 'menu', priority: KEYDOWN_PRIORITIES.MENU }
-    );
 
     const e = fireKey({ key: 'Escape', code: 'Escape' });
 
     expect(e.defaultPrevented).toBe(true);
-    expect(calls).toEqual(['menu-close']);
 
-    unregisterMenu();
+    await waitFor(() => {
+      expect(document.querySelector('.context-menu')).toBeNull();
+    });
+
+    expect(calls).toEqual(['menu-close']);
   });
 
-  it('Preview modal consumes Space before Menu and App', async () => {
+  it('Preview modal consumes Space before App handler', async () => {
     const calls = [];
 
     const unregisterApp = registerKeydownHandler(
@@ -111,15 +125,6 @@ describe('Overlay key priority', () => {
         return true;
       },
       { id: 'app', priority: KEYDOWN_PRIORITIES.APP }
-    );
-
-    const unregisterMenu = registerKeydownHandler(
-      (e) => {
-        if (e.key !== ' ') return false;
-        calls.push('menu-space');
-        return true;
-      },
-      { id: 'menu', priority: KEYDOWN_PRIORITIES.MENU }
     );
 
     render(<PreviewHarness />);
@@ -134,11 +139,10 @@ describe('Overlay key priority', () => {
       expect(screen.getByTestId('preview-open').textContent).toBe('true');
     });
 
-    unregisterMenu();
     unregisterApp();
   });
 
-  it('Confirm consumes Escape so Preview does not close underneath', async () => {
+  it('Confirm dialog consumes Escape so Preview does not close underneath', async () => {
     render(<PreviewHarness />);
     await tick();
 
@@ -149,19 +153,13 @@ describe('Overlay key priority', () => {
       expect(screen.getByTestId('preview-open').textContent).toBe('true');
     });
 
-    const unregisterConfirm = registerKeydownHandler(
-      (e) => {
-        if (e.key !== 'Escape') return false;
-        return true;
-      },
-      { id: 'confirm', priority: KEYDOWN_PRIORITIES.CONFIRM }
-    );
+    const confirmPromise = showConfirm('Are you sure?', 'Confirm');
 
     fireKey({ key: 'Escape', code: 'Escape' });
 
+    await expect(confirmPromise).resolves.toBe(false);
+
     // Confirm consumed Escape; preview should remain open.
     expect(screen.getByTestId('preview-open').textContent).toBe('true');
-
-    unregisterConfirm();
   });
 });
