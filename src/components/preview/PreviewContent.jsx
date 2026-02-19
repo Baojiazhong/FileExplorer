@@ -1,8 +1,11 @@
 import React from 'react';
 import Icon from '../common/Icon';
 import { convertFileSrc } from '@tauri-apps/api/core';
+import { useI18n } from '../../i18n';
 
 export function PreviewContent({ payload }) {
+  const { t } = useI18n();
+
   if (!payload) return null;
 
   switch (payload.kind) {
@@ -15,17 +18,20 @@ export function PreviewContent({ payload }) {
             </div>
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: 8, minWidth: 0 }}>
               <div style={{ fontWeight: 600, fontSize: '1.5rem', color: 'var(--text-primary, #1a1a1a)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {payload.name || 'Folder'}
+                {payload.name || t('preview.folderFallbackName')}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: 8 }}>
                 <div style={{ fontSize: '0.95rem', color: 'var(--text-secondary, #666)' }}>
-                  <span style={{ fontWeight: 500 }}>Size:</span> {typeof payload.size === 'number' ? formatFileSize(payload.size) : '—'}
+                  <span style={{ fontWeight: 500 }}>{t('preview.folderSizeLabel')}</span>{' '}
+                  {typeof payload.size === 'number' ? formatFileSize(payload.size) : '—'}
                 </div>
                 <div style={{ fontSize: '0.95rem', color: 'var(--text-secondary, #666)' }}>
-                  <span style={{ fontWeight: 500 }}>Items:</span> {typeof payload.item_count === 'number' ? payload.item_count : '—'}
+                  <span style={{ fontWeight: 500 }}>{t('preview.folderItemsLabel')}</span>{' '}
+                  {typeof payload.item_count === 'number' ? payload.item_count : '—'}
                 </div>
                 <div style={{ fontSize: '0.95rem', color: 'var(--text-secondary, #666)' }}>
-                  <span style={{ fontWeight: 500 }}>Last Modified:</span> {payload.modified ? new Date(payload.modified).toLocaleString() : '—'}
+                  <span style={{ fontWeight: 500 }}>{t('preview.folderLastModifiedLabel')}</span>{' '}
+                  {payload.modified ? new Date(payload.modified).toLocaleString() : '—'}
                 </div>
               </div>
             </div>
@@ -39,7 +45,7 @@ export function PreviewContent({ payload }) {
       if (!src) {
         return (
           <div className="preview-unknown">
-            <p>Preview not available for this item.</p>
+            <p>{t('preview.notAvailable')}</p>
           </div>
         );
       }
@@ -58,7 +64,7 @@ export function PreviewContent({ payload }) {
       if (!src) {
         return (
           <div className="preview-unknown">
-            <p>Preview not available for this item.</p>
+            <p>{t('preview.notAvailable')}</p>
           </div>
         );
       }
@@ -77,14 +83,14 @@ export function PreviewContent({ payload }) {
       if (!url) {
         return (
           <div className="preview-unknown">
-            <p>Preview not available for this item.</p>
+            <p>{t('preview.notAvailable')}</p>
           </div>
         );
       }
       return (
         <div className="preview-video-container">
           <video src={url} controls className="preview-video" preload="metadata">
-            Your browser does not support video preview.
+            {t('preview.videoNotSupported')}
           </video>
         </div>
       );
@@ -95,7 +101,7 @@ export function PreviewContent({ payload }) {
       if (!url) {
         return (
           <div className="preview-unknown">
-            <p>Preview not available for this item.</p>
+            <p>{t('preview.notAvailable')}</p>
           </div>
         );
       }
@@ -104,7 +110,7 @@ export function PreviewContent({ payload }) {
           <div className="preview-audio-player">
             <div className="preview-audio-icon">🎵</div>
             <audio src={url} controls className="preview-audio" preload="metadata">
-              Your browser does not support audio preview.
+              {t('preview.audioNotSupported')}
             </audio>
           </div>
         </div>
@@ -125,7 +131,7 @@ export function PreviewContent({ payload }) {
           </pre>
           {payload.truncated && (
             <div className="preview-text-truncated">
-              <p>Content truncated for performance. Open file to view complete content.</p>
+              <p>{t('preview.textTruncated')}</p>
             </div>
           )}
         </div>
@@ -136,7 +142,7 @@ export function PreviewContent({ payload }) {
       return (
         <div className="preview-unknown">
           <div className="preview-unknown-icon">📁</div>
-          <p>Preview not available for this item.</p>
+          <p>{t('preview.notAvailable')}</p>
         </div>
       );
 
@@ -144,7 +150,7 @@ export function PreviewContent({ payload }) {
       return (
         <div className="preview-error">
           <div className="preview-error-icon">⚠️</div>
-          <h3>Preview Error</h3>
+          <h3>{t('preview.errorTitle')}</h3>
           <p>{payload.message}</p>
         </div>
       );
@@ -152,7 +158,7 @@ export function PreviewContent({ payload }) {
     default:
       return (
         <div className="preview-unknown">
-          <p>Unknown preview type.</p>
+          <p>{t('preview.unknownType')}</p>
         </div>
       );
   }
@@ -169,3 +175,4 @@ function formatFileSize(bytes) {
 }
 
 export default PreviewContent;
+
