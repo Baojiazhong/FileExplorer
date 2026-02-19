@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSftp } from '../../providers/SftpProvider';
 import { useFileSystem } from '../../providers/FileSystemProvider';
 import { useHistory } from '../../providers/HistoryProvider';
+import { useI18n } from '../../i18n';
 import { showSuccess, showError } from '../../utils/NotificationSystem';
 import AddSftpConnectionView from '../sidebar/AddSftpConnectionView';
 import './networkView.css';
@@ -11,6 +12,7 @@ import './networkView.css';
  * and provides management for SFTP connections
  */
 const NetworkView = () => {
+    const { t } = useI18n();
     const { sftpConnections, navigateToSftpConnection, createSftpUrl } = useSftp();
     const { loadDirectory } = useFileSystem();
     const { navigateTo } = useHistory();
@@ -53,9 +55,9 @@ const NetworkView = () => {
                 key: 'fileExplorerSftpConnections',
                 newValue: JSON.stringify(newConnections)
             }));
-            showSuccess(`SFTP connection "${conn.name}" added successfully`);
+            showSuccess(t('networkView.sftp.addSuccess', { name: conn.name }));
         } catch (err) {
-            showError('Failed to add SFTP connection');
+            showError(t('networkView.sftp.addFailed'));
         }
         setIsAddSftpModalOpen(false);
     };
@@ -68,31 +70,37 @@ const NetworkView = () => {
                 const sftpPath = createSftpUrl(connection, '.');
                 await loadDirectory(sftpPath);
                 navigateTo(sftpPath);
-                showSuccess(`Connected to ${connection.name}`);
+                showSuccess(t('networkView.sftp.connected', { name: connection.name }));
             }
         } catch (error) {
             console.error('Failed to connect to SFTP:', error);
-            showError(`Failed to connect to ${connection.name}: ${error.message || error}`);
+            showError(
+                t('networkView.sftp.connectFailed', {
+                    name: connection.name,
+                    message: error.message || error,
+                })
+            );
         }
     };
 
     return (
         <div className="network-view">
             <div className="network-view-header">
-                <h2 className="network-view-title">Network</h2>
-                <p className="network-view-subtitle">Manage and connect to remote servers</p>
+                <h2 className="network-view-title">{t('networkView.title')}</h2>
+                <p className="network-view-subtitle">{t('networkView.subtitle')}</p>
             </div>
 
             <div className="network-connections-section">
                 <div className="section-header">
-                    <h3 className="section-title">SFTP Connections</h3>
+                    <h3 className="section-title">{t('networkView.sftpConnectionsTitle')}</h3>
                     <button
                         className="add-connection-button"
                         onClick={() => setIsAddSftpModalOpen(true)}
-                        title="Add SFTP Connection"
+                        title={t('networkView.addConnectionTitle')}
+                        aria-label={t('networkView.addConnectionAria')}
                     >
                         <span className="icon icon-plus"></span>
-                        <span>Add Connection</span>
+                        <span>{t('networkView.addConnection')}</span>
                     </button>
                 </div>
 
@@ -102,14 +110,15 @@ const NetworkView = () => {
                             <div className="empty-connections-icon">
                                 <span className="icon icon-network"></span>
                             </div>
-                            <h4>No SFTP connections</h4>
-                            <p>Add an SFTP connection to get started with remote file access</p>
+                            <h4>{t('sidebar.network.emptyTitle')}</h4>
+                            <p>{t('networkView.emptyHint')}</p>
                             <button
                                 className="add-first-connection-button"
                                 onClick={() => setIsAddSftpModalOpen(true)}
+                                aria-label={t('networkView.addFirstConnectionAria')}
                             >
                                 <span className="icon icon-plus"></span>
-                                Add Your First Connection
+                                {t('networkView.addFirstConnection')}
                             </button>
                         </div>
                     ) : (
@@ -128,10 +137,11 @@ const NetworkView = () => {
                                     <button
                                         className="connect-button"
                                         onClick={() => handleConnectToSftp(connection)}
-                                        title="Connect to this SFTP server"
+                                        title={t('networkView.connectTitle')}
+                                        aria-label={t('networkView.connectAria', { name: connection.name })}
                                     >
                                         <span className="icon icon-play"></span>
-                                        Connect
+                                        {t('networkView.connect')}
                                     </button>
                                 </div>
                             </div>
@@ -141,15 +151,15 @@ const NetworkView = () => {
             </div>
 
             <div className="network-info-section">
-                <h3 className="section-title">About Network Features</h3>
+                <h3 className="section-title">{t('networkView.aboutTitle')}</h3>
                 <div className="info-cards">
                     <div className="info-card">
                         <div className="info-icon">
                             <span className="icon icon-shield"></span>
                         </div>
                         <div className="info-content">
-                            <h4>Secure Connections</h4>
-                            <p>All SFTP connections use secure SSH protocols to protect your data during transfer.</p>
+                            <h4>{t('networkView.about.secure.title')}</h4>
+                            <p>{t('networkView.about.secure.body')}</p>
                         </div>
                     </div>
                     <div className="info-card">
@@ -157,8 +167,8 @@ const NetworkView = () => {
                             <span className="icon icon-folder"></span>
                         </div>
                         <div className="info-content">
-                            <h4>File Operations</h4>
-                            <p>Perform all standard file operations on remote files just like local ones.</p>
+                            <h4>{t('networkView.about.operations.title')}</h4>
+                            <p>{t('networkView.about.operations.body')}</p>
                         </div>
                     </div>
                     <div className="info-card">
@@ -166,8 +176,8 @@ const NetworkView = () => {
                             <span className="icon icon-sync"></span>
                         </div>
                         <div className="info-content">
-                            <h4>Seamless Integration</h4>
-                            <p>Remote files appear alongside local files with full explorer functionality.</p>
+                            <h4>{t('networkView.about.integration.title')}</h4>
+                            <p>{t('networkView.about.integration.body')}</p>
                         </div>
                     </div>
                 </div>

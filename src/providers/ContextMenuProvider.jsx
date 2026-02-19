@@ -789,7 +789,7 @@ export default function ContextMenuProvider({ children }) {
             return [
                 {
                     id: 'paste',
-                    label: 'Paste',
+                    label: t('contextMenu.items.paste'),
                     icon: 'paste',
                     disabled: !hasClipboard || isProcessing,
                     action: pasteFromClipboard
@@ -797,7 +797,7 @@ export default function ContextMenuProvider({ children }) {
                 { type: 'separator' },
                 {
                     id: 'new-folder',
-                    label: 'New Folder',
+                    label: t('contextMenu.items.newFolder'),
                     icon: 'folder',
                     action: () => {
                         document.dispatchEvent(new CustomEvent('create-folder'));
@@ -805,7 +805,7 @@ export default function ContextMenuProvider({ children }) {
                 },
                 {
                     id: 'new-file',
-                    label: 'New File',
+                    label: t('contextMenu.items.newFile'),
                     icon: 'file',
                     action: () => {
                         document.dispatchEvent(new CustomEvent('create-file'));
@@ -814,14 +814,14 @@ export default function ContextMenuProvider({ children }) {
                 { type: 'separator' },
                 {
                     id: 'properties',
-                    label: 'Properties',
+                    label: t('contextMenu.items.properties'),
                     icon: 'properties',
                     action: () => showProperties(currentPath)
                 },
                 { type: 'separator' },
                 {
                     id: 'refresh',
-                    label: 'Refresh',
+                    label: t('contextMenu.items.refresh'),
                     icon: 'refresh',
                     action: () => loadDirectory(currentPath)
                 }
@@ -835,7 +835,7 @@ export default function ContextMenuProvider({ children }) {
         const menuItems = [
             {
                 id: 'open',
-                label: 'Open',
+                label: t('contextMenu.items.open'),
                 icon: 'open',
                 disabled: selectedItems.length > 1,
                 action: async () => {
@@ -860,7 +860,7 @@ export default function ContextMenuProvider({ children }) {
             },
             {
                 id: 'open-with',
-                label: 'Open with...',
+                label: t('contextMenu.items.openWith'),
                 icon: 'open-with',
                 disabled: selectedItems.length > 1 || isDirectory || isProcessing || !isWindowsRuntime,
                 action: async () => {
@@ -889,21 +889,21 @@ export default function ContextMenuProvider({ children }) {
             { type: 'separator' },
             {
                 id: 'copy',
-                label: 'Copy',
+                label: t('contextMenu.items.copy'),
                 icon: 'copy',
                 disabled: isProcessing,
                 action: () => copyToClipboard(targetItems)
             },
             {
                 id: 'cut',
-                label: 'Cut',
+                label: t('contextMenu.items.cut'),
                 icon: 'cut',
                 disabled: isProcessing,
                 action: () => cutToClipboard(targetItems)
             },
             {
                 id: 'paste',
-                label: 'Paste',
+                label: t('contextMenu.items.paste'),
                 icon: 'paste',
                 disabled: !hasClipboard || !isDirectory || isProcessing,
                 action: pasteFromClipboard
@@ -911,7 +911,7 @@ export default function ContextMenuProvider({ children }) {
             { type: 'separator' },
             {
                 id: 'copy-path',
-                label: 'Copy Path',
+                label: t('contextMenu.items.copyPath'),
                 icon: 'copy',
                 disabled: selectedItems.length > 1 || isProcessing,
                 action: () => copyPath(contextTarget)
@@ -919,14 +919,14 @@ export default function ContextMenuProvider({ children }) {
             { type: 'separator' },
             {
                 id: 'rename',
-                label: 'Rename',
+                label: t('contextMenu.items.rename'),
                 icon: 'rename',
                 disabled: selectedItems.length > 1 || isProcessing,
                 action: () => renameItem(contextTarget)
             },
             {
                 id: 'delete',
-                label: 'Delete',
+                label: t('contextMenu.items.delete'),
                 icon: 'delete',
                 disabled: isProcessing,
                 action: () => deleteItems(targetItems)
@@ -939,7 +939,7 @@ export default function ContextMenuProvider({ children }) {
                 { type: 'separator' },
                 {
                     id: 'add-as-template',
-                    label: 'Add as Template',
+                    label: t('contextMenu.items.addAsTemplate'),
                     icon: 'template',
                     disabled: isProcessing,
                     action: () => addAsTemplate(contextTarget)
@@ -953,7 +953,7 @@ export default function ContextMenuProvider({ children }) {
                 { type: 'separator' },
                 {
                     id: 'extract',
-                    label: 'Extract Here',
+                    label: t('contextMenu.items.extractHere'),
                     icon: 'extract',
                     disabled: isProcessing,
                     action: () => unzipItem(contextTarget)
@@ -964,7 +964,7 @@ export default function ContextMenuProvider({ children }) {
                 { type: 'separator' },
                 {
                     id: 'compress',
-                    label: selectedItems.length > 1 ? 'Add to Archive...' : 'Compress to ZIP',
+                    label: selectedItems.length > 1 ? t('contextMenu.items.addToArchive') : t('contextMenu.items.compressToZip'),
                     icon: 'compress',
                     disabled: isProcessing,
                     action: () => zipItems(targetItems)
@@ -979,13 +979,13 @@ export default function ContextMenuProvider({ children }) {
                 { type: 'separator' },
                 {
                     id: 'hash-options',
-                    label: 'Hash',
+                    label: t('contextMenu.items.hash'),
                     icon: 'hash',
                     disabled: isProcessing,
                     submenu: [
                         {
                             id: 'generate-hash',
-                            label: 'Generate & Copy to Clipboard',
+                            label: t('contextMenu.items.hashGenerateAndCopy'),
                             icon: 'hash',
                             disabled: isProcessing,
                             action: () => {
@@ -995,7 +995,7 @@ export default function ContextMenuProvider({ children }) {
                         },
                         {
                             id: 'generate-hash-file',
-                            label: 'Save Hash to File...',
+                            label: t('contextMenu.items.hashSaveToFile'),
                             icon: 'hash',
                             disabled: isProcessing,
                             action: () => {
@@ -1006,7 +1006,7 @@ export default function ContextMenuProvider({ children }) {
                         { type: 'separator' },
                         {
                             id: 'compare-hash',
-                            label: 'Compare with Hash...',
+                            label: t('contextMenu.items.hashCompare'),
                             icon: 'hash',
                             disabled: isProcessing,
                             action: () => {
@@ -1024,7 +1024,7 @@ export default function ContextMenuProvider({ children }) {
             { type: 'separator' },
             {
                 id: itemIsInFavorites ? 'remove-from-favorites' : 'add-to-favorites',
-                label: itemIsInFavorites ? 'Remove from Favorites' : 'Add to Favorites',
+                label: itemIsInFavorites ? t('contextMenu.items.removeFromFavorites') : t('contextMenu.items.addToFavorites'),
                 icon: 'star',
                 disabled: selectedItems.length > 1,
                 action: () => {
@@ -1042,7 +1042,7 @@ export default function ContextMenuProvider({ children }) {
             { type: 'separator' },
             {
                 id: 'properties',
-                label: 'Properties',
+                label: t('contextMenu.items.properties'),
                 icon: 'properties',
                 disabled: selectedItems.length > 1,
                 action: () => showProperties(contextTarget)
