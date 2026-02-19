@@ -1,4 +1,5 @@
 import React from 'react';
+import { useI18n } from '../../i18n';
 import FileIcon from './FileIcon';
 import { formatFileSize, formatDate, getFileType } from '../../utils/formatters';
 import './detailsPanel.css';
@@ -11,6 +12,7 @@ import './detailsPanel.css';
  * @returns {React.ReactElement} Details panel component
  */
 const DetailsPanel = ({ item, isMultipleSelection = false }) => {
+    const { t } = useI18n();
     // If no item selected or multiple items are selected
     if (!item || isMultipleSelection) {
         return (
@@ -18,8 +20,8 @@ const DetailsPanel = ({ item, isMultipleSelection = false }) => {
                 <div className="details-header">
                     <h3 className="details-title">
                         {isMultipleSelection
-                            ? 'Multiple Items Selected'
-                            : 'No Item Selected'}
+                            ? t('details.multipleSelectedTitle')
+                            : t('details.noneSelectedTitle')}
                     </h3>
                 </div>
 
@@ -28,11 +30,11 @@ const DetailsPanel = ({ item, isMultipleSelection = false }) => {
                         <div className="details-summary">
                             {/* In a real implementation, this would show the count of files and folders,
               total size, etc. */}
-                            <p>Multiple items selected. Select a single item to view details.</p>
+                            <p>{t('details.multipleSelectedHint')}</p>
                         </div>
                     ) : (
                         <div className="details-empty">
-                            <p>Select an item to view its details.</p>
+                            <p>{t('details.noneSelectedHint')}</p>
                         </div>
                     )}
                 </div>
@@ -45,11 +47,14 @@ const DetailsPanel = ({ item, isMultipleSelection = false }) => {
 
     // Format size
     const size = isDirectory
-        ? `${item.sub_file_count || 0} files, ${item.sub_dir_count || 0} folders`
+        ? t('details.sizeSummary', {
+            files: item.sub_file_count || 0,
+            folders: item.sub_dir_count || 0,
+        })
         : formatFileSize(item.size_in_bytes);
 
     // Get file type
-    const fileType = isDirectory ? 'Folder' : getFileType(item.name);
+    const fileType = isDirectory ? t('details.folderType') : getFileType(item.name);
 
     // Get extension (for files)
     const extension = !isDirectory && item.name.includes('.')
@@ -64,7 +69,7 @@ const DetailsPanel = ({ item, isMultipleSelection = false }) => {
     return (
         <div className="details-panel">
             <div className="details-header">
-                <h3 className="details-title">Properties</h3>
+                <h3 className="details-title">{t('details.propertiesTitle')}</h3>
             </div>
 
             <div className="details-content">
@@ -87,68 +92,68 @@ const DetailsPanel = ({ item, isMultipleSelection = false }) => {
                 </div>
 
                 <div className="details-section">
-                    <h4 className="details-section-title">General</h4>
+                    <h4 className="details-section-title">{t('details.generalTitle')}</h4>
 
                     <div className="details-row">
-                        <span className="details-label">Location:</span>
+                        <span className="details-label">{t('details.locationLabel')}</span>
                         <span className="details-value truncate" title={item.path}>
                           {item.path.replace(`/${item.name}`, '')}
                         </span>
                     </div>
 
                     <div className="details-row">
-                        <span className="details-label">Size:</span>
+                        <span className="details-label">{t('details.sizeLabel')}</span>
                         <span className="details-value">
                           {size}
                             {!isDirectory && item.size_in_bytes != null && (
-                                <span className="details-value-secondary"> ({item.size_in_bytes.toLocaleString()} bytes)</span>
+                                <span className="details-value-secondary"> {t('details.bytesValue', { bytes: item.size_in_bytes.toLocaleString() })}</span>
                             )}
                         </span>
                     </div>
 
                     {!isDirectory && (
                         <div className="details-row">
-                            <span className="details-label">Type:</span>
+                            <span className="details-label">{t('details.typeLabel')}</span>
                             <span className="details-value">{fileType}</span>
                         </div>
                     )}
                 </div>
 
                 <div className="details-section">
-                    <h4 className="details-section-title">Dates</h4>
+                    <h4 className="details-section-title">{t('details.datesTitle')}</h4>
 
                     <div className="details-row">
-                        <span className="details-label">Created:</span>
+                        <span className="details-label">{t('details.createdLabel')}</span>
                         <span className="details-value">{created}</span>
                     </div>
 
                     <div className="details-row">
-                        <span className="details-label">Modified:</span>
+                        <span className="details-label">{t('details.modifiedLabel')}</span>
                         <span className="details-value">{modified}</span>
                     </div>
 
                     <div className="details-row">
-                        <span className="details-label">Accessed:</span>
+                        <span className="details-label">{t('details.accessedLabel')}</span>
                         <span className="details-value">{accessed}</span>
                     </div>
                 </div>
 
                 <div className="details-section">
-                    <h4 className="details-section-title">Permissions</h4>
+                    <h4 className="details-section-title">{t('details.permissionsTitle')}</h4>
 
                     <div className="details-row">
-                        <span className="details-label">Access rights:</span>
+                        <span className="details-label">{t('details.accessRightsLabel')}</span>
                         <span className="details-value">{item.access_rights_as_string}</span>
                     </div>
 
                     <div className="details-row">
-                        <span className="details-label">Octal:</span>
+                        <span className="details-label">{t('details.octalLabel')}</span>
                         <span className="details-value">{item.access_rights_as_number}</span>
                     </div>
 
                     <div className="details-row">
-                        <span className="details-label">Symlink:</span>
-                        <span className="details-value">{item.is_symlink ? 'Yes' : 'No'}</span>
+                        <span className="details-label">{t('details.symlinkLabel')}</span>
+                        <span className="details-value">{item.is_symlink ? t('common.yes') : t('common.no')}</span>
                     </div>
                 </div>
             </div>

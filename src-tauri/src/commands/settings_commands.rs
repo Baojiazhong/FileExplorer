@@ -318,6 +318,7 @@ mod tests_settings_commands {
         let state = create_test_settings_state_with_temp_file(temp_file.path().to_path_buf());
         let json = get_settings_as_json_impl(state);
         assert!(json.contains("\"darkmode\":false"));
+        assert!(json.contains("\"language\":\"auto\""));
         assert!(json.contains("\"logging_level\":\"Full\""));
     }
 
@@ -343,6 +344,13 @@ mod tests_settings_commands {
 
         let updated = get_setting_field_impl(state.clone(), "darkmode".to_string()).unwrap();
         assert_eq!(updated, json!(true));
+
+        let result =
+            update_settings_field_impl(state.clone(), "language".to_string(), json!("zh-CN"));
+        assert!(result.is_ok());
+
+        let updated = get_setting_field_impl(state.clone(), "language".to_string()).unwrap();
+        assert_eq!(updated, json!("zh-CN"));
     }
 
     #[test]

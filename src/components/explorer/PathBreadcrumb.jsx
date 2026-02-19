@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useHistory } from '../../providers/HistoryProvider';
 import { useFileSystem } from '../../providers/FileSystemProvider';
 import { useSftp } from '../../providers/SftpProvider';
+import { useI18n } from '../../i18n';
 import './pathBreadcrumb.css';
 
 /**
@@ -14,6 +15,7 @@ import './pathBreadcrumb.css';
  * @returns {React.ReactElement} PathBreadcrumb component
  */
 const PathBreadcrumb = ({ onCopyPath, isVisible = true, onSearch }) => {
+    const { t } = useI18n();
     const { currentPath, navigateTo } = useHistory();
     const { loadDirectory, currentDirData } = useFileSystem();
     const { isSftpPath, parseSftpPath, createSftpUrl, createSftpPath, sftpConnections } = useSftp();
@@ -375,8 +377,8 @@ const PathBreadcrumb = ({ onCopyPath, isVisible = true, onSearch }) => {
                                 }
                             }, 100);
                         }}
-                        placeholder="Search in current folder"
-                        aria-label="Search in current folder"
+                        placeholder={t('path.localSearchPlaceholder')}
+                        aria-label={t('path.localSearchAria')}
                     />
                 ) : isEditing ? (
                     <input
@@ -386,7 +388,7 @@ const PathBreadcrumb = ({ onCopyPath, isVisible = true, onSearch }) => {
                         onChange={(e) => setEditValue(e.target.value)}
                         onKeyDown={handleKeyDown}
                         onBlur={() => setIsEditing(false)}
-                        aria-label="Path input"
+                        aria-label={t('path.inputAria')}
                     />
                 ) : (
                     <div className="breadcrumb-segments">
@@ -420,8 +422,8 @@ const PathBreadcrumb = ({ onCopyPath, isVisible = true, onSearch }) => {
                                     e.stopPropagation();
                                     onCopyPath();
                                 }}
-                                title="Copy current path"
-                                aria-label="Copy current path"
+                                title={t('path.copyCurrentPathTitle')}
+                                aria-label={t('path.copyCurrentPathAria')}
                             >
                                 <span className="icon icon-copy"></span>
                             </button>
@@ -438,8 +440,8 @@ const PathBreadcrumb = ({ onCopyPath, isVisible = true, onSearch }) => {
                             e.stopPropagation();
                             handleSearchClick();
                         }}
-                        title={isSearchVisible ? "Clear search" : "Search in current folder"}
-                        aria-label={isSearchVisible ? "Clear search" : "Search in current folder"}
+                        title={isSearchVisible ? t('path.clearSearchTitle') : t('path.localSearchTitle')}
+                        aria-label={isSearchVisible ? t('path.clearSearchAria') : t('path.localSearchAria')}
                     >
                         <span className={`icon ${isSearchVisible ? 'icon-x' : 'icon-search'}`}></span>
                     </button>

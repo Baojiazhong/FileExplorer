@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useI18n } from '../../i18n';
 import { useHistory } from '../../providers/HistoryProvider';
 import { useFileSystem } from '../../providers/FileSystemProvider';
 import { useSftp } from '../../providers/SftpProvider';
@@ -13,6 +14,7 @@ import './tabs.css';
  * @returns {React.ReactElement} TabManager component
  */
 const TabManager = ({ children }) => {
+    const { t } = useI18n();
     const [tabs, setTabs] = useState([]);
     const [activeTabId, setActiveTabId] = useState(null);
     const { currentPath } = useHistory();
@@ -82,7 +84,7 @@ const TabManager = ({ children }) => {
      * @returns {string} The extracted tab title
      */
     const getTabTitle = (path) => {
-        if (!path) return 'Home';
+        if (!path) return t('tabs.homeTitle');
         
         // Handle SFTP paths
         if (isSftpPath(path)) {
@@ -97,12 +99,12 @@ const TabManager = ({ children }) => {
                     return `${parsed.connection.name}: ${folderName}`;
                 }
             }
-            return 'SFTP';
+            return t('tabs.sftpTitle');
         }
         
         // Handle regular file system paths
         const segments = path.split(/[/\\]/).filter(Boolean);
-        return segments.length > 0 ? segments[segments.length - 1] : 'Root';
+        return segments.length > 0 ? segments[segments.length - 1] : t('tabs.rootTitle');
     };
 
     /**
@@ -111,7 +113,7 @@ const TabManager = ({ children }) => {
      * @returns {string} The full path for tooltip
      */
     const getFullPathForTooltip = (path) => {
-        if (!path) return 'Home';
+        if (!path) return t('tabs.homeTitle');
         
         // Handle SFTP paths - convert to standard format
         if (isSftpPath(path)) {
@@ -281,7 +283,7 @@ const TabManager = ({ children }) => {
     };
 
     if (tabs.length === 0) {
-        return <div className="tab-manager-loading">Loading...</div>;
+        return <div className="tab-manager-loading">{t('common.loading')}</div>;
     }
 
     return (
@@ -330,7 +332,7 @@ const TabManager = ({ children }) => {
                                         onDoubleClick={handleDoubleClick}
                                         onMouseDown={handleMouseDown}
                                         onSelectStart={handleSelectStart}
-                                        aria-label="Close tab"
+                                        aria-label={t('tabs.closeTabAria')}
                                     >
                                         <span className="icon icon-x"></span>
                                     </button>

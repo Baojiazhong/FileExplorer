@@ -7,10 +7,13 @@ import EmptyState from '../explorer/EmptyState';
 import FileIcon from '../explorer/FileIcon';
 import Modal from '../common/Modal';
 import Button from '../common/Button';
+import { showError, showSuccess, showConfirm } from '../../utils/NotificationSystem';
+import { useI18n } from '../../i18n';
 import { registerKeydownHandler, KEYDOWN_PRIORITIES } from '../../utils/keyboard';
 import './search.css';
 
 const GlobalSearch = ({ isOpen, onClose }) => {
+    const { t } = useI18n();
     const [query, setQuery] = useState('');
     const [results, setResults] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
@@ -782,7 +785,7 @@ const GlobalSearch = ({ isOpen, onClose }) => {
             onClose();
         } catch (error) {
             console.error('Failed to open item location:', error);
-            alert(`Failed to open location: ${error.message || error}`);
+            showError(t('search.failedOpenLocation', { message: error.message || error }));
         }
     };
 
@@ -816,7 +819,7 @@ const GlobalSearch = ({ isOpen, onClose }) => {
             onClose();
         } catch (error) {
             console.error('Failed to navigate to path:', error);
-            alert(`Failed to navigate: ${error.message || error}`);
+            showError(t('search.failedNavigate', { message: error.message || error }));
         }
     };
 
@@ -870,14 +873,14 @@ const GlobalSearch = ({ isOpen, onClose }) => {
             stopProgressPolling();
 
             // Show error to user
-            alert(`Failed to start indexing: ${error.message || error}`);
+            showError(t('search.failedStartIndexing', { message: error.message || error }));
         }
     };
 
     // Manual indexing trigger
     const startManualIndexing = async () => {
         if (!systemInfo?.user_home_dir) {
-            alert('User home directory not available for indexing');
+            showError(t('search.homeDirUnavailable'));
             return;
         }
 
@@ -920,7 +923,7 @@ const GlobalSearch = ({ isOpen, onClose }) => {
 
         } catch (error) {
             console.error('Manual indexing failed:', error);
-            alert(`Failed to start indexing: ${error.message || error}`);
+            showError(t('search.failedStartIndexing', { message: error.message || error }));
             setIsIndexing(false);
             stopProgressPolling();
         }
@@ -928,7 +931,12 @@ const GlobalSearch = ({ isOpen, onClose }) => {
 
     // Clear search engine index
     const clearSearchEngine = async () => {
-        if (!window.confirm('Are you sure you want to clear the entire search index? This will remove all indexed files and you will need to re-index.')) {
+        const ok = await showConfirm(t('search.confirmClearIndex'), {
+            title: t('search.clearIndexTitle'),
+            confirmText: t('common.confirm'),
+            cancelText: t('common.cancel'),
+        });
+        if (!ok) {
             return;
         }
 
@@ -942,10 +950,11 @@ const GlobalSearch = ({ isOpen, onClose }) => {
             setQuery('');
             await loadSearchEngineInfo();
             
-            alert('Search engine index cleared successfully. You can now re-index your files.');
+            showSuccess(t('search.indexCleared'));
+
         } catch (error) {
             console.error('Failed to clear search engine:', error);
-            alert(`Failed to clear search engine: ${error.message || error}`);
+            showError(t('search.failedClearIndex', { message: error.message || error }));
         }
     };
 
@@ -969,7 +978,7 @@ const GlobalSearch = ({ isOpen, onClose }) => {
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title="Global Search"
+            title={t('search.globalTitle')}
             size="lg"
         >
             <div className="global-search-content">
@@ -1006,33 +1015,34 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                                     // Delay hiding suggestions to allow clicking on them
                                     setTimeout(() => setIsInputFocused(false), 150);
                                 }}
-                                placeholder="Search files and folders....."
+                                placeholder={t('search.placeholder')}
+
                                 autoFocus
                                 style={{
                                     paddingRight: query.trim() ? '110px' : '75px' // Extra space for both search and filter buttons
                                 }}
                             />
                             {isSearching && (
-                                <div className="search-loading-indicator" style={{ 
-                                    position: 'absolute', 
-                                    right: query.trim() ? '110px' : '75px', 
-                                    top: '50%', 
-                                    transform: 'translateY(-50%)',
-                                    fontSize: '12px',
-                                    color: '#666',
-                                    pointerEvents: 'none', // Prevent interference with input
-                                    zIndex: 1
-                                }}>
-                                    Searching...
-                                </div>
+                                    <div className="search-loading-indicator" style={{ 
+                                        position: 'absolute', 
+                                        right: query.trim() ? '110px' : '75px', 
+                                        top: '50%', 
+                                        transform: 'translateY(-50%)',
+                                        fontSize: '12px',
+                                        color: '#666',
+                                        pointerEvents: 'none', // Prevent interference with input
+                                        zIndex: 1
+                                    }}>
+                                        {t('search.searching')}
+                                    </div>
                             )}
                             {query.trim() && (
-                                <button
-                                    type="button"
-                                    className="clear-search-btn"
-                                    onClick={clearSearch}
-                                    title="Clear search"
-                                    style={{
+                                    <button
+                                        type="button"
+                                        className="clear-search-btn"
+                                        onClick={clearSearch}
+                                        title={t('search.clearSearch')}
+                                        style={{
                                         position: 'absolute',
                                         right: '75px',
                                         top: '50%',
@@ -1072,11 +1082,11 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                                     }}></span>
                                 </button>
                             )}
-                            <button
-                                type="submit"
-                                className="search-btn"
-                                title="Search (Enter)"
-                                onClick={() => {
+                                <button
+                                    type="submit"
+                                    className="search-btn"
+                                    title={t('search.searchEnter')}
+                                    onClick={() => {
                                     // Hide suggestions immediately when search button is clicked
                                     setShowSuggestions(false);
                                     setSuggestions([]);
@@ -1463,7 +1473,7 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                                                 }}
                                                 disabled={isSearching || isIndexing || !systemInfo?.user_home_dir}
                                             >
-                                                {isIndexing ? 'Indexing...' : 'Re-index Home Directory'}
+                                                {isIndexing ? t('search.indexing') : t('search.indexHomeDirectory')}
                                             </Button>
                                             
                                             {/* Test indexing with a smaller directory */}
@@ -1472,7 +1482,7 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                                                 size="sm"
                                                 onClick={async () => {
                                                     if (!systemInfo?.user_home_dir) {
-                                                        alert('System info not available');
+                                                        showError(t('search.systemInfoUnavailable'));
                                                         return;
                                                     }
 
@@ -1503,7 +1513,7 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                                                         console.log('Test indexing result:', result);
                                                     } catch (error) {
                                                         console.error('Test indexing failed:', error);
-                                                        alert(`Test indexing failed: ${error.message || error}`);
+                                                        showError(t('search.testIndexingFailed', { message: error.message || error }));
                                                         setIsIndexing(false);
                                                         stopProgressPolling();
                                                     }

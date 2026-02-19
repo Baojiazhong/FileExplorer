@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import Icon from './Icon';
+import { useI18n } from '../../i18n';
 import './common.css';
 import { registerKeydownHandler, KEYDOWN_PRIORITIES } from '../../utils/keyboard';
 
@@ -42,15 +43,17 @@ const Modal = ({
     children,
     footer,
     size = 'md',
-    closeOnEsc = true,
-    closeOnOverlayClick = true,
     showCloseButton = true,
+    closeOnOverlayClick = true,
+    closeOnEsc = true,
     className = '',
-    defaultAction = null,
+    defaultAction,
     defaultActionEnabled = true,
-    consumeEnter = undefined,
+    consumeEnter,
+    closeAriaLabel,
     ...rest
 }) => {
+    const { t } = useI18n();
     const modalRef = useRef(null);
 
     // Close modal when Escape key is pressed
@@ -198,7 +201,11 @@ const Modal = ({
                         )}
 
                         {showCloseButton && (
-                            <button className="modal-close" onClick={onClose} aria-label="Close modal">
+                            <button
+                                className="modal-close"
+                                onClick={onClose}
+                                aria-label={closeAriaLabel || t('common.closeModal')}
+                            >
                                 <Icon name="x" />
                             </button>
                         )}

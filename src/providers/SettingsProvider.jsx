@@ -32,6 +32,7 @@ const defaultSettings = {
     terminal_height: 240,
     enable_animations_and_transitions: true,
     enable_virtual_scroll_for_large_directories: false,
+    language: "auto", // auto | en-US | zh-CN
 
     // Search settings
     enable_suggestions: true,

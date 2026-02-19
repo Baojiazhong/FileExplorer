@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useSettings } from '../../providers/SettingsProvider';
+import { useI18n, LOCALES } from '../../i18n';
 import Modal from '../common/Modal';
 import Button from '../common/Button';
+import { showConfirm, showSuccess } from '../../utils/NotificationSystem';
 import './settings.css';
-
 /**
  * SettingsPanel component - Provides a comprehensive settings interface
  * @param {Object} props - Component props
@@ -13,28 +14,28 @@ import './settings.css';
  * @returns {React.ReactElement} Settings panel modal component
  */
 const SettingsPanel = ({ isOpen, onClose }) => {
+    const { t } = useI18n();
     const { settings, error, updateSetting, resetSettings, reloadSettings } = useSettings();
 
     const [isResetting, setIsResetting] = useState(false);
     const [activeTab, setActiveTab] = useState('appearance');
     const [localError, setLocalError] = useState(null);
 
-    /**
-     * Available tabs configuration
-     * @type {Array<{id: string, label: string, icon: string}>}
-     */
-    const tabs = [
-        { id: 'appearance', label: 'Appearance', icon: 'palette' },
-        { id: 'behavior', label: 'Behavior', icon: 'settings' },
-        { id: 'search', label: 'Search', icon: 'search' },
-        { id: 'advanced', label: 'Advanced', icon: 'cog' }
-    ];
+    const tabs = useMemo(
+        () => [
+            { id: 'appearance', label: t('settings.tabs.appearance'), icon: 'palette' },
+            { id: 'behavior', label: t('settings.tabs.behavior'), icon: 'settings' },
+            { id: 'search', label: t('settings.tabs.search'), icon: 'search' },
+            { id: 'advanced', label: t('settings.tabs.advanced'), icon: 'cog' },
+        ],
+        [t]
+    );
 
     const keymapPresets = [
-        { id: 'auto', label: 'Auto (OS default)' },
-        { id: 'windows', label: 'Windows (Explorer)' },
-        { id: 'macos', label: 'macOS (Finder)' },
-        { id: 'linux', label: 'Linux (Ubuntu Files)' },
+        { id: 'auto', label: t('settings.advanced.keyboard.presets.auto') },
+        { id: 'windows', label: t('settings.advanced.keyboard.presets.windows') },
+        { id: 'macos', label: t('settings.advanced.keyboard.presets.macos') },
+        { id: 'linux', label: t('settings.advanced.keyboard.presets.linux') },
     ];
 
     /**
@@ -42,8 +43,8 @@ const SettingsPanel = ({ isOpen, onClose }) => {
      * @type {Array<{id: boolean, label: string}>}
      */
     const themes = [
-        { id: false, label: 'Light' },
-        { id: true, label: 'Dark' }
+        { id: false, label: t('settings.appearance.theme.light') },
+        { id: true, label: t('settings.appearance.theme.dark') }
     ];
 
     /**
@@ -51,9 +52,9 @@ const SettingsPanel = ({ isOpen, onClose }) => {
      * @type {Array<{id: string, label: string}>}
      */
     const viewModes = [
-        { id: 'grid', label: 'Grid View' },
-        { id: 'list', label: 'List View' },
-        { id: 'details', label: 'Details View' }
+        { id: 'grid', label: t('settings.appearance.defaultView.grid') },
+        { id: 'list', label: t('settings.appearance.defaultView.list') },
+        { id: 'details', label: t('settings.appearance.defaultView.details') }
     ];
 
     /**
@@ -61,9 +62,9 @@ const SettingsPanel = ({ isOpen, onClose }) => {
      * @type {Array<{id: string, label: string}>}
      */
     const fontSizes = [
-        { id: 'Small', label: 'Small' },
-        { id: 'Medium', label: 'Medium' },
-        { id: 'Large', label: 'Large' }
+        { id: 'Small', label: t('settings.appearance.fontSize.small') },
+        { id: 'Medium', label: t('settings.appearance.fontSize.medium') },
+        { id: 'Large', label: t('settings.appearance.fontSize.large') }
     ];
 
     /**
@@ -71,10 +72,10 @@ const SettingsPanel = ({ isOpen, onClose }) => {
      * @type {Array<{id: string, label: string}>}
      */
     const sortOptions = [
-        { id: 'Name', label: 'Name' },
-        { id: 'Size', label: 'Size' },
-        { id: 'Modified', label: 'Date Modified' },
-        { id: 'Type', label: 'Type' }
+        { id: 'Name', label: t('settings.behavior.defaultSort.name') },
+        { id: 'Size', label: t('settings.behavior.defaultSort.size') },
+        { id: 'Modified', label: t('settings.behavior.defaultSort.dateModified') },
+        { id: 'Type', label: t('settings.behavior.defaultSort.type') }
     ];
 
     /**
@@ -82,8 +83,8 @@ const SettingsPanel = ({ isOpen, onClose }) => {
      * @type {Array<{id: string, label: string}>}
      */
     const sortDirections = [
-        { id: 'Ascending', label: 'Ascending' },
-        { id: 'Descending', label: 'Descending' }
+        { id: 'Ascending', label: t('settings.behavior.defaultSort.ascending') },
+        { id: 'Descending', label: t('settings.behavior.defaultSort.descending') }
     ];
 
     /**
@@ -91,8 +92,8 @@ const SettingsPanel = ({ isOpen, onClose }) => {
      * @type {Array<{id: string, label: string}>}
      */
     const doubleClickOptions = [
-        { id: 'OpenFilesAndFolders', label: 'Open files and folders' },
-        { id: 'SelectFilesAndFolders', label: 'Select files and folders' }
+        { id: 'OpenFilesAndFolders', label: t('settings.behavior.doubleClick.open') },
+        { id: 'SelectFilesAndFolders', label: t('settings.behavior.doubleClick.select') }
     ];
 
     /**
@@ -123,7 +124,13 @@ const SettingsPanel = ({ isOpen, onClose }) => {
      * @async
      */
     const handleReset = async () => {
-        if (!confirm('Are you sure you want to reset all settings to default? This cannot be undone.')) {
+        const confirmed = await showConfirm(t('settings.advanced.dangerZone.resetConfirm'), {
+            title: t('settings.advanced.dangerZone.title'),
+            confirmText: t('common.confirm'),
+            cancelText: t('common.cancel'),
+        });
+
+        if (!confirmed) {
             return;
         }
 
@@ -131,10 +138,10 @@ const SettingsPanel = ({ isOpen, onClose }) => {
         try {
             await resetSettings();
             setLocalError(null);
-            alert('Settings have been reset to default.');
+            showSuccess(t('settings.advanced.dangerZone.resetDone'));
         } catch (error) {
             console.error('Failed to reset settings:', error);
-            setLocalError('Failed to reset settings. Please try again.');
+            setLocalError(t('settings.advanced.dangerZone.resetFailed'));
         } finally {
             setIsResetting(false);
         }
@@ -147,10 +154,10 @@ const SettingsPanel = ({ isOpen, onClose }) => {
     const handleClearSearchIndex = async () => {
         try {
             await invoke('clear_search_engine');
-            alert('Search index has been cleared.');
+            showSuccess(t('settings.search.index.cleared'));
         } catch (error) {
             console.error('Failed to clear search index:', error);
-            setLocalError('Failed to clear search index.');
+            setLocalError(t('settings.search.index.clearFailed'));
         }
     };
 
@@ -161,7 +168,7 @@ const SettingsPanel = ({ isOpen, onClose }) => {
     const renderAppearanceTab = () => (
         <div className="settings-tab-content">
             <div className="settings-section">
-                <h3>Theme</h3>
+                <h3>{t('settings.appearance.theme.title')}</h3>
                 <div className="radio-group">
                     {themes.map(theme => (
                         <label key={theme.id.toString()} className="radio-option">
@@ -179,7 +186,7 @@ const SettingsPanel = ({ isOpen, onClose }) => {
             </div>
 
             <div className="settings-section">
-                <h3>Default View</h3>
+                <h3>{t('settings.appearance.defaultView.title')}</h3>
                 <div className="radio-group">
                     {viewModes.map(mode => (
                         <label key={mode.id} className="radio-option">
@@ -197,7 +204,7 @@ const SettingsPanel = ({ isOpen, onClose }) => {
             </div>
 
             <div className="settings-section">
-                <h3>Font Size</h3>
+                <h3>{t('settings.appearance.fontSize.title')}</h3>
                 <select
                     value={settings.font_size || 'Medium'}
                     onChange={(e) => updateSetting('font_size', e.target.value)}
@@ -210,7 +217,7 @@ const SettingsPanel = ({ isOpen, onClose }) => {
             </div>
 
             <div className="settings-section">
-                <h3>Accent Color</h3>
+                <h3>{t('settings.appearance.accentColor.title')}</h3>
                 <div className="form-group">
                     <input
                         type="color"
@@ -219,8 +226,23 @@ const SettingsPanel = ({ isOpen, onClose }) => {
                         className="color-picker"
                     />
                     <div className="input-hint">
-                        Choose your preferred accent color for the interface.
+                        {t('settings.appearance.accentColor.hint')}
                     </div>
+                </div>
+            </div>
+
+            <div className="settings-section">
+                <h3>{t('language.label')}</h3>
+                <div className="form-group">
+                    <select
+                        value={settings.language || LOCALES.AUTO}
+                        onChange={(e) => updateSetting('language', e.target.value)}
+                        className="settings-select"
+                    >
+                        <option value={LOCALES.AUTO}>{t('common.auto')}</option>
+                        <option value={LOCALES.EN_US}>{t('language.english')}</option>
+                        <option value={LOCALES.ZH_CN}>{t('language.simplifiedChinese')}</option>
+                    </select>
                 </div>
             </div>
 
@@ -231,7 +253,7 @@ const SettingsPanel = ({ isOpen, onClose }) => {
                         checked={settings.show_file_extensions !== false}
                         onChange={(e) => updateSetting('show_file_extensions', e.target.checked)}
                     />
-                    <span>Show file extensions</span>
+                    <span>{t('settings.appearance.showFileExtensions')}</span>
                 </label>
             </div>
 
@@ -245,14 +267,14 @@ const SettingsPanel = ({ isOpen, onClose }) => {
     const renderBehaviorTab = () => (
         <div className="settings-tab-content">
             <div className="settings-section">
-                <h3>File Operations</h3>
+                <h3>{t('settings.behavior.fileOperations.title')}</h3>
                 <label className="checkbox-option">
                     <input
                         type="checkbox"
                         checked={settings.confirm_delete !== false}
                         onChange={(e) => updateSetting('confirm_delete', e.target.checked)}
                     />
-                    <span>Confirm before deleting files</span>
+                    <span>{t('settings.behavior.fileOperations.confirmDelete')}</span>
                 </label>
 
                 <label className="checkbox-option">
@@ -261,7 +283,7 @@ const SettingsPanel = ({ isOpen, onClose }) => {
                         checked={settings.show_hidden_files_and_folders || false}
                         onChange={(e) => updateSetting('show_hidden_files_and_folders', e.target.checked)}
                     />
-                    <span>Show hidden files and folders</span>
+                    <span>{t('settings.behavior.fileOperations.showHidden')}</span>
                 </label>
 
                 <label className="checkbox-option">
@@ -270,15 +292,15 @@ const SettingsPanel = ({ isOpen, onClose }) => {
                         checked={settings.auto_refresh_dir !== false}
                         onChange={(e) => updateSetting('auto_refresh_dir', e.target.checked)}
                     />
-                    <span>Auto-refresh directories</span>
+                    <span>{t('settings.behavior.fileOperations.autoRefresh')}</span>
                 </label>
             </div>
 
             <div className="settings-section">
-                <h3>Default Sort</h3>
+                <h3>{t('settings.behavior.defaultSort.title')}</h3>
                 <div className="form-row">
                     <div className="form-group">
-                        <label>Sort by:</label>
+                        <label>{t('settings.behavior.defaultSort.sortBy')}</label>
                         <select
                             value={settings.sort_by || 'Name'}
                             onChange={(e) => updateSetting('sort_by', e.target.value)}
@@ -291,7 +313,7 @@ const SettingsPanel = ({ isOpen, onClose }) => {
                     </div>
 
                     <div className="form-group">
-                        <label>Direction:</label>
+                        <label>{t('settings.behavior.defaultSort.direction')}</label>
                         <select
                             value={settings.sort_direction || 'Ascending'}
                             onChange={(e) => updateSetting('sort_direction', e.target.value)}
@@ -306,7 +328,7 @@ const SettingsPanel = ({ isOpen, onClose }) => {
             </div>
 
             <div className="settings-section">
-                <h3>Double-click Behavior</h3>
+                <h3>{t('settings.behavior.doubleClick.title')}</h3>
                 <div className="radio-group">
                     {doubleClickOptions.map(option => (
                         <label key={option.id} className="radio-option">
@@ -332,14 +354,14 @@ const SettingsPanel = ({ isOpen, onClose }) => {
     const renderSearchTab = () => (
         <div className="settings-tab-content">
             <div className="settings-section">
-                <h3>Search Behavior</h3>
+                <h3>{t('settings.search.behavior.title')}</h3>
                 <label className="checkbox-option">
                     <input
                         type="checkbox"
                         checked={settings.case_sensitive_search || false}
                         onChange={(e) => updateSetting('case_sensitive_search', e.target.checked)}
                     />
-                    <span>Case-sensitive search by default</span>
+                    <span>{t('settings.search.behavior.caseSensitive')}</span>
                 </label>
 
                 <label className="checkbox-option">
@@ -348,7 +370,7 @@ const SettingsPanel = ({ isOpen, onClose }) => {
                         checked={settings.index_hidden_files || false}
                         onChange={(e) => updateSetting('index_hidden_files', e.target.checked)}
                     />
-                    <span>Include hidden files in search index</span>
+                    <span>{t('settings.search.behavior.includeHidden')}</span>
                 </label>
 
                 <label className="checkbox-option">
@@ -357,7 +379,7 @@ const SettingsPanel = ({ isOpen, onClose }) => {
                         checked={settings.fuzzy_search_enabled !== false}
                         onChange={(e) => updateSetting('fuzzy_search_enabled', e.target.checked)}
                     />
-                    <span>Enable fuzzy search</span>
+                    <span>{t('settings.search.behavior.fuzzy')}</span>
                 </label>
 
                 <label className="checkbox-option">
@@ -366,7 +388,7 @@ const SettingsPanel = ({ isOpen, onClose }) => {
                         checked={settings.enable_suggestions !== false}
                         onChange={(e) => updateSetting('enable_suggestions', e.target.checked)}
                     />
-                    <span>Enable search suggestions</span>
+                    <span>{t('settings.search.behavior.suggestions')}</span>
                 </label>
 
                 <label className="checkbox-option">
@@ -375,13 +397,13 @@ const SettingsPanel = ({ isOpen, onClose }) => {
                         checked={settings.highlight_matches !== false}
                         onChange={(e) => updateSetting('highlight_matches', e.target.checked)}
                     />
-                    <span>Highlight search matches</span>
+                    <span>{t('settings.search.behavior.highlight')}</span>
                 </label>
             </div>
 
             <div className="settings-section">
-                <h3>Search Index</h3>
-                <p>Indexing improves search performance but uses disk space.</p>
+                <h3>{t('settings.search.index.title')}</h3>
+                <p>{t('settings.search.index.description')}</p>
 
                 <label className="checkbox-option">
                     <input
@@ -389,14 +411,14 @@ const SettingsPanel = ({ isOpen, onClose }) => {
                         checked={settings.search_engine_enabled !== false}
                         onChange={(e) => updateSetting('search_engine_enabled', e.target.checked)}
                     />
-                    <span>Enable search indexing</span>
+                    <span>{t('settings.search.index.enable')}</span>
                 </label>
 
                 <Button
                     variant="secondary"
                     onClick={handleClearSearchIndex}
                 >
-                    Clear Search Index
+                    {t('settings.search.index.clear')}
                 </Button>
             </div>
         </div>
@@ -409,9 +431,9 @@ const SettingsPanel = ({ isOpen, onClose }) => {
     const renderAdvancedTab = () => (
         <div className="settings-tab-content">
             <div className="settings-section">
-                <h3>Keyboard</h3>
+                <h3>{t('settings.advanced.keyboard.title')}</h3>
                 <div className="form-group">
-                    <label>Shortcut preset:</label>
+                    <label>{t('settings.advanced.keyboard.shortcutPreset')}</label>
                     <select
                         value={settings.keymap_preset || 'auto'}
                         onChange={(e) => updateSetting('keymap_preset', e.target.value)}
@@ -422,15 +444,15 @@ const SettingsPanel = ({ isOpen, onClose }) => {
                         ))}
                     </select>
                     <div className="input-hint">
-                        Auto uses the current OS default. Changing this affects global shortcuts (e.g. Enter on macOS renames like Finder).
+                        {t('settings.advanced.keyboard.autoHint')}
                     </div>
                 </div>
             </div>
 
             <div className="settings-section">
-                <h3>Performance</h3>
+                <h3>{t('settings.advanced.performance.title')}</h3>
                 <div className="form-group">
-                    <label>Terminal height (pixels):</label>
+                    <label>{t('settings.advanced.performance.terminalHeight')}</label>
                     <input
                         type="number"
                         min="200"
@@ -447,7 +469,7 @@ const SettingsPanel = ({ isOpen, onClose }) => {
                         checked={settings.enable_animations_and_transitions !== false}
                         onChange={(e) => updateSetting('enable_animations_and_transitions', e.target.checked)}
                     />
-                    <span>Enable animations and transitions</span>
+                    <span>{t('settings.advanced.performance.animations')}</span>
                 </label>
 
                 <label className="checkbox-option">
@@ -456,14 +478,14 @@ const SettingsPanel = ({ isOpen, onClose }) => {
                         checked={settings.enable_virtual_scroll_for_large_directories || false}
                         onChange={(e) => updateSetting('enable_virtual_scroll_for_large_directories', e.target.checked)}
                     />
-                    <span>Enable virtual scrolling for large directories</span>
+                    <span>{t('settings.advanced.performance.virtualScroll')}</span>
                 </label>
             </div>
 
             <div className="settings-section">
-                <h3>Hash Algorithm</h3>
+                <h3>{t('settings.advanced.hash.title')}</h3>
                 <div className="form-group">
-                    <label>Default hash algorithm:</label>
+                    <label>{t('settings.advanced.hash.defaultAlgo')}</label>
                     <select
                         value={settings.default_checksum_hash || 'SHA256'}
                         onChange={(e) => updateSetting('default_checksum_hash', e.target.value)}
@@ -474,37 +496,37 @@ const SettingsPanel = ({ isOpen, onClose }) => {
                         ))}
                     </select>
                     <div className="input-hint">
-                        Used for generating file hashes and integrity checks.
+                        {t('settings.advanced.hash.hint')}
                     </div>
                 </div>
             </div>
 
             <div className="settings-section">
-                <h3>Default Paths</h3>
+                <h3>{t('settings.advanced.defaultPaths.title')}</h3>
                 <div className="form-group">
-                    <label>Default folder on opening:</label>
+                    <label>{t('settings.advanced.defaultPaths.defaultFolderOnOpening')}</label>
                     <input
                         type="text"
                         value={settings.default_folder_path_on_opening || ''}
                         onChange={(e) => updateSetting('default_folder_path_on_opening', e.target.value)}
                         className="settings-input"
-                        placeholder="Leave empty to use system default"
+                        placeholder={t('settings.advanced.defaultPaths.placeholder')}
                     />
                     <div className="input-hint">
-                        The folder to open when the application starts.
+                        {t('settings.advanced.defaultPaths.hint')}
                     </div>
                 </div>
             </div>
 
             <div className="settings-section danger-zone">
-                <h3>Danger Zone</h3>
-                <p>These actions cannot be undone.</p>
+                <h3>{t('settings.advanced.dangerZone.title')}</h3>
+                <p>{t('settings.advanced.dangerZone.description')}</p>
                 <Button
                     variant="danger"
                     onClick={handleReset}
                     disabled={isResetting}
                 >
-                    {isResetting ? 'Resetting...' : 'Reset All Settings'}
+                    {isResetting ? t('settings.advanced.dangerZone.resetting') : t('settings.advanced.dangerZone.resetAll')}
                 </Button>
             </div>
         </div>
@@ -528,7 +550,7 @@ const SettingsPanel = ({ isOpen, onClose }) => {
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title="Settings"
+            title={t('settings.title')}
             size="lg"
             footer={
                 <div className="settings-footer">
@@ -540,10 +562,10 @@ const SettingsPanel = ({ isOpen, onClose }) => {
                     )}
                     <div className="settings-footer-buttons">
                         <Button variant="primary" onClick={reloadSettings}>
-                            Save & Apply
+                            {t('settings.footer.saveApply')}
                         </Button>
                         <Button variant="ghost" onClick={onClose}>
-                            Close
+                            {t('common.close')}
                         </Button>
                     </div>
                 </div>

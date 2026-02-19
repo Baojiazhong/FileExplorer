@@ -16,6 +16,10 @@ fn default_keymap_preset() -> String {
     "auto".to_string()
 }
 
+fn default_language() -> String {
+    "auto".to_string()
+}
+
 //In this file we should change everything to lowercase for the json -> first step is done in DefaultView
 /// File view mode for directories.
 ///
@@ -126,6 +130,9 @@ pub struct Settings {
     /// Keyboard shortcut preset. "auto" resolves based on the running OS.
     #[serde(default = "default_keymap_preset")]
     pub keymap_preset: String,
+    /// UI language selection. "auto" resolves based on the system locale.
+    #[serde(default = "default_language")]
+    pub language: String,
     /// Whether to prompt for confirmation before deleting files
     pub confirm_delete: bool,
     /// Whether to automatically refresh directory contents
@@ -173,6 +180,7 @@ impl Default for Settings {
             right_pane_width: default_right_pane_width(),
             accent_color: "#000000".to_string(),
             keymap_preset: "auto".to_string(),
+            language: default_language(),
             confirm_delete: true,
             auto_refresh_dir: true,
             sort_direction: SortDirection::Ascending,

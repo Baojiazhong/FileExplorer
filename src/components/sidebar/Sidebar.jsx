@@ -3,6 +3,7 @@ import {useFileSystem} from '../../providers/FileSystemProvider';
 import {useHistory} from '../../providers/HistoryProvider';
 import {useContextMenu} from '../../providers/ContextMenuProvider';
 import {useSftp} from '../../providers/SftpProvider';
+import { useI18n } from '../../i18n';
 import SidebarItem from './SidebarItem';
 import Favorites from './Favorites';
 //import QuickAccess from './QuickAccess';
@@ -12,7 +13,7 @@ import AddSftpConnectionView from './AddSftpConnectionView';
 import PermissionHelper from '../common/PermissionHelper';
 import {open} from '@tauri-apps/plugin-dialog';
 import './sidebar.css';
-import {showConfirm, showError, showSuccess} from "../../utils/NotificationSystem.js";
+import { showConfirm, showError, showSuccess } from '../../utils/NotificationSystem.js';
 
 /**
  * Sidebar component - Provides navigation, favorites, and quick access
@@ -24,6 +25,7 @@ import {showConfirm, showError, showSuccess} from "../../utils/NotificationSyste
  * @returns {React.ReactElement} Sidebar component
  */
 const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
+    const { t } = useI18n();
     const { volumes, loadDirectory, loadVolumes } = useFileSystem();
     const { currentPath, navigateTo } = useHistory();
     const { removeFromFavorites } = useContextMenu();
@@ -45,10 +47,15 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
     // Quick browse to protected folder
     const browseToProtectedFolder = async (folderName, expectedPath) => {
         try {
+            const lastSlashIndex = expectedPath
+                ? Math.max(expectedPath.lastIndexOf('/'), expectedPath.lastIndexOf('\\'))
+                : -1;
+            const defaultPath = expectedPath && lastSlashIndex > 0 ? expectedPath.substring(0, lastSlashIndex) : undefined;
+
             const selectedPath = await open({
                 directory: true,
-                title: `Browse to your ${folderName} folder`,
-                defaultPath: expectedPath ? expectedPath.substring(0, expectedPath.lastIndexOf('/')) : undefined
+                title: t('permission.browseTitle', { name: folderName }),
+                defaultPath,
             });
             
             if (selectedPath) {
@@ -100,7 +107,11 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
 
     // Remove SFTP connection with confirmation
     const removeSftpConnection = async (name) => {
-        const confirmRemove = await showConfirm(`Are you sure you want to remove the SFTP connection "${name}"?`);
+        const confirmRemove = await showConfirm(t('sidebar.network.removeConfirm', { name }), {
+            title: t('common.confirm'),
+            confirmText: t('common.confirm'),
+            cancelText: t('common.cancel'),
+        });
         if (!confirmRemove) return;
         try {
             const existing = JSON.parse(localStorage.getItem('fileExplorerSftpConnections') || '[]');
@@ -111,9 +122,9 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
                 key: 'fileExplorerSftpConnections',
                 newValue: JSON.stringify(newConnections)
             }));
-            showSuccess('SFTP COnnection "${name}" removed successfully.', 'success');
+             showSuccess(t('sidebar.network.removeSuccess', { name }));
         } catch (err) {
-            showError('Failed to remove SFTP connection: ' + err.message, 'error');
+             showError(t('sidebar.network.removeFailed', { message: err.message || err }));
         }
     };
 
@@ -124,7 +135,8 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
             quickAccess: false,
             thisPC: false,
             favorites: false,
-            drives: false
+            drives: false,
+            network: false,
         };
     });
 
@@ -288,7 +300,7 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
 
         const sourcePath = newSourcePath.trim();
         addToFavorites({
-            name: sourcePath.split(/[/\\]/).pop() || 'New Source',
+            name: sourcePath.split(/[/\\]/).pop() || t('sidebar.addDataSource.defaultName'),
             path: sourcePath,
             icon: 'folder'
         });
@@ -385,12 +397,16 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
                     {/*
                     <section className="sidebar-section">
                         <div className="sidebar-section-header">
-                            <h3 className="sidebar-section-title">Quick Access</h3>
-                            <button
-                                className="section-collapse-button"
-                                onClick={() => toggleSectionCollapse('quickAccess')}
-                                aria-label={sectionCollapsed.quickAccess ? 'Expand Quick Access' : 'Collapse Quick Access'}
-                            >
+                             <h3 className="sidebar-section-title">{t('sidebar.sections.quickAccess')}</h3>
+                                <button
+                                    className="section-collapse-button"
+                                    onClick={() => toggleSectionCollapse('quickAccess')}
+                                    aria-label={
+                                        sectionCollapsed.quickAccess
+                                            ? t('sidebar.sectionActions.expand', { name: t('sidebar.sections.quickAccess') })
+                                            : t('sidebar.sectionActions.collapse', { name: t('sidebar.sections.quickAccess') })
+                                    }
+                                >
                                 <span className={`icon icon-chevron-${sectionCollapsed.quickAccess ? 'up' : 'down'}`}></span>
                             </button>
                         </div>
@@ -407,11 +423,15 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
                     {/* This PC section */}
                     <section className="sidebar-section">
                         <div className="sidebar-section-header">
-                            <h3 className="sidebar-section-title">This PC</h3>
+                             <h3 className="sidebar-section-title">{t('sidebar.sections.thisPC')}</h3>
                             <button
                                 className="section-collapse-button"
                                 onClick={() => toggleSectionCollapse('thisPC')}
-                                aria-label={sectionCollapsed.thisPC ? 'Expand This PC' : 'Collapse This PC'}
+                                 aria-label={
+                                     sectionCollapsed.thisPC
+                                         ? t('sidebar.sectionActions.expand', { name: t('sidebar.sections.thisPC') })
+                                         : t('sidebar.sectionActions.collapse', { name: t('sidebar.sections.thisPC') })
+                                 }
                             >
                                 <span className={`icon icon-chevron-${sectionCollapsed.thisPC ? 'up' : 'down'}`}></span>
                             </button>
@@ -420,7 +440,7 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
                             <ul className="sidebar-list">
                                 <SidebarItem
                                     icon="computer"
-                                    name="This PC"
+                                     name={t('sidebar.sections.thisPC')}
                                     path="this-pc"
                                     isActive={currentView === 'this-pc'}
                                     onClick={() => {
@@ -433,11 +453,15 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
                                 {userVolume && (
                                     <SidebarItem
                                         icon="user"
-                                        name={`User (${userVolume.volume_name || 'User Disk'})`}
+                                        name={t('sidebar.userVolume.name', {
+                                            disk: userVolume.volume_name || t('sidebar.userVolume.fallbackDisk'),
+                                        })}
                                         path={userVolume.mount_point}
                                         isActive={currentView === 'explorer' && currentPath === userVolume.mount_point}
                                         onClick={() => handleItemClick(userVolume.mount_point)}
-                                        info={`${(userVolume.available_space / 1024 / 1024 / 1024).toFixed(1)}GB free`}
+                                        info={t('sidebar.userVolume.freeSpace', {
+                                            free: (userVolume.available_space / 1024 / 1024 / 1024).toFixed(1),
+                                        })}
                                     />
                                 )}
 
@@ -454,7 +478,7 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
                                             onClick={() => handleItemClick(dir.path, dir.name)}
                                             actions={isProtectedDir ? [{
                                                 icon: 'folder-open',
-                                                tooltip: `Browse to ${dir.name} folder`,
+                                                tooltip: t('permission.browseTitle', { name: dir.name }),
                                                 onClick: () => browseToProtectedFolder(dir.name, dir.path)
                                             }] : []}
                                         />
@@ -467,19 +491,23 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
                     {/* Favorites section */}
                     <section className="sidebar-section">
                         <div className="sidebar-section-header">
-                            <h3 className="sidebar-section-title">Favorites</h3>
+                             <h3 className="sidebar-section-title">{t('sidebar.sections.favorites')}</h3>
                             <div className="sidebar-section-actions">
                                 <button
                                     className="section-add-button"
                                     onClick={handleAddSource}
-                                    title="Add to Favorites"
+                                     title={t('sidebar.addSourceTooltip')}
                                 >
                                     <span className="icon icon-plus-small"></span>
                                 </button>
                                 <button
                                     className="section-collapse-button"
                                     onClick={() => toggleSectionCollapse('favorites')}
-                                    aria-label={sectionCollapsed.favorites ? 'Expand Favorites' : 'Collapse Favorites'}
+                                     aria-label={
+                                         sectionCollapsed.favorites
+                                             ? t('sidebar.sectionActions.expand', { name: t('sidebar.sections.favorites') })
+                                             : t('sidebar.sectionActions.collapse', { name: t('sidebar.sections.favorites') })
+                                     }
                                 >
                                     <span className={`icon icon-chevron-${sectionCollapsed.favorites ? 'up' : 'down'}`}></span>
                                 </button>
@@ -499,11 +527,15 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
                     {/* Drives/Volumes section */}
                     <section className="sidebar-section">
                         <div className="sidebar-section-header">
-                            <h3 className="sidebar-section-title">Drives</h3>
+                             <h3 className="sidebar-section-title">{t('sidebar.sections.drives')}</h3>
                             <button
                                 className="section-collapse-button"
                                 onClick={() => toggleSectionCollapse('drives')}
-                                aria-label={sectionCollapsed.drives ? 'Expand Drives' : 'Collapse Drives'}
+                                 aria-label={
+                                     sectionCollapsed.drives
+                                         ? t('sidebar.sectionActions.expand', { name: t('sidebar.sections.drives') })
+                                         : t('sidebar.sectionActions.collapse', { name: t('sidebar.sections.drives') })
+                                 }
                             >
                                 <span className={`icon icon-chevron-${sectionCollapsed.drives ? 'up' : 'down'}`}></span>
                             </button>
@@ -518,13 +550,20 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
                                         path={volume.mount_point}
                                         isActive={currentView === 'explorer' && currentPath === volume.mount_point}
                                         onClick={() => handleItemClick(volume.mount_point)}
-                                        info={`${(volume.available_space / 1024 / 1024 / 1024).toFixed(1)}GB free of ${(volume.size / 1024 / 1024 / 1024).toFixed(1)}GB`}
+                                        info={t('sidebar.drives.freeOf', {
+                                            free: (volume.available_space / 1024 / 1024 / 1024).toFixed(1),
+                                            total: (volume.size / 1024 / 1024 / 1024).toFixed(1),
+                                        })}
                                         actions={volume.is_removable ? [
                                             {
                                                 icon: 'eject',
-                                                tooltip: 'Safely eject',
+                                                 tooltip: t('sidebar.drives.safelyEject'),
                                                 onClick: async () => {
-                                                    const confirmEject = await showConfirm(`Are you sure you want to safely eject ${volume.volume_name}?`);
+                                                     const confirmEject = await showConfirm(t('sidebar.drives.ejectConfirm', { name: volume.volume_name }), {
+                                                         title: t('common.confirm'),
+                                                         confirmText: t('common.confirm'),
+                                                         cancelText: t('common.cancel'),
+                                                     });
                                                     if (!confirmEject) return;
 
                                                     try {
@@ -548,7 +587,7 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
                                                         const commandResponse = JSON.parse(result);
                                                         
                                                         if (commandResponse.status === 0) {
-                                                            showSuccess(`${volume.volume_name} has been safely ejected.`, 'success');
+                                                             showSuccess(t('sidebar.drives.ejectSuccess', { name: volume.volume_name }));
                                                             // Reload volumes to update the UI after ejection
                                                             setTimeout(() => {
                                                                 loadVolumes();
@@ -568,7 +607,7 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
                                                             // If not JSON, use as-is
                                                         }
                                                         
-                                                        showError(`Failed to eject ${volume.volume_name}: ${errorMessage}`, 'error');
+                                                         showError(t('sidebar.drives.ejectFailed', { name: volume.volume_name, message: errorMessage }));
                                                     }
                                                 }
                                             }
@@ -581,19 +620,23 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
                     {/* Network section */}
                     <section>
                         <div className="sidebar-section-header">
-                            <h3 className="sidebar-section-title">Network</h3>
+                             <h3 className="sidebar-section-title">{t('sidebar.sections.network')}</h3>
                             <div className="sidebar-section-actions">
                                 <button
                                     className="section-add-button"
                                     onClick={() => setIsAddSftpModalOpen(true)}
-                                    title="Add SFTP Connection"
+                                     title={t('sidebar.network.addConnection')}
                                 >
                                     <span className="icon icon-plus-small"></span>
                                 </button>
                                 <button
                                     className="section-collapse-button"
                                     onClick={() => toggleSectionCollapse('network')}
-                                    aria-label={sectionCollapsed.network ? 'Expand Network' : 'Collapse Network'}
+                                     aria-label={
+                                         sectionCollapsed.network
+                                             ? t('sidebar.sectionActions.expand', { name: t('sidebar.sections.network') })
+                                             : t('sidebar.sectionActions.collapse', { name: t('sidebar.sections.network') })
+                                     }
                                 >
                                     <span className={`icon icon-chevron-${sectionCollapsed.network ? 'up' : 'down'}`}></span>
                                 </button>
@@ -607,8 +650,8 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
                                             <span className="icon icon-network"></span>
                                         </div>
                                         <div className="empty-state-text">
-                                            <p>No SFTP connections</p>
-                                            <span>Add a connection to get started</span>
+                                             <p>{t('sidebar.network.emptyTitle')}</p>
+                                             <span>{t('sidebar.network.emptyHint')}</span>
                                         </div>
                                     </div>
                                 ) : (
@@ -634,7 +677,7 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
                                             }}
                                             actions={[{
                                                 icon: 'x',
-                                                tooltip: 'Remove SFTP Connection',
+                                                 tooltip: t('sidebar.network.removeConnection'),
                                                 onClick: () => removeSftpConnection(conn.name)
                                             }]}
                                         />
@@ -671,11 +714,11 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
                     <button
                         className={`sidebar-action-button ${isTerminalOpen ? 'active' : ''}`}
                         onClick={onTerminalToggle}
-                        aria-label="Toggle Terminal"
-                        title="Toggle Terminal (Ctrl+`)"
+                        aria-label={t('sidebar.toggleTerminal')}
+                        title={t('sidebar.toggleTerminalWithShortcut')}
                     >
                         <span className="icon icon-terminal"></span>
-                        <span>Terminal</span>
+                         <span>{t('sidebar.terminal')}</span>
                     </button>
 
                     <button
@@ -684,11 +727,11 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
                             navigateTo(null); // Clear explorer path
                             document.dispatchEvent(new CustomEvent('open-settings'));
                         }}
-                        aria-label="Settings"
-                        title="Settings"
+                         aria-label={t('sidebar.settings')}
+                         title={t('sidebar.settings')}
                     >
                         <span className="icon icon-settings"></span>
-                        <span>Settings</span>
+                         <span>{t('sidebar.settings')}</span>
                     </button>
 
                     <button
@@ -697,21 +740,21 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
                             navigateTo(null); // Clear explorer path
                             document.dispatchEvent(new CustomEvent('open-templates'));
                         }}
-                        aria-label="Templates"
-                        title="Templates"
+                         aria-label={t('sidebar.templates')}
+                         title={t('sidebar.templates')}
                     >
                         <span className="icon icon-template"></span>
-                        <span>Templates</span>
+                         <span>{t('sidebar.templates')}</span>
                     </button>
 
                     <button
                         className="sidebar-action-button"
-                        aria-label="Add Datasource"
-                        title="Add Datasource"
+                         aria-label={t('sidebar.addSource')}
+                         title={t('sidebar.addSource')}
                         onClick={handleAddSource}
                     >
                         <span className="icon icon-plus"></span>
-                        <span>Add Source</span>
+                         <span>{t('sidebar.addSource')}</span>
                     </button>
                 </div>
             </aside>
@@ -720,7 +763,7 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
             <Modal
                 isOpen={isAddSourceModalOpen}
                 onClose={() => setIsAddSourceModalOpen(false)}
-                title="Add Data Source"
+                title={t('sidebar.addDataSource.title')}
                 size="sm"
                 defaultAction={saveNewSource}
                 defaultActionEnabled={!!newSourcePath.trim()}
@@ -730,21 +773,21 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
                             variant="ghost"
                             onClick={() => setIsAddSourceModalOpen(false)}
                         >
-                            Cancel
+                            {t('sidebar.addDataSource.cancel')}
                         </Button>
                         <Button
                             variant="primary"
                             onClick={saveNewSource}
                             disabled={!newSourcePath.trim()}
                         >
-                            Add Source
+                            {t('sidebar.addDataSource.add')}
                         </Button>
                     </>
                 }
             >
                 <form onSubmit={handleAddSourceSubmit}>
                     <div className="form-group">
-                        <label htmlFor="source-path">Data Source Path</label>
+                        <label htmlFor="source-path">{t('sidebar.addDataSource.pathLabel')}</label>
                         <input
                             ref={addSourceInputRef}
                             type="text"
@@ -753,10 +796,10 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
                             value={newSourcePath}
                             onChange={handleAddSourceInputChange}
                             onKeyDown={handleAddSourceKeyDown}
-                            placeholder="Enter path to folder to add as data source"
+                            placeholder={t('sidebar.addDataSource.placeholder')}
                         />
                         <div className="input-hint">
-                            Enter the full path to a folder that you want to add as a data source to favorites.
+                            {t('sidebar.addDataSource.hint')}
                         </div>
                     </div>
                 </form>

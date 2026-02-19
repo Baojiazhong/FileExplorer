@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import SidebarItem from './SidebarItem';
+import { useI18n } from '../../i18n';
+import { showConfirm } from '../../utils/NotificationSystem';
 
 /**
  * Favorites component - Displays and manages favorite locations
@@ -20,7 +22,8 @@ const Favorites = ({
                        onAdd,
                        currentView,
                        currentPath
-                   }) => {
+}) => {
+    const { t } = useI18n();
     const [favorites, setFavorites] = useState([]);
 
     /**
@@ -75,10 +78,15 @@ const Favorites = ({
      * @param {React.MouseEvent} e - Context menu event
      * @param {Object} item - The favorite item
      */
-    const handleContextMenu = (e, item) => {
+    const handleContextMenu = async (e, item) => {
         e.preventDefault();
 
-        const choice = confirm('Remove from favorites?');
+        const choice = await showConfirm(t('sidebar.favorites.removeConfirm'), {
+            title: t('common.confirm'),
+            confirmText: t('common.confirm'),
+            cancelText: t('common.cancel'),
+        });
+
         if (choice) {
             onRemove(item.path);
         }
@@ -94,8 +102,8 @@ const Favorites = ({
                     <span className="icon icon-star"></span>
                 </div>
                 <div className="empty-state-text">
-                    <p>No favorites added</p>
-                    <span>Right-click an item and select <br /> "Add to Favorites"</span>
+                    <p>{t('sidebar.favorites.emptyTitle')}</p>
+                    <span>{t('sidebar.favorites.emptyHint')}</span>
                 </div>
             </div>
         );
@@ -116,7 +124,7 @@ const Favorites = ({
                     actions={[
                         {
                             icon: 'x',
-                            tooltip: 'Remove from favorites',
+                            tooltip: t('sidebar.favorites.removeTooltip'),
                             onClick: () => onRemove(item.path),
                         },
                     ]}

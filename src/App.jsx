@@ -1,5 +1,6 @@
 import React from 'react';
 import SettingsProvider from './providers/SettingsProvider';
+import I18nProvider from './i18n/I18nProvider.jsx';
 import ThemeProvider from './providers/ThemeProvider';
 import AppStateProvider from './providers/AppStateProvider';
 import HistoryProvider from './providers/HistoryProvider';
@@ -77,20 +78,23 @@ class App extends React.Component {
         return (
             <div className="app-container">
                 <SettingsProvider>
-                    <ThemeProvider>
-                        <AppStateProvider>
-                            <HistoryProvider>
-                                <SftpProvider>
-                                    <FileSystemProvider>
-                                        <ContextMenuProvider>
-                                            <MainLayout />
-                                        </ContextMenuProvider>
-                                    </FileSystemProvider>
-                                </SftpProvider>
-                            </HistoryProvider>
-                        </AppStateProvider>
-                    </ThemeProvider>
+                    <I18nProvider>
+                        <ThemeProvider>
+                            <AppStateProvider>
+                                <HistoryProvider>
+                                    <SftpProvider>
+                                        <FileSystemProvider>
+                                            <ContextMenuProvider>
+                                                <MainLayout />
+                                            </ContextMenuProvider>
+                                        </FileSystemProvider>
+                                    </SftpProvider>
+                                </HistoryProvider>
+                            </AppStateProvider>
+                        </ThemeProvider>
+                    </I18nProvider>
                 </SettingsProvider>
+
             </div>
         );
     }

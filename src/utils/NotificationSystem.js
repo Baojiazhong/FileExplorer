@@ -1,4 +1,22 @@
 import { registerKeydownHandler, KEYDOWN_PRIORITIES } from './keyboard';
+import enUS from '../i18n/locales/en-US';
+import zhCN from '../i18n/locales/zh-CN';
+import { createTranslator, LOCALES, normalizeLocale } from '../i18n/core';
+
+const dictionaries = {
+    [LOCALES.EN_US]: enUS,
+    [LOCALES.ZH_CN]: zhCN,
+};
+
+const getNotificationTranslator = () => {
+    try {
+        const lang = document?.documentElement?.lang || navigator?.language || LOCALES.EN_US;
+        const locale = normalizeLocale(lang);
+        return createTranslator({ dictionaries, locale });
+    } catch {
+        return createTranslator({ dictionaries, locale: LOCALES.EN_US });
+    }
+};
 
 /**
  * Simple notification system to replace browser alerts
@@ -118,7 +136,25 @@ export const showWarning = (message, duration) => showNotification(message, 'war
 export const showInfo = (message, duration) => showNotification(message, 'info', duration);
 
 // Simple confirm dialog replacement
-export const showConfirm = (message, title = 'Confirm') => {
+//
+// Backward compatible signature:
+//   showConfirm(message, title?)
+// New preferred signature:
+//   showConfirm(message, { title, confirmText, cancelText })
+export const showConfirm = (message, titleOrOptions) => {
+    const t = getNotificationTranslator();
+
+    const options =
+        titleOrOptions && typeof titleOrOptions === 'object'
+            ? titleOrOptions
+            : titleOrOptions
+                ? { title: titleOrOptions }
+                : {};
+
+    const title = options.title || t('common.confirm');
+    const confirmText = options.confirmText || t('common.confirm');
+    const cancelText = options.cancelText || t('common.cancel');
+
     return new Promise((resolve) => {
         const modal = document.createElement('div');
         modal.setAttribute('data-modal', 'confirm-dialog');
@@ -169,7 +205,7 @@ export const showConfirm = (message, title = 'Confirm') => {
         `;
 
         const cancelBtn = document.createElement('button');
-        cancelBtn.textContent = 'Cancel';
+        cancelBtn.textContent = cancelText;
         cancelBtn.style.cssText = `
             padding: 8px 16px;
             border: 1px solid #e0e4e8;
@@ -180,7 +216,7 @@ export const showConfirm = (message, title = 'Confirm') => {
         `;
 
         const confirmBtn = document.createElement('button');
-        confirmBtn.textContent = 'Confirm';
+        confirmBtn.textContent = confirmText;
         confirmBtn.style.cssText = `
             padding: 8px 16px;
             border: none;
@@ -253,9 +289,6 @@ export const showConfirm = (message, title = 'Confirm') => {
             }
         });
 
-        // ESC key to cancel
-        // handled by keyboard router
-
         buttonContainer.appendChild(cancelBtn);
         buttonContainer.appendChild(confirmBtn);
         dialog.appendChild(titleEl);
@@ -266,5 +299,195 @@ export const showConfirm = (message, title = 'Confirm') => {
 
         // Focus confirm button
         confirmBtn.focus();
+    });
+};
+
+// Simple prompt dialog replacement
+//
+// Backward compatible signature:
+//   showPrompt(message, title?)
+// New preferred signature:
+//   showPrompt(message, { title, confirmText, cancelText, defaultValue, placeholder })
+//
+// Returns the entered string, or null if cancelled.
+export const showPrompt = (message, titleOrOptions) => {
+    const t = getNotificationTranslator();
+
+    const options =
+        titleOrOptions && typeof titleOrOptions === 'object'
+            ? titleOrOptions
+            : titleOrOptions
+                ? { title: titleOrOptions }
+                : {};
+
+    const title = options.title || t('common.prompt');
+    const confirmText = options.confirmText || t('common.confirm');
+    const cancelText = options.cancelText || t('common.cancel');
+    const defaultValue = options.defaultValue || '';
+    const placeholder = options.placeholder || '';
+
+    return new Promise((resolve) => {
+        const modal = document.createElement('div');
+        modal.setAttribute('data-modal', 'prompt-dialog');
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10001;
+        `;
+
+        const dialog = document.createElement('div');
+        dialog.setAttribute('role', 'dialog');
+        dialog.setAttribute('aria-modal', 'true');
+        dialog.style.cssText = `
+            background: #ffffff;
+            border-radius: 8px;
+            padding: 24px;
+            max-width: 420px;
+            width: 90%;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        `;
+
+        const titleEl = document.createElement('h3');
+        titleEl.textContent = title;
+        titleEl.style.cssText = `
+            margin: 0 0 16px 0;
+            color: #1a1c1e;
+            font-size: 18px;
+        `;
+
+        const messageEl = document.createElement('p');
+        messageEl.textContent = message;
+        messageEl.style.cssText = `
+            margin: 0 0 12px 0;
+            color: #4b5563;
+            line-height: 1.5;
+        `;
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = defaultValue;
+        input.placeholder = placeholder;
+        input.style.cssText = `
+            width: 100%;
+            box-sizing: border-box;
+            padding: 10px 12px;
+            border: 1px solid #e0e4e8;
+            border-radius: 6px;
+            font-size: 14px;
+            outline: none;
+            margin: 0 0 20px 0;
+        `;
+
+        const buttonContainer = document.createElement('div');
+        buttonContainer.style.cssText = `
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        `;
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.textContent = cancelText;
+        cancelBtn.style.cssText = `
+            padding: 8px 16px;
+            border: 1px solid #e0e4e8;
+            background: transparent;
+            color: #1a1c1e;
+            border-radius: 6px;
+            cursor: pointer;
+        `;
+
+        const confirmBtn = document.createElement('button');
+        confirmBtn.textContent = confirmText;
+        confirmBtn.style.cssText = `
+            padding: 8px 16px;
+            border: none;
+            background: #0672ef;
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+        `;
+
+        let cleanedUp = false;
+
+        const cleanup = () => {
+            if (cleanedUp) return;
+            cleanedUp = true;
+            unregisterKeydown();
+            if (modal.parentNode) {
+                modal.parentNode.removeChild(modal);
+            }
+        };
+
+        const unregisterKeydown = registerKeydownHandler(
+            (e) => {
+                if (cleanedUp) return true;
+                if (e.defaultPrevented) return false;
+
+                // Let Tab/Shift+Tab work for focus.
+                if (e.key === 'Tab') return false;
+
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    cleanup();
+                    resolve(null);
+                    return true;
+                }
+
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const value = input.value;
+                    cleanup();
+                    resolve(value);
+                    return true;
+                }
+
+                // Block app-level shortcuts while modal is open.
+                e.preventDefault();
+                return true;
+            },
+            {
+                name: 'Prompt dialog keys',
+                priority: KEYDOWN_PRIORITIES.CONFIRM,
+                when: () => document.body.contains(modal),
+            }
+        );
+
+        cancelBtn.addEventListener('click', () => {
+            cleanup();
+            resolve(null);
+        });
+
+        confirmBtn.addEventListener('click', () => {
+            const value = input.value;
+            cleanup();
+            resolve(value);
+        });
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                cleanup();
+                resolve(null);
+            }
+        });
+
+        buttonContainer.appendChild(cancelBtn);
+        buttonContainer.appendChild(confirmBtn);
+        dialog.appendChild(titleEl);
+        dialog.appendChild(messageEl);
+        dialog.appendChild(input);
+        dialog.appendChild(buttonContainer);
+        modal.appendChild(dialog);
+        document.body.appendChild(modal);
+
+        // Focus input and select default value.
+        input.focus();
+        input.select();
     });
 };

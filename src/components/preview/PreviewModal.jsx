@@ -1,4 +1,5 @@
 import React from 'react';
+import { useI18n } from '../../i18n';
 import PreviewContent from './PreviewContent';
 import './PreviewModal.css';
 
@@ -11,6 +12,7 @@ import './PreviewModal.css';
  * @returns {React.ReactElement|null} PreviewModal component or null
  */
 export function PreviewModal({ payload, onClose, isLoading }) {
+  const { t } = useI18n();
   if (!payload && !isLoading) return null;
 
   return (
@@ -37,7 +39,7 @@ export function PreviewModal({ payload, onClose, isLoading }) {
           <button
             onClick={onClose}
             className="preview-modal-close"
-            aria-label="Close preview"
+            aria-label={t('preview.closeAria')}
             style={{ marginRight: 0 }}
           >
             <span className="icon icon-x"></span>
@@ -65,7 +67,7 @@ export function PreviewModal({ payload, onClose, isLoading }) {
           {isLoading ? (
             <div className="preview-loading">
               <div className="spinner"></div>
-              <p>Loading preview...</p>
+              <p>{t('preview.loading')}</p>
             </div>
           ) : (
             <PreviewContent payload={payload} variant="modal" />

@@ -1,5 +1,8 @@
 /src-tauri/test-data*/
 
+# Ignore accidental Windows device file
+nul
+
 # General Rust ignores
 /target/
 /Cargo.lock

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { useI18n } from '../../i18n';
 import { useFileSystem } from '../../providers/FileSystemProvider';
 import { useHistory } from '../../providers/HistoryProvider';
 import { formatFileSize } from '../../utils/formatters';
@@ -13,6 +14,7 @@ import {showConfirm, showError, showSuccess} from "../../utils/NotificationSyste
  * @returns {React.ReactElement} ThisPCView component
  */
 const ThisPCView = () => {
+    const { t } = useI18n();
     const [systemInfo, setSystemInfo] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const { volumes, loadDirectory, loadVolumes } = useFileSystem();
@@ -74,32 +76,38 @@ const ThisPCView = () => {
             // Common user folder paths - some folders might have multiple possible names
             const folderConfigs = [
                 {
-                    name: 'Desktop',
+                    key: 'desktop',
+                    name: t('thisPc.userFolders.desktop'),
                     paths: [getDesktopPath()],
                     icon: 'desktop'
                 },
                 {
-                    name: 'Documents',
+                    key: 'documents',
+                    name: t('thisPc.userFolders.documents'),
                     paths: [getDocumentsPath()],
                     icon: 'documents'
                 },
                 {
-                    name: 'Downloads',
+                    key: 'downloads',
+                    name: t('thisPc.userFolders.downloads'),
                     paths: [getDownloadsPath()],
                     icon: 'downloads'
                 },
                 {
-                    name: 'Pictures',
+                    key: 'pictures',
+                    name: t('thisPc.userFolders.pictures'),
                     paths: [getPicturesPath()],
                     icon: 'pictures'
                 },
                 {
-                    name: 'Music',
+                    key: 'music',
+                    name: t('thisPc.userFolders.music'),
                     paths: [getMusicPath()],
                     icon: 'music'
                 },
                 {
-                    name: 'Videos',
+                    key: 'videos',
+                    name: t('thisPc.userFolders.videos'),
                     paths: videoPaths,
                     icon: 'videos'
                 }
@@ -243,7 +251,11 @@ const ThisPCView = () => {
             navigateTo(path);
         } catch (error) {
             console.error('Failed to navigate to folder:', error);
-            showError(`Cannot access ${path}. The folder may not exist or is inaccessible.`);
+            showError(
+                t('thisPc.cannotAccessFolder', {
+                    path,
+                })
+            );
         }
     };
 
@@ -263,7 +275,13 @@ const ThisPCView = () => {
     const ejectVolume = async (volume) => {
         if (!volume.is_removable) return;
 
-        const confirmEject = await showConfirm(`Are you sure you want to safely eject ${volume.volume_name}?`);
+                        const volumeDisplayName = volume.volume_name || volume.mount_point;
+
+                const confirmEject = await showConfirm(
+                     t('sidebar.drives.ejectConfirm', {
+                         name: volumeDisplayName,
+                     })
+                 );
         if (!confirmEject) return;
 
         try {
@@ -286,7 +304,11 @@ const ThisPCView = () => {
             const commandResponse = JSON.parse(result);
             
             if (commandResponse.status === 0) {
-                showSuccess(`${volume.volume_name} has been safely ejected.`);
+                showSuccess(
+                    t('sidebar.drives.ejectSuccess', {
+                        name: volumeDisplayName,
+                    })
+                );
                 // Reload volumes to update the UI after ejection
                 setTimeout(() => {
                     loadVolumes();
@@ -306,7 +328,12 @@ const ThisPCView = () => {
                 // If not JSON, use as-is
             }
             
-            showError(`Failed to eject ${volume.volume_name}: ${errorMessage}`);
+            showError(
+                t('sidebar.drives.ejectFailed', {
+                    name: volumeDisplayName,
+                    message: errorMessage,
+                })
+            );
         }
     };
 
@@ -314,7 +341,7 @@ const ThisPCView = () => {
         return (
             <div className="this-pc-loading">
                 <div className="spinner"></div>
-                <p>Loading system information...</p>
+                <p>{t('thisPc.loadingSystemInformation')}</p>
             </div>
         );
     }
@@ -322,10 +349,10 @@ const ThisPCView = () => {
     return (
         <div className="this-pc-view">
             <div className="this-pc-header">
-                <h2>This PC</h2>
+                <h2>{t('thisPc.title')}</h2>
                 {systemInfo && (
                     <div className="system-info">
-                        <span>Running {systemInfo.current_running_os}</span>
+                        <span>{t('thisPc.runningOs', { os: systemInfo.current_running_os })}</span>
                         {systemInfo.current_cpu_architecture && (
                             <span> • {systemInfo.current_cpu_architecture}</span>
                         )}
@@ -336,7 +363,7 @@ const ThisPCView = () => {
             {/* User Folders Section */}
             {userFolders.length > 0 && (
                 <div className="pc-section">
-                    <h3>Folders</h3>
+                     <h3>{t('thisPc.foldersSectionTitle')}</h3>
                     <div className="folders-grid">
                         {userFolders.map((folder) => (
                             <div
@@ -359,7 +386,7 @@ const ThisPCView = () => {
 
             {/* Drives Section */}
             <div className="pc-section">
-                <h3>Drives</h3>
+                 <h3>{t('thisPc.drivesSectionTitle')}</h3>
                 <div className="drives-grid">
                     {volumes.map((volume) => {
                         const usedSpace = volume.size - volume.available_space;
@@ -385,7 +412,7 @@ const ThisPCView = () => {
 
                                     <div className="drive-storage">
                                         <div className="storage-info">
-                                            <span>{formatFileSize(volume.available_space)} free of {formatFileSize(volume.size)}</span>
+                                             <span>{t('thisPc.freeOf', { free: formatFileSize(volume.available_space), total: formatFileSize(volume.size) })}</span>
                                         </div>
                                         <div className="storage-bar">
                                             <div
@@ -404,7 +431,8 @@ const ThisPCView = () => {
                                                 e.stopPropagation();
                                                 ejectVolume(volume);
                                             }}
-                                            title="Safely eject"
+                                             title={t('sidebar.drives.safelyEject')}
+                                             aria-label={t('sidebar.drives.safelyEject')}
                                         >
                                             <span className="icon icon-eject"></span>
                                         </button>
@@ -419,27 +447,27 @@ const ThisPCView = () => {
             {/* System Information */}
             {systemInfo && (
                 <div className="pc-section">
-                    <h3>System Information</h3>
+                     <h3>{t('thisPc.systemInformationSectionTitle')}</h3>
                     <div className="system-details">
                         <div className="detail-row">
-                            <span className="detail-label">Operating System:</span>
+                             <span className="detail-label">{t('thisPc.operatingSystemLabel')}</span>
                             <span className="detail-value">{systemInfo.current_running_os}</span>
                         </div>
                         {systemInfo.current_cpu_architecture && (
                             <div className="detail-row">
-                                <span className="detail-label">Architecture:</span>
+                                 <span className="detail-label">{t('thisPc.architectureLabel')}</span>
                                 <span className="detail-value">{systemInfo.current_cpu_architecture}</span>
                             </div>
                         )}
                         {systemInfo.user_home_dir && (
                             <div className="detail-row">
-                                <span className="detail-label">User Directory:</span>
+                                 <span className="detail-label">{t('thisPc.userDirectoryLabel')}</span>
                                 <span className="detail-value">{systemInfo.user_home_dir}</span>
                             </div>
                         )}
                         {systemInfo.version && (
                             <div className="detail-row">
-                                <span className="detail-label">Version:</span>
+                                 <span className="detail-label">{t('thisPc.versionLabel')}</span>
                                 <span className="detail-value">{systemInfo.version}</span>
                             </div>
                         )}

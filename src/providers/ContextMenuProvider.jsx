@@ -3,7 +3,8 @@ import { invoke } from '@tauri-apps/api/core';
 import { useFileSystem } from './FileSystemProvider';
 import { useHistory } from './HistoryProvider';
 import { useSftp } from './SftpProvider';
-import { showNotification, showError, showSuccess, showConfirm } from '../utils/NotificationSystem';
+import { useI18n } from '../i18n';
+import { showNotification, showError, showSuccess, showConfirm, showPrompt } from '../utils/NotificationSystem';
 
 const ContextMenuContext = createContext({
     isOpen: false,
@@ -16,6 +17,7 @@ const ContextMenuContext = createContext({
 });
 
 export default function ContextMenuProvider({ children }) {
+    const { t } = useI18n();
     const [isOpen, setIsOpen] = useState(false);
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const [target, setTarget] = useState(null);
@@ -46,7 +48,7 @@ export default function ContextMenuProvider({ children }) {
             // Check if already in favorites
             const alreadyExists = existingFavorites.some(fav => fav.path === item.path);
             if (alreadyExists) {
-                showNotification('This item is already in your favorites.');
+                showNotification(t('contextMenu.favorites.alreadyAdded'));
                 return;
             }
 
@@ -66,10 +68,10 @@ export default function ContextMenuProvider({ children }) {
                 newValue: JSON.stringify(updatedFavorites)
             }));
 
-            showSuccess(`Added "${item.name}" to favorites.`);
+            showSuccess(t('contextMenu.favorites.added', { name: item.name }));
         } catch (error) {
             console.error('Failed to add to favorites:', error);
-            showError('Failed to add to favorites.');
+            showError(t('contextMenu.favorites.addFailed'));
         }
     }, []);
 
@@ -123,17 +125,17 @@ export default function ContextMenuProvider({ children }) {
             }
             
             await navigator.clipboard.writeText(pathToCopy);
-            showSuccess(`Path copied to clipboard: ${pathToCopy}`);
+            showSuccess(t('contextMenu.clipboard.pathCopied', { path: pathToCopy }));
         } catch (error) {
             console.error('Failed to copy path:', error);
-            showError('Failed to copy path to clipboard.');
+            showError(t('contextMenu.clipboard.copyPathFailed'));
         }
     }, [isSftpPath, parseSftpPath]);
 
     // Add as template
     const addAsTemplate = useCallback(async (item) => {
         if (!item || item.isDirectory || 'sub_file_count' in item) {
-            showError('Only files can be added as templates.');
+            showError(t('contextMenu.templates.onlyFiles'));
             return;
         }
 
@@ -154,7 +156,7 @@ export default function ContextMenuProvider({ children }) {
                     templatePath = tempPath;
                 } catch (downloadError) {
                     console.error('Failed to download SFTP file for template:', downloadError);
-                    showError(`Failed to download SFTP file: ${downloadError.message || downloadError}`);
+                    showError(t('contextMenu.sftp.downloadForTemplateFailed', { message: downloadError.message || downloadError }));
                     return;
                 }
             }
@@ -162,12 +164,12 @@ export default function ContextMenuProvider({ children }) {
             const result = await invoke('add_template', {
                 templatePath: templatePath
             });
-            showSuccess(`Template added successfully: ${result}`);
+            showSuccess(t('contextMenu.templates.added', { result }));
 
             window.dispatchEvent(new CustomEvent('templates-updated'));
         } catch (error) {
             console.error('Failed to add template:', error);
-            showError(`Failed to add template: ${error.message || error}`);
+            showError(t('contextMenu.templates.addFailed', { message: error.message || error }));
         } finally {
             setIsProcessing(false);
         }
@@ -270,7 +272,8 @@ export default function ContextMenuProvider({ children }) {
                             // SFTP to SFTP move
                             await moveSftpItem(sourcePath, destPath);
                         } else {
-                            showError('Moving between SFTP and local file systems is not yet supported');
+                             showError(t('contextMenu.sftp.moveBetweenSftpAndLocalUnsupported'));
+
                             continue;
                         }
                     } else {
@@ -289,7 +292,8 @@ export default function ContextMenuProvider({ children }) {
                             // SFTP to SFTP copy
                             await copySftpItem(sourcePath, destPath);
                         } else {
-                            showError('Copying between SFTP and local file systems is not yet supported');
+                             showError(t('contextMenu.sftp.copyBetweenSftpAndLocalUnsupported'));
+
                             continue;
                         }
                     } else {
@@ -315,7 +319,7 @@ export default function ContextMenuProvider({ children }) {
             await loadDirectory(currentPath);
         } catch (error) {
             console.error('Paste operation failed:', error);
-            showError(`Failed to paste: ${error.message || error}`);
+            showError(t('contextMenu.paste.failed', { message: error.message || error }));
         } finally {
             setIsProcessing(false);
         }
@@ -326,10 +330,16 @@ export default function ContextMenuProvider({ children }) {
         if (!items.length) return;
 
         const itemNames = items.map(item => item.name).join(', ');
-        const confirmMessage = `Are you sure you want to move ${items.length === 1 ? itemNames : `${items.length} items`} to trash?`;
+        const confirmMessage = t(
+            items.length === 1 ? 'contextMenu.delete.confirmSingle' : 'contextMenu.delete.confirmMultiple',
+            items.length === 1 ? { name: itemNames } : { count: items.length }
+        );
 
-        // Use custom confirm dialog
-        const shouldDelete = await showConfirm(confirmMessage, 'Move to Trash');
+        const shouldDelete = await showConfirm(confirmMessage, {
+            title: t('contextMenu.delete.confirmTitle'),
+            confirmText: t('common.confirm'),
+            cancelText: t('common.cancel'),
+        });
         if (!shouldDelete) return;
 
         setIsProcessing(true);
@@ -340,7 +350,7 @@ export default function ContextMenuProvider({ children }) {
             }
         } catch (error) {
             console.error('Delete operation failed:', error);
-            showError(`Failed to delete: ${error.message || error}`);
+            showError(t('contextMenu.delete.failed', { message: error.message || error }));
         } finally {
             setIsProcessing(false);
         }
@@ -361,27 +371,33 @@ export default function ContextMenuProvider({ children }) {
         const isSftpItems = items.some(item => isSftpPath(item.path));
         const isAllSftp = items.every(item => isSftpPath(item.path));
         
-        if (isSftpItems && !isAllSftp) {
-            showError('Cannot mix SFTP and local files in the same archive');
-            return;
-        }
-
-        let destinationPath = null;
-        let zipName = null;
-
-        if (items.length === 1) {
-            // For single item, use its name as base for zip name
-            const item = items[0];
-            const baseName = item.name;
-            zipName = `${baseName}.zip`;
-        } else {
-            // For multiple items, ask user for zip name
-            zipName = window.prompt('Enter name for the zip file:', 'archive.zip');
-            if (!zipName) return;
-            if (!zipName.endsWith('.zip')) {
-                zipName += '.zip';
+            if (isSftpItems && !isAllSftp) {
+                showError(t('contextMenu.zip.cannotMixSftpAndLocal'));
+                return;
             }
-        }
+
+            let destinationPath = null;
+            let zipName = null;
+
+            if (items.length === 1) {
+                // For single item, use its name as base for zip name
+                const item = items[0];
+                const baseName = item.name;
+                zipName = `${baseName}.zip`;
+            } else {
+                // For multiple items, ask user for zip name
+                zipName = await showPrompt(t('contextMenu.zip.promptName'), {
+                    title: t('contextMenu.zip.promptTitle'),
+                    defaultValue: 'archive.zip',
+                    placeholder: 'archive.zip',
+                    confirmText: t('common.confirm'),
+                    cancelText: t('common.cancel'),
+                });
+                if (!zipName) return;
+                if (!zipName.endsWith('.zip')) {
+                    zipName += '.zip';
+                }
+            }
 
         if (isAllSftp) {
             // Handle SFTP items
@@ -419,7 +435,7 @@ export default function ContextMenuProvider({ children }) {
                         
                         // Upload the zip file (we'd need an upload function in SFTP provider)
                         // For now, we'll copy it to local temp and let user know
-                        showSuccess(`ZIP created locally at: ${tempZipPath}. SFTP upload not yet implemented.`);
+                        showSuccess(t('contextMenu.zip.createdLocallyUploadNotImplemented', { path: tempZipPath }));
                     }
                 } else {
                     // Copy zip to current local directory
@@ -427,13 +443,13 @@ export default function ContextMenuProvider({ children }) {
                         sourcePath: tempZipPath,
                         destinationPath: destinationPath
                     });
-                    showSuccess(`Successfully created ${zipName}`);
+                    showSuccess(t('contextMenu.zip.created', { name: zipName }));
                 }
                 
                 await loadDirectory(currentPath);
             } catch (error) {
                 console.error('SFTP zip operation failed:', error);
-                showError(`Failed to create zip: ${error.message || error}`);
+                showError(t('contextMenu.zip.createFailed', { message: error.message || error }));
             } finally {
                 setIsProcessing(false);
             }
@@ -450,10 +466,10 @@ export default function ContextMenuProvider({ children }) {
                 });
 
                 await loadDirectory(currentPath);
-                showSuccess(`Successfully created ${destinationPath.split('/').pop()}`);
+                showSuccess(t('contextMenu.zip.created', { name: destinationPath.split('/').pop() }));
             } catch (error) {
                 console.error('Zip operation failed:', error);
-                showError(`Failed to create zip: ${error.message || error}`);
+                showError(t('contextMenu.zip.createFailed', { message: error.message || error }));
             } finally {
                 setIsProcessing(false);
             }
@@ -484,20 +500,20 @@ export default function ContextMenuProvider({ children }) {
                 
                 // For now, we'll extract locally and notify user
                 // TODO: Implement upload of extracted files back to SFTP
-                showSuccess(`ZIP extracted locally to: ${tempExtractPath}. SFTP upload of extracted files not yet implemented.`);
+                showSuccess(t('contextMenu.zip.extractedLocallyUploadNotImplemented', { path: tempExtractPath }));
             } else {
                 // Handle local zip files (original logic)
                 await invoke('unzip', {
                     zipPaths: [item.path],
                     destinationPath: currentPath
                 });
-                showSuccess(`Successfully extracted ${item.name}`);
+                showSuccess(t('contextMenu.zip.extracted', { name: item.name }));
             }
 
             await loadDirectory(currentPath);
         } catch (error) {
             console.error('Unzip operation failed:', error);
-            showError(`Failed to extract: ${error.message || error}`);
+            showError(t('contextMenu.zip.extractFailed', { message: error.message || error }));
         } finally {
             setIsProcessing(false);
         }
@@ -509,7 +525,8 @@ export default function ContextMenuProvider({ children }) {
 
         if (!item || item.isDirectory || 'sub_file_count' in item) {
             console.log('❌ Item invalid for hash generation');
-            showError('Hash generation is only available for files.');
+            showError(t('contextMenu.hash.onlyFiles'));
+
             return;
         }
 
@@ -538,7 +555,7 @@ export default function ContextMenuProvider({ children }) {
             // Try to copy hash to clipboard, with fallback if it fails
             try {
                 await navigator.clipboard.writeText(hash);
-                showSuccess(`Hash generated and copied to clipboard: ${hash.substring(0, 16)}...`);
+                showSuccess(t('contextMenu.hash.generatedCopied', { prefix: hash.substring(0, 16) }));
             } catch (clipboardError) {
                 console.warn('📋 Clipboard access failed, showing hash display modal instead:', clipboardError);
                 
@@ -550,7 +567,7 @@ export default function ContextMenuProvider({ children }) {
             }
         } catch (error) {
             console.error('💥 Hash generation failed:', error);
-            showError(`Failed to generate hash: ${error.message || error}`);
+            showError(t('contextMenu.hash.generateFailed', { message: error.message || error }));
         } finally {
             setIsProcessing(false);
         }
@@ -562,7 +579,8 @@ export default function ContextMenuProvider({ children }) {
 
         if (!item || item.isDirectory || 'sub_file_count' in item) {
             console.log('❌ Item invalid for hash file generation');
-            showError('Hash generation is only available for files.');
+            showError(t('contextMenu.hash.onlyFiles'));
+
             return;
         }
 
@@ -586,7 +604,7 @@ export default function ContextMenuProvider({ children }) {
                 console.log('✅ SFTP file downloaded for hash generation:', tempPath);
             } catch (error) {
                 console.error('Failed to download SFTP file for hash generation:', error);
-                showError(`Failed to download SFTP file: ${error.message || error}`);
+                showError(t('contextMenu.sftp.downloadForHashFailed', { message: error.message || error }));
                 setIsProcessing(false);
                 return;
             } finally {
@@ -612,7 +630,8 @@ export default function ContextMenuProvider({ children }) {
 
         if (!item || item.isDirectory || 'sub_file_count' in item) {
             console.log('❌ Item invalid for hash comparison');
-            showError('Hash comparison is only available for files.');
+            showError(t('contextMenu.hashCompare.onlyFiles'));
+
             return;
         }
 
@@ -636,7 +655,7 @@ export default function ContextMenuProvider({ children }) {
                 console.log('✅ SFTP file downloaded for hash comparison:', tempPath);
             } catch (error) {
                 console.error('Failed to download SFTP file for hash comparison:', error);
-                showError(`Failed to download SFTP file: ${error.message || error}`);
+                showError(t('contextMenu.sftp.downloadForHashFailed', { message: error.message || error }));
                 setIsProcessing(false);
                 return;
             } finally {
@@ -834,7 +853,7 @@ export default function ContextMenuProvider({ children }) {
                             }
                         } catch (error) {
                             console.error('Failed to open file:', error);
-                            showError(`Failed to open file: ${error.message || error}`);
+                            showError(t('contextMenu.openFile.failed', { message: error.message || error }));
                         }
                     }
                 }
@@ -861,7 +880,7 @@ export default function ContextMenuProvider({ children }) {
                         await invoke('open_with_dialog', { path: pathToOpen });
                     } catch (error) {
                         console.error('Failed to open file with dialog:', error);
-                        showError(`Failed to open with...: ${error.message || error}`);
+                        showError(t('contextMenu.openWith.failed', { message: error.message || error }));
                     } finally {
                         setIsProcessing(false);
                     }

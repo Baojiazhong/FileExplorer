@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useI18n } from '../../i18n';
 import SidebarItem from './SidebarItem';
 
 /**
@@ -12,6 +13,7 @@ import SidebarItem from './SidebarItem';
  * @returns {React.ReactElement} QuickAccess component
  */
 const QuickAccess = ({ isCollapsed = false, onItemClick, currentView, currentPath }) => {
+    const { t } = useI18n();
     const [recentItems, setRecentItems] = useState([]);
 
     /**
@@ -92,7 +94,7 @@ const QuickAccess = ({ isCollapsed = false, onItemClick, currentView, currentPat
 
         return (
             <div className="sidebar-empty-state">
-                <p>No recent locations</p>
+                <p>{t('sidebar.quickAccess.emptyTitle')}</p>
             </div>
         );
     }

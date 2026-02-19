@@ -6,6 +6,7 @@ import { useHistory } from '../providers/HistoryProvider';
 import { useSettings } from '../providers/SettingsProvider';
 import { useSftp } from '../providers/SftpProvider';
 import { invoke } from '@tauri-apps/api/core';
+import { useI18n } from '../i18n';
 import { showError, showConfirm, showSuccess } from '../utils/NotificationSystem';
 import { getFileType } from '../utils/formatters';
 
@@ -62,6 +63,7 @@ import { registerKeydownHandler, KEYDOWN_PRIORITIES } from '../utils/keyboard.js
  * @returns {JSX.Element} The MainLayout component
  */
 const MainLayout = () => {
+    const { t } = useI18n();
     const { theme, toggleTheme } = useTheme();
     const { isLoading, currentDirData, selectedItems, loadDirectory, volumes, focusedItem, setFocusedItem, renameItem: fsRenameItem, openFile } = useFileSystem();
     const { isSftpPath, parseSftpPath } = useSftp();
@@ -428,7 +430,7 @@ const MainLayout = () => {
                         });
 
                         console.log('MainLayout: Auto-indexing initiated:', result);
-                        showSuccess('Background indexing finished');
+                        showSuccess(t('search.backgroundIndexingFinished'));
                     } else {
                         console.log('MainLayout: Search engine already has indexed files, skipping auto-indexing');
                     }
@@ -691,26 +693,14 @@ const MainLayout = () => {
             }
             
             await navigator.clipboard.writeText(pathToCopy);
-            // Show temporary notification
-            const notification = document.createElement('div');
-            notification.textContent = 'Path copied to clipboard';
-            notification.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: var(--accent);
-                color: white;
-                padding: 12px 20px;
-                border-radius: 6px;
-                z-index: 10000;
-                animation: slideIn 0.3s ease-out;
-            `;
-            document.body.appendChild(notification);
-            setTimeout(() => {
-                notification.remove();
-            }, 2000);
+            showSuccess(
+                t('contextMenu.clipboard.pathCopied', {
+                    path: pathToCopy,
+                })
+            );
         } catch (error) {
             console.error('Failed to copy path:', error);
+            showError(t('contextMenu.clipboard.copyPathFailed'));
         }
     }, [currentPath, isSftpPath, parseSftpPath]);
 
@@ -746,7 +736,15 @@ const MainLayout = () => {
         } catch (error) {
             console.error('Rename operation failed:', error);
             if (error.message && error.message.includes('already exists')) {
-                const shouldCreateCopy = await showConfirm(`A file named "${newName}" already exists. Create a copy instead?`, 'File Exists');
+                const shouldCreateCopy = await showConfirm(
+                    t('explorer.create.alreadyExists', {
+                        name: newName,
+                    }),
+                    {
+                        title: t('explorer.rename.fileExistsTitle'),
+                        confirmText: t('explorer.rename.createCopyButton'),
+                    }
+                );
                 if (shouldCreateCopy) {
                     const extension = newName.includes('.') ? newName.split('.').pop() : '';
                     const baseName = extension ? newName.replace(`.${extension}`, '') : newName;
@@ -754,7 +752,11 @@ const MainLayout = () => {
                     handleRename(item, copyName);
                 }
             } else {
-                showError(`Failed to rename: ${error.message || error}`);
+                showError(
+                    t('explorer.rename.failed', {
+                        message: error.message || String(error),
+                    })
+                );
             }
         }
     };
@@ -1273,8 +1275,9 @@ const MainLayout = () => {
                                     className="icon-button"
                                     onClick={handleCut}
                                     disabled={selectedItems.length === 0}
-                                    title="Cut (Ctrl+X)"
-                                    aria-label="Cut selected items"
+                                    title={t('toolbar.cutTitle')}
+                                    aria-label={t('toolbar.cutAria')}
+
                                 >
                                     <span className="icon icon-cut"></span>
                                 </button>
@@ -1283,8 +1286,9 @@ const MainLayout = () => {
                                     className="icon-button"
                                     onClick={handleCopy}
                                     disabled={selectedItems.length === 0}
-                                    title="Copy (Ctrl+C)"
-                                    aria-label="Copy selected items"
+                                    title={t('toolbar.copyTitle')}
+                                    aria-label={t('toolbar.copyAria')}
+
                                 >
                                     <span className="icon icon-copy"></span>
                                 </button>
@@ -1293,8 +1297,9 @@ const MainLayout = () => {
                                     className="icon-button"
                                     onClick={handlePaste}
                                     disabled={!clipboard.items || clipboard.items.length === 0}
-                                    title="Paste (Ctrl+V)"
-                                    aria-label="Paste items"
+                                    title={t('toolbar.pasteTitle')}
+                                    aria-label={t('toolbar.pasteAria')}
+
                                 >
                                     <span className="icon icon-paste"></span>
                                 </button>
@@ -1303,8 +1308,9 @@ const MainLayout = () => {
                                     className="icon-button"
                                     onClick={handleRenameToolbar}
                                     disabled={selectedItems.length !== 1}
-                                    title="Rename (F2)"
-                                    aria-label="Rename selected item"
+                                    title={t('toolbar.renameTitle')}
+                                    aria-label={t('toolbar.renameAria')}
+
                                 >
                                     <span className="icon icon-rename"></span>
                                 </button>
@@ -1313,8 +1319,9 @@ const MainLayout = () => {
                                     className="icon-button"
                                     onClick={handleDelete}
                                     disabled={selectedItems.length === 0}
-                                    title="Delete (Del)"
-                                    aria-label="Delete selected items"
+                                    title={t('toolbar.deleteTitle')}
+                                    aria-label={t('toolbar.deleteAria')}
+
                                 >
                                     <span className="icon icon-trash"></span>
                                 </button>
@@ -1323,8 +1330,9 @@ const MainLayout = () => {
                                     className="icon-button"
                                     onClick={handleProperties}
                                     disabled={selectedItems.length === 0}
-                                    title="Properties (Alt+Enter)"
-                                    aria-label="Show properties"
+                                    title={t('toolbar.propertiesTitle')}
+                                    aria-label={t('toolbar.propertiesAria')}
+
                                 >
                                     <span className="icon icon-properties"></span>
                                 </button>
@@ -1341,26 +1349,31 @@ const MainLayout = () => {
                                 <button
                                     className="icon-button"
                                     onClick={toggleTheme}
-                                    title={theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'}
-                                    aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
+                                    title={theme === 'light' ? t('toolbar.switchToDark') : t('toolbar.switchToLight')}
+                                    aria-label={t('toolbar.switchThemeAria', { theme: theme === 'light' ? 'dark' : 'light' })}
+
                                 >
                                     <span className={`icon ${theme === 'light' ? 'icon-moon' : 'icon-sun'}`}></span>
                                 </button>
                                 
-                                <button
-                                    className="icon-button toggle-hidden-files"
-                                    onClick={handleHiddenFilesToggle}
-                                    title={`${settings.show_hidden_files_and_folders ? 'Hide' : 'Show'} hidden files and folders`}
-                                    aria-label="Toggle hidden files visibility"
-                                >
-                                    <span className={`icon ${settings.show_hidden_files_and_folders ? 'icon-eye' : 'icon-eye-off'}`}></span>
-                                </button>
+                                 <button
+                                     className="icon-button toggle-hidden-files"
+                                     onClick={handleHiddenFilesToggle}
+                                     title={t('toolbar.showHiddenTitle', {
+                                         action: settings.show_hidden_files_and_folders ? t('common.hide') : t('common.show'),
+                                     })}
+                                     aria-label={t('toolbar.toggleHiddenAria')}
+                                 >
+                                     <span className={`icon ${settings.show_hidden_files_and_folders ? 'icon-eye' : 'icon-eye-off'}`}></span>
+                                 </button>
+
                                 
                                 <button
                                     className={`icon-button ${rightPaneMode === 'preview' ? 'active' : ''}`}
                                     onClick={handlePreviewPaneToggle}
-                                    title="Preview Pane"
-                                    aria-label="Toggle preview pane"
+                                    title={t('toolbar.previewPaneTitle')}
+                                    aria-label={t('toolbar.previewPaneAria')}
+
                                 >
                                     <span className="icon icon-preview-pane"></span>
                                 </button>
@@ -1368,8 +1381,9 @@ const MainLayout = () => {
                                 <button
                                     className={`icon-button ${rightPaneMode === 'details' ? 'active' : ''}`}
                                     onClick={handleDetailsPanelToggle}
-                                    title="Details Panel"
-                                    aria-label="Toggle details panel"
+                                    title={t('toolbar.detailsPanelTitle')}
+                                    aria-label={t('toolbar.detailsPanelAria')}
+
                                 >
                                     <span className="icon icon-panel-right"></span>
                                 </button>
@@ -1424,12 +1438,13 @@ const MainLayout = () => {
                         <div className="toolbar-center">
                         </div>
                         <div className="toolbar-right">
-                            <button
-                                className="icon-button"
-                                onClick={() => setIsGlobalSearchOpen(true)}
-                                title="Global Search (Ctrl+Shift+F)"
-                                aria-label="Global Search"
-                            >
+                                 <button
+                                     className="icon-button"
+                                     onClick={() => setIsGlobalSearchOpen(true)}
+                                     title={t('toolbar.globalSearchTitle')}
+                                     aria-label={t('toolbar.globalSearchAria')}
+                                 >
+
                                 <span className="icon icon-search-global"></span>
                             </button>
                         </div>
@@ -1464,7 +1479,8 @@ const MainLayout = () => {
                                      onMouseDown={handleRightPaneResizeStart}
                                      role="separator"
                                      aria-orientation="vertical"
-                                     aria-label="Resize right pane"
+                                      aria-label={t('toolbar.resizeRightPaneAria')}
+
                                  ></div>
                              )}
 
