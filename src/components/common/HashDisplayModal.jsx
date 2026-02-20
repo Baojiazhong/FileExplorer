@@ -1,6 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import Modal from '../common/Modal';
 import Button from '../common/Button';
+import { useI18n } from '../../i18n';
 import { showSuccess, showError } from '../../utils/NotificationSystem';
 
 /**
@@ -13,6 +14,7 @@ import { showSuccess, showError } from '../../utils/NotificationSystem';
  * @returns {React.ReactElement|null} Hash display modal or null if no hash provided
  */
 const HashDisplayModal = ({ isOpen, onClose, hash, fileName }) => {
+    const { t } = useI18n();
     const textAreaRef = useRef(null);
 
     /**
@@ -36,17 +38,17 @@ const HashDisplayModal = ({ isOpen, onClose, hash, fileName }) => {
         try {
             // Try modern clipboard API first
             await navigator.clipboard.writeText(hash);
-            showSuccess('Hash copied to clipboard!');
+            showSuccess(t('hashDisplay.toast.copied'));
         } catch (error) {
             try {
                 // Fallback to document.execCommand
                 if (textAreaRef.current) {
                     textAreaRef.current.select();
                     document.execCommand('copy');
-                    showSuccess('Hash copied to clipboard!');
+                    showSuccess(t('hashDisplay.toast.copied'));
                 }
             } catch (fallbackError) {
-                showError('Failed to copy to clipboard. Please copy manually.');
+                showError(t('hashDisplay.toast.copyFailed'));
             }
         }
     };
@@ -71,7 +73,7 @@ const HashDisplayModal = ({ isOpen, onClose, hash, fileName }) => {
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title={`Hash for "${fileName}"`}
+            title={t('hashDisplay.title', { name: fileName })}
             size="md"
             footer={
                 <>
@@ -79,20 +81,20 @@ const HashDisplayModal = ({ isOpen, onClose, hash, fileName }) => {
                         variant="ghost"
                         onClick={onClose}
                     >
-                        Close
+                        {t('common.close')}
                     </Button>
                     <Button
                         variant="primary"
                         onClick={copyToClipboard}
                     >
-                        Copy to Clipboard
+                        {t('hashDisplay.copy')}
                     </Button>
                 </>
             }
         >
             <div className="form-group">
                 <label htmlFor="hash-display">
-                    Generated Hash:
+                    {t('hashDisplay.generatedHashLabel')}
                 </label>
                 <textarea
                     ref={textAreaRef}
@@ -110,7 +112,7 @@ const HashDisplayModal = ({ isOpen, onClose, hash, fileName }) => {
                     onKeyDown={handleKeyDown}
                 />
                 <div className="input-hint">
-                    The hash has been generated successfully. Use Ctrl+C (Cmd+C on Mac) or click the button to copy.
+                    {t('hashDisplay.hint')}
                 </div>
             </div>
         </Modal>

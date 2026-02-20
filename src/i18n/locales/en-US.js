@@ -418,6 +418,16 @@ const enUS = {
             saveFailed: 'Failed to generate hash file: {message}',
         },
     },
+    hashDisplay: {
+        title: 'Hash for "{name}"',
+        generatedHashLabel: 'Generated hash:',
+        hint: 'The hash has been generated successfully. Use Ctrl+C (Cmd+C on Mac) or click the button to copy.',
+        copy: 'Copy to clipboard',
+        toast: {
+            copied: 'Copied to clipboard.',
+            copyFailed: 'Failed to copy to clipboard.',
+        },
+    },
     templates: {
         title: 'Templates',
         closeTitle: 'Close Templates',
@@ -470,9 +480,11 @@ const enUS = {
     search: {
         globalTitle: 'Global Search',
         searching: 'Searching…',
+        calculating: 'Calculating…',
         clearSearch: 'Clear search',
         searchEnter: 'Search (Enter)',
         filtersTitle: 'Filters & Options',
+        filtersToggleTitle: 'Search filters and options',
         filterOptionsTitle: 'Filter Options',
         filterDirectoriesOnly: 'Show directories only',
         filterShowHidden: 'Show hidden files',

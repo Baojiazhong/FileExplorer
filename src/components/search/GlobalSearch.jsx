@@ -388,7 +388,7 @@ const GlobalSearch = ({ isOpen, onClose }) => {
 
     // Format time remaining
     const formatTimeRemaining = (ms) => {
-        if (!ms) return 'Calculating...';
+        if (!ms) return t('search.calculating');
 
         const seconds = Math.floor(ms / 1000);
         const minutes = Math.floor(seconds / 60);
@@ -1137,7 +1137,7 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                                     console.log('Filter button clicked, current state:', filtersExpanded);
                                     setFiltersExpanded(!filtersExpanded);
                                 }}
-                                title="Search filters and options"
+                                title={t('search.filtersToggleTitle')}
                                 style={{
                                     position: 'absolute',
                                     right: '8px',

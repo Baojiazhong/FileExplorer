@@ -415,6 +415,16 @@ const zhCN = {
             saveFailed: '生成 Hash 文件失败：{message}',
         },
     },
+    hashDisplay: {
+        title: '“{name}” 的 Hash',
+        generatedHashLabel: '生成的 Hash：',
+        hint: 'Hash 已生成成功。使用 Ctrl+C（Mac 上为 Cmd+C）或点击按钮复制。',
+        copy: '复制到剪贴板',
+        toast: {
+            copied: '已复制到剪贴板。',
+            copyFailed: '复制到剪贴板失败。',
+        },
+    },
     templates: {
         title: 'Templates',
         closeTitle: '关闭 Templates',
@@ -467,9 +477,11 @@ const zhCN = {
     search: {
         globalTitle: '全局搜索',
         searching: '搜索中…',
+        calculating: '计算中…',
         clearSearch: '清空搜索',
         searchEnter: '搜索（Enter）',
         filtersTitle: '筛选与选项',
+        filtersToggleTitle: '搜索筛选与选项',
         filterOptionsTitle: '筛选选项',
         filterDirectoriesOnly: '仅显示文件夹',
         filterShowHidden: '显示隐藏文件',

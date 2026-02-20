@@ -81,7 +81,14 @@ const FileItem = ({
         } catch (error) {
             console.error('Rename operation failed:', error);
             if (error.message && error.message.includes('already exists')) {
-                const shouldCreateCopy = await showConfirm(`A file named "${newName}" already exists. Create a copy instead?`, 'File Exists');
+                const shouldCreateCopy = await showConfirm(
+                    t('explorer.create.alreadyExists', { name: newName }),
+                    {
+                        title: t('explorer.rename.fileExistsTitle'),
+                        confirmText: t('explorer.rename.createCopyButton'),
+                        cancelText: t('common.cancel'),
+                    }
+                );
                 if (shouldCreateCopy) {
                     const extension = newName.includes('.') ? newName.split('.').pop() : '';
                     const baseName = extension ? newName.replace(`.${extension}`, '') : newName;
@@ -89,7 +96,7 @@ const FileItem = ({
                     handleRename(item, copyName);
                 }
             } else {
-                showError(`Failed to rename: ${error.message || error}`);
+                showError(t('explorer.rename.failed', { message: error.message || error }));
             }
         }
     };
