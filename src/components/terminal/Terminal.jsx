@@ -62,12 +62,7 @@ const Terminal = ({ isOpen, onToggle }) => {
         if (commandHistory.length === 0) {
             const welcomeMessage = {
                 type: 'system',
-                content: `File Explorer Terminal v2.0
-Current directory: ${currentPath || '/'}
-
-Type 'help' to see available commands.
-Command history is persistent across sessions.
-Use Ctrl+R for reverse search, Ctrl+C to interrupt commands.`,
+                content: t('terminal.welcome', { path: currentPath || '/' }),
                 timestamp: new Date().toLocaleTimeString(),
             };
             setCommandHistory([welcomeMessage]);
@@ -188,7 +183,7 @@ Use Ctrl+R for reverse search, Ctrl+C to interrupt commands.`,
                     // Handle status 1 with empty stdout/stderr (command not found)
                     if (parsedOutput.status === 1) {
                         if (parsedOutput.stdout === "" && parsedOutput.stderr === "") {
-                            return { type: 'error', content: `Command not found: ${command.split(' ')[0]}` };
+                            return { type: 'error', content: t('terminal.errors.commandNotFound', { command: command.split(' ')[0] }) };
                         } else if (parsedOutput.stderr) {
                             return { type: 'error', content: parsedOutput.stderr.trim() };
                         }
@@ -209,7 +204,7 @@ Use Ctrl+R for reverse search, Ctrl+C to interrupt commands.`,
                         type: parsedOutput.status === 0 ? 'output' : 'error',
                         content: parsedOutput.status === 0 ?
                             (output || '') :
-                            `Command failed with status ${parsedOutput.status}`
+                            t('terminal.errors.commandFailedWithStatus', { status: parsedOutput.status })
                     };
                 } catch (e) {
                     // Not JSON, return as is
@@ -224,7 +219,7 @@ Use Ctrl+R for reverse search, Ctrl+C to interrupt commands.`,
                 // Handle command not found
                 if (output.status === 1) {
                     if (output.stdout === "" && output.stderr === "") {
-                        return { type: 'error', content: `Command not found: ${command.split(' ')[0]}` };
+                        return { type: 'error', content: t('terminal.errors.commandNotFound', { command: command.split(' ')[0] }) };
                     } else if (output.stderr) {
                         return { type: 'error', content: output.stderr };
                     }
@@ -237,7 +232,7 @@ Use Ctrl+R for reverse search, Ctrl+C to interrupt commands.`,
                 // Empty response
                 return {
                     type: output.status === 0 ? 'output' : 'error',
-                    content: output.status === 0 ? '' : `Command failed with status ${output.status}`
+                    content: output.status === 0 ? '' : t('terminal.errors.commandFailedWithStatus', { status: output.status })
                 };
             }
 
@@ -250,7 +245,7 @@ Use Ctrl+R for reverse search, Ctrl+C to interrupt commands.`,
             if (error.message === 'Command cancelled') {
                 return {
                     type: 'system',
-                    content: 'Command cancelled by user',
+                    content: t('terminal.system.commandCancelled'),
                 };
             }
 
@@ -283,7 +278,7 @@ Use Ctrl+R for reverse search, Ctrl+C to interrupt commands.`,
 
             return {
                 type: 'error',
-                content: `Error: ${errorMessage}`,
+                content: t('terminal.errors.errorPrefix', { message: errorMessage }),
             };
         } finally {
             setIsExecuting(false);
@@ -305,40 +300,7 @@ Use Ctrl+R for reverse search, Ctrl+C to interrupt commands.`,
             case 'help':
                 return {
                     type: 'output',
-                    content: `Available commands:
-  help                    - Show this help message
-  clear [history]         - Clear the terminal (or history with 'clear history')
-  history                 - Show recent commands
-  ls, dir                 - List directory contents
-  pwd                     - Print working directory
-  cd [path]               - Change directory (supports .., ~, relative/absolute paths)
-  echo <text>             - Print text
-  mkdir <name>            - Create directory
-  touch <name>            - Create file
-  cat <file>              - Display file contents
-  tree                    - Show enhanced directory tree with icons
-  find <pattern>          - Search for files and directories by name
-  which <command>         - Show command type and location
-  whoami                  - Show current user
-  date                    - Show current date and time
-  ping <host>             - Test network connectivity (auto-limited to 4 packets)
-  exit                    - Close the terminal
-  
-  Enhanced features:
-  • Persistent command history across sessions (up to 50 commands)
-  • Smart tab completion for commands and file paths
-  • Real-time directory synchronization with file explorer
-  • Syntax highlighting for file listings and paths
-  • File type icons and visual formatting
-  
-  Keyboard shortcuts:
-  Ctrl+C                  - Interrupt running command or clear input
-  Ctrl+R                  - Reverse search through command history
-  ↑/↓                     - Navigate persistent command history
-  Tab                     - Smart auto-complete (commands/paths)
-  Esc                     - Exit search mode
-  
-  Note: All system commands run in the current directory.`,
+                    content: t('terminal.help.text'),
                 };
 
             case 'clear':
@@ -348,7 +310,7 @@ Use Ctrl+R for reverse search, Ctrl+C to interrupt commands.`,
                     localStorage.removeItem('terminal-command-history');
                     return {
                         type: 'system',
-                        content: 'Command history cleared.',
+                        content: t('terminal.system.historyCleared'),
                     };
                 } else {
                     // Clear terminal display
@@ -360,7 +322,7 @@ Use Ctrl+R for reverse search, Ctrl+C to interrupt commands.`,
                 if (persistentHistory.length === 0) {
                     return {
                         type: 'output',
-                        content: 'No command history available.',
+                        content: t('terminal.history.noHistory'),
                     };
                 }
 
@@ -371,7 +333,7 @@ Use Ctrl+R for reverse search, Ctrl+C to interrupt commands.`,
 
                 return {
                     type: 'output',
-                    content: `Recent commands:\n${recentCommands}\n\nTip: Use 'clear history' to clear command history.`,
+                    content: t('terminal.history.recentWithTip', { commands: recentCommands }),
                 };
 
 
@@ -467,7 +429,7 @@ Use Ctrl+R for reverse search, Ctrl+C to interrupt commands.`,
                     console.error('[Terminal cd] Error in cd command:', error);
                     return {
                         type: 'error',
-                        content: `cd: ${args[0] || ''}: No such file or directory`,
+                        content: t('terminal.errors.cdNoSuchFileOrDir', { path: args[0] || '' }),
                     };
                 }
             }
@@ -499,7 +461,7 @@ Use Ctrl+R for reverse search, Ctrl+C to interrupt commands.`,
                     if (data.directories.length === 0 && data.files.length === 0) {
                         return {
                             type: 'output',
-                            content: 'Directory is empty',
+                            content: t('terminal.ls.directoryEmpty'),
                         };
                     }
                     
@@ -518,7 +480,7 @@ Use Ctrl+R for reverse search, Ctrl+C to interrupt commands.`,
                 } catch (error) {
                     return {
                         type: 'error',
-                        content: `Cannot list directory: ${error.message || error}`,
+                        content: t('terminal.errors.cannotListDirectory', { message: error.message || error }),
                     };
                 }
 
@@ -528,13 +490,13 @@ Use Ctrl+R for reverse search, Ctrl+C to interrupt commands.`,
                     const data = JSON.parse(dirContent);
                     
                     const pathParts = currentPath.split('/').filter(part => part);
-                    const folderName = pathParts[pathParts.length - 1] || 'root';
+                    const folderName = pathParts[pathParts.length - 1] || t('terminal.tree.rootFolderName');
                     
                     let tree = `📁 ${folderName}/\n`;
                     
                     const totalItems = data.directories.length + data.files.length;
                     if (totalItems === 0) {
-                        tree += '   (empty directory)\n';
+                        tree += `   ${t('terminal.tree.emptyDirectory')}\n`;
                         return {
                             type: 'output',
                             content: tree,
@@ -572,7 +534,7 @@ Use Ctrl+R for reverse search, Ctrl+C to interrupt commands.`,
                         tree += `${connector}${icon} ${file.name}\n`;
                     });
 
-                    tree += `\n📊 ${sortedDirectories.length} directories, ${sortedFiles.length} files`;
+                    tree += `\n📊 ${t('terminal.tree.summary', { directories: sortedDirectories.length, files: sortedFiles.length })}`;
 
                     return {
                         type: 'output',
@@ -581,7 +543,7 @@ Use Ctrl+R for reverse search, Ctrl+C to interrupt commands.`,
                 } catch (error) {
                     return {
                         type: 'error',
-                        content: `Cannot generate tree: ${error.message || error}`,
+                        content: t('terminal.errors.cannotGenerateTree', { message: error.message || error }),
                     };
                 }
 
@@ -595,7 +557,7 @@ Use Ctrl+R for reverse search, Ctrl+C to interrupt commands.`,
                 if (args.length === 0) {
                     return {
                         type: 'error',
-                        content: 'mkdir: missing operand',
+                        content: t('terminal.mkdir.missingOperand'),
                     };
                 }
                 try {
@@ -605,12 +567,12 @@ Use Ctrl+R for reverse search, Ctrl+C to interrupt commands.`,
                     });
                     return {
                         type: 'output',
-                        content: `Directory '${args[0]}' created successfully.`,
+                        content: t('terminal.mkdir.created', { name: args[0] }),
                     };
                 } catch (error) {
                     return {
                         type: 'error',
-                        content: `mkdir: ${error.message || error}`,
+                        content: t('terminal.mkdir.failed', { message: error.message || error }),
                     };
                 }
 
@@ -618,7 +580,7 @@ Use Ctrl+R for reverse search, Ctrl+C to interrupt commands.`,
                 if (args.length === 0) {
                     return {
                         type: 'error',
-                        content: 'touch: missing operand',
+                        content: t('terminal.touch.missingOperand'),
                     };
                 }
                 try {
@@ -628,12 +590,12 @@ Use Ctrl+R for reverse search, Ctrl+C to interrupt commands.`,
                     });
                     return {
                         type: 'output',
-                        content: `File '${args[0]}' created successfully.`,
+                        content: t('terminal.touch.created', { name: args[0] }),
                     };
                 } catch (error) {
                     return {
                         type: 'error',
-                        content: `touch: ${error.message || error}`,
+                        content: t('terminal.touch.failed', { message: error.message || error }),
                     };
                 }
 
@@ -641,7 +603,7 @@ Use Ctrl+R for reverse search, Ctrl+C to interrupt commands.`,
                 if (args.length === 0) {
                     return {
                         type: 'error',
-                        content: 'cat: missing operand',
+                        content: t('terminal.cat.missingOperand'),
                     };
                 }
                 try {
@@ -654,7 +616,7 @@ Use Ctrl+R for reverse search, Ctrl+C to interrupt commands.`,
                 } catch (error) {
                     return {
                         type: 'error',
-                        content: `cat: ${error.message || error}`,
+                        content: t('terminal.cat.failed', { message: error.message || error }),
                     };
                 }
 
@@ -662,7 +624,7 @@ Use Ctrl+R for reverse search, Ctrl+C to interrupt commands.`,
                 if (args.length === 0) {
                     return {
                         type: 'error',
-                        content: 'find: missing search pattern\nUsage: find <pattern>',
+                        content: t('terminal.find.missingPattern'),
                     };
                 }
                 
@@ -691,18 +653,18 @@ Use Ctrl+R for reverse search, Ctrl+C to interrupt commands.`,
                     if (matches.length === 0) {
                         return {
                             type: 'output',
-                            content: `No files or directories found matching '${args[0]}'`,
+                            content: t('terminal.find.noMatches', { pattern: args[0] }),
                         };
                     }
                     
                     return {
                         type: 'output',
-                        content: `Found ${matches.length} matches for '${args[0]}':\n\n${matches.join('\n')}`,
+                        content: t('terminal.find.matches', { count: matches.length, pattern: args[0], matches: matches.join('\n') }),
                     };
                 } catch (error) {
                     return {
                         type: 'error',
-                        content: `find: ${error.message || error}`,
+                        content: t('terminal.find.failed', { message: error.message || error }),
                     };
                 }
 
@@ -710,7 +672,7 @@ Use Ctrl+R for reverse search, Ctrl+C to interrupt commands.`,
                 if (args.length === 0) {
                     return {
                         type: 'error',
-                        content: 'which: missing command name',
+                        content: t('terminal.which.missingCommandName'),
                     };
                 }
                 
@@ -720,7 +682,7 @@ Use Ctrl+R for reverse search, Ctrl+C to interrupt commands.`,
                 if (builtinCommands.includes(searchCommand)) {
                     return {
                         type: 'output',
-                        content: `${searchCommand}: built-in terminal command`,
+                        content: t('terminal.which.builtin', { command: searchCommand }),
                     };
                 } else {
                     // Check if it's a system command by trying to execute it with --version or --help
@@ -731,12 +693,12 @@ Use Ctrl+R for reverse search, Ctrl+C to interrupt commands.`,
                         });
                         return {
                             type: 'output',
-                            content: `${searchCommand}: system command (use system PATH)`,
+                            content: t('terminal.which.system', { command: searchCommand }),
                         };
                     } catch {
                         return {
                             type: 'output',
-                            content: `${searchCommand}: command not found`,
+                            content: t('terminal.which.notFound', { command: searchCommand }),
                         };
                     }
                 }
@@ -745,7 +707,7 @@ Use Ctrl+R for reverse search, Ctrl+C to interrupt commands.`,
                 onToggle();
                 return {
                     type: 'system',
-                    content: 'Terminal closed.',
+                    content: t('terminal.system.closed'),
                 };
 
             default:
@@ -900,7 +862,7 @@ Use Ctrl+R for reverse search, Ctrl+C to interrupt commands.`,
                 // Show available options in terminal
                 const optionsMessage = {
                     type: 'system',
-                    content: `Available commands: ${matches.join(', ')}`,
+                    content: t('terminal.completion.availableCommands', { commands: matches.join(', ') }),
                     timestamp: new Date().toLocaleTimeString(),
                 };
                 setCommandHistory(prev => [...prev, optionsMessage]);
@@ -926,7 +888,7 @@ Use Ctrl+R for reverse search, Ctrl+C to interrupt commands.`,
                     // Show available files/directories
                     const optionsMessage = {
                         type: 'system',
-                        content: `Available items: ${matches.join(', ')}`,
+                        content: t('terminal.completion.availableItems', { items: matches.join(', ') }),
                         timestamp: new Date().toLocaleTimeString(),
                     };
                     setCommandHistory(prev => [...prev, optionsMessage]);
@@ -1035,7 +997,7 @@ Use Ctrl+R for reverse search, Ctrl+C to interrupt commands.`,
                 // Add visual feedback that the command was interrupted
                 setCommandHistory(prev => [...prev, {
                     type: 'error',
-                    content: '❌ Command interrupted by user (Ctrl+C)',
+                    content: t('terminal.system.commandInterrupted'),
                     timestamp: new Date().toLocaleTimeString(),
                 }]);
                 
@@ -1157,7 +1119,7 @@ Use Ctrl+R for reverse search, Ctrl+C to interrupt commands.`,
                 ))}
                 <form onSubmit={handleSubmit} className="terminal-input-line">
                     {isSearchMode ? (
-                        <span className="terminal-prompt-search">(reverse-i-search) </span>
+                        <span className="terminal-prompt-search">{t('terminal.search.prompt')}</span>
                     ) : (
                         <div className="terminal-current-prompt">
                             <span className="terminal-prompt-user">{getPrompt().split('@')[0]}</span>
@@ -1185,7 +1147,7 @@ Use Ctrl+R for reverse search, Ctrl+C to interrupt commands.`,
                     {!isSearchMode && isExecuting && (
                         <span className="terminal-executing">
                             <span className="spinner-small"></span>
-                            <span className="terminal-interrupt-hint">⏱️ Running... Press Ctrl+C to interrupt</span>
+                            <span className="terminal-interrupt-hint">{t('terminal.system.runningHint')}</span>
                         </span>
                     )}
                 </form>

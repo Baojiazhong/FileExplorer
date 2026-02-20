@@ -829,6 +829,70 @@ const zhCN = {
         closeTitle: '关闭终端',
         closeAria: '关闭终端',
         searchPlaceholder: '输入以搜索历史记录…',
+        welcome: "文件管理器终端 v2.0\n当前目录：{path}\n\n输入 'help' 查看可用命令。\n命令历史会在会话间持久保存。\n使用 Ctrl+R 反向搜索，Ctrl+C 中断命令。",
+        help: {
+            text: `可用命令：\n  help                    - 显示此帮助信息\n  clear [history]         - 清空终端（或使用 'clear history' 清空历史）\n  history                 - 显示最近命令\n  ls, dir                 - 列出目录内容\n  pwd                     - 显示当前工作目录\n  cd [path]               - 切换目录（支持 ..、~、相对/绝对路径）\n  echo <text>             - 输出文本\n  mkdir <name>            - 创建目录\n  touch <name>            - 创建文件\n  cat <file>              - 显示文件内容\n  tree                    - 显示带图标的目录树\n  find <pattern>          - 按名称搜索文件与目录\n  which <command>         - 显示命令类型与位置\n  whoami                  - 显示当前用户\n  date                    - 显示当前日期与时间\n  ping <host>             - 测试网络连通性（默认限制为 4 个包）\n  exit                    - 关闭终端\n  \n  增强功能：\n  • 命令历史跨会话持久保存（最多 50 条）\n  • 智能 Tab 补全命令与路径\n  • 与文件管理器实时同步当前目录\n  • 文件列表与路径语法高亮\n  • 文件类型图标与视觉格式化\n  \n  键盘快捷键：\n  Ctrl+C                  - 中断正在运行的命令或清空输入\n  Ctrl+R                  - 在命令历史中反向搜索\n  ↑/↓                     - 浏览持久化命令历史\n  Tab                     - 智能自动补全（命令/路径）\n  Esc                     - 退出搜索模式\n  \n  提示：所有系统命令都在当前目录下运行。`,
+        },
+        system: {
+            historyCleared: '命令历史已清空。',
+            commandCancelled: '命令已被用户取消',
+            closed: '终端已关闭。',
+            commandInterrupted: '❌ 命令已被用户中断（Ctrl+C）',
+            runningHint: '⏱️ 运行中…按 Ctrl+C 中断',
+        },
+        history: {
+            noHistory: '暂无命令历史。',
+            recentWithTip: "最近命令：\n{commands}\n\n提示：使用 'clear history' 可清空命令历史。",
+        },
+        errors: {
+            commandNotFound: '未找到命令：{command}',
+            commandFailedWithStatus: '命令执行失败，状态码 {status}',
+            errorPrefix: '错误：{message}',
+            cdNoSuchFileOrDir: 'cd: {path}: 没有那个文件或目录',
+            cannotListDirectory: '无法列出目录：{message}',
+            cannotGenerateTree: '无法生成目录树：{message}',
+        },
+        ls: {
+            directoryEmpty: '目录为空',
+        },
+        tree: {
+            rootFolderName: '根目录',
+            emptyDirectory: '（空目录）',
+            summary: '{directories} 个目录，{files} 个文件',
+        },
+        mkdir: {
+            missingOperand: 'mkdir: 缺少操作数',
+            created: "目录 '{name}' 创建成功。",
+            failed: 'mkdir: {message}',
+        },
+        touch: {
+            missingOperand: 'touch: 缺少操作数',
+            created: "文件 '{name}' 创建成功。",
+            failed: 'touch: {message}',
+        },
+        cat: {
+            missingOperand: 'cat: 缺少操作数',
+            failed: 'cat: {message}',
+        },
+        find: {
+            missingPattern: 'find: 缺少搜索模式\n用法：find <pattern>',
+            noMatches: "未找到匹配“{pattern}”的文件或目录",
+            matches: "找到 {count} 个匹配“{pattern}”：\n\n{matches}",
+            failed: 'find: {message}',
+        },
+        which: {
+            missingCommandName: 'which: 缺少命令名',
+            builtin: '{command}：终端内置命令',
+            system: '{command}：系统命令（使用系统 PATH）',
+            notFound: '{command}：未找到命令',
+        },
+        completion: {
+            availableCommands: '可用命令：{commands}',
+            availableItems: '可用项：{items}',
+        },
+        search: {
+            prompt: '（反向搜索） ',
+        },
     },
     tabs: {
         closeTabAria: '关闭标签页',

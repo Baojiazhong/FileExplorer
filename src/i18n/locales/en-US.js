@@ -315,20 +315,20 @@ const enUS = {
             removeSuccess: 'SFTP connection "{name}" removed successfully.',
             removeFailed: 'Failed to remove SFTP connection: {message}',
         },
-         sections: {
-             quickAccess: 'Quick Access',
-             thisPC: 'This PC',
-             favorites: 'Favorites',
-             drives: 'Drives',
-             network: 'Network',
-         },
-         quickAccess: {
-             emptyTitle: 'No recent locations',
-         },
-         sectionActions: {
+        sections: {
+            quickAccess: 'Quick Access',
+            thisPC: 'This PC',
+            favorites: 'Favorites',
+            drives: 'Drives',
+            network: 'Network',
+        },
+        quickAccess: {
+            emptyTitle: 'No recent locations',
+        },
+        sectionActions: {
             expand: 'Expand {name}',
             collapse: 'Collapse {name}',
-         },
+        },
         addSourceTooltip: 'Add to Favorites',
         userVolume: {
             name: 'User ({disk})',
@@ -784,6 +784,7 @@ const enUS = {
         accessRightsLabel: 'Access rights:',
         octalLabel: 'Octal:',
         symlinkLabel: 'Symlink:',
+    
         folderType: 'Folder',
         bytesValue: '({bytes} bytes)',
         sizeSummary: '{files} files, {folders} folders',
@@ -799,6 +800,70 @@ const enUS = {
         closeTitle: 'Close terminal',
         closeAria: 'Close terminal',
         searchPlaceholder: 'Start typing to search history…',
+        welcome: "File Explorer Terminal v2.0\nCurrent directory: {path}\n\nType 'help' to see available commands.\nCommand history is persistent across sessions.\nUse Ctrl+R for reverse search, Ctrl+C to interrupt commands.",
+        help: {
+            text: `Available commands:\n  help                    - Show this help message\n  clear [history]         - Clear the terminal (or history with 'clear history')\n  history                 - Show recent commands\n  ls, dir                 - List directory contents\n  pwd                     - Print working directory\n  cd [path]               - Change directory (supports .., ~, relative/absolute paths)\n  echo <text>             - Print text\n  mkdir <name>            - Create directory\n  touch <name>            - Create file\n  cat <file>              - Display file contents\n  tree                    - Show enhanced directory tree with icons\n  find <pattern>          - Search for files and directories by name\n  which <command>         - Show command type and location\n  whoami                  - Show current user\n  date                    - Show current date and time\n  ping <host>             - Test network connectivity (auto-limited to 4 packets)\n  exit                    - Close the terminal\n  \n  Enhanced features:\n  • Persistent command history across sessions (up to 50 commands)\n  • Smart tab completion for commands and file paths\n  • Real-time directory synchronization with file explorer\n  • Syntax highlighting for file listings and paths\n  • File type icons and visual formatting\n  \n  Keyboard shortcuts:\n  Ctrl+C                  - Interrupt running command or clear input\n  Ctrl+R                  - Reverse search through command history\n  ↑/↓                     - Navigate persistent command history\n  Tab                     - Smart auto-complete (commands/paths)\n  Esc                     - Exit search mode\n  \n  Note: All system commands run in the current directory.`,
+        },
+        system: {
+            historyCleared: 'Command history cleared.',
+            commandCancelled: 'Command cancelled by user',
+            closed: 'Terminal closed.',
+            commandInterrupted: '❌ Command interrupted by user (Ctrl+C)',
+            runningHint: '⏱️ Running... Press Ctrl+C to interrupt',
+        },
+        history: {
+            noHistory: 'No command history available.',
+            recentWithTip: "Recent commands:\n{commands}\n\nTip: Use 'clear history' to clear command history.",
+        },
+        errors: {
+            commandNotFound: 'Command not found: {command}',
+            commandFailedWithStatus: 'Command failed with status {status}',
+            errorPrefix: 'Error: {message}',
+            cdNoSuchFileOrDir: 'cd: {path}: No such file or directory',
+            cannotListDirectory: 'Cannot list directory: {message}',
+            cannotGenerateTree: 'Cannot generate tree: {message}',
+        },
+        ls: {
+            directoryEmpty: 'Directory is empty',
+        },
+        tree: {
+            rootFolderName: 'root',
+            emptyDirectory: '(empty directory)',
+            summary: '{directories} directories, {files} files',
+        },
+        mkdir: {
+            missingOperand: 'mkdir: missing operand',
+            created: "Directory '{name}' created successfully.",
+            failed: 'mkdir: {message}',
+        },
+        touch: {
+            missingOperand: 'touch: missing operand',
+            created: "File '{name}' created successfully.",
+            failed: 'touch: {message}',
+        },
+        cat: {
+            missingOperand: 'cat: missing operand',
+            failed: 'cat: {message}',
+        },
+        find: {
+            missingPattern: 'find: missing search pattern\nUsage: find <pattern>',
+            noMatches: "No files or directories found matching '{pattern}'",
+            matches: "Found {count} matches for '{pattern}':\n\n{matches}",
+            failed: 'find: {message}',
+        },
+        which: {
+            missingCommandName: 'which: missing command name',
+            builtin: '{command}: built-in terminal command',
+            system: '{command}: system command (use system PATH)',
+            notFound: '{command}: command not found',
+        },
+        completion: {
+            availableCommands: 'Available commands: {commands}',
+            availableItems: 'Available items: {items}',
+        },
+        search: {
+            prompt: '(reverse-i-search) ',
+        },
     },
     tabs: {
         closeTabAria: 'Close tab',
