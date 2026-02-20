@@ -1218,7 +1218,7 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                                 borderBottom: '1px solid var(--border)',
                                 fontWeight: '500'
                             }}>
-                                Suggestions
+                                {t('search.suggestions.title')}
                                 {isLoadingSuggestions && (
                                     <span style={{ marginLeft: '8px', fontStyle: 'italic' }}>{t('common.loading')}</span>
                                 )}
@@ -1273,26 +1273,26 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                             {/* Current Directory Context */}
                             {currentDirectory && (
                                 <div className="search-control-section">
-                                    <h4 style={{ margin: '0 0 var(--space-sm) 0', fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-medium)' }}>Current Context</h4>
+                                    <h4 style={{ margin: '0 0 var(--space-sm) 0', fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-medium)' }}>{t('search.currentContext.title')}</h4>
                                     <div className="current-directory-info">
-                                        <span className="directory-label">Current Directory:</span>
+                                        <span className="directory-label">{t('search.currentContext.currentDirectory')}</span>
                                         <span className="directory-path" title={currentDirectory}>
                                             {currentDirectory}
                                         </span>
-                                        <small>(Files in this directory will be ranked higher)</small>
+                                        <small>{t('search.currentContext.rankingHint')}</small>
                                     </div>
                                 </div>
                             )}
 
                             {/* Sort Controls */}
                             <div className="search-control-section">
-                                <h4 style={{ margin: 'var(--space-md) 0 var(--space-sm) 0', fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-medium)' }}>Sort Results By</h4>
+                                <h4 style={{ margin: 'var(--space-md) 0 var(--space-sm) 0', fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-medium)' }}>{t('search.sort.title')}</h4>
                                 <div className="sort-controls">
                                     {[
-                                        { value: 'relevance', label: 'Relevance (Score)' },
-                                        { value: 'name', label: 'Name' },
-                                        { value: 'path', label: 'Path' },
-                                        { value: 'extension', label: 'File Type' }
+                                        { value: 'relevance', label: t('search.sort.option.relevance') },
+                                        { value: 'name', label: t('search.sort.option.name') },
+                                        { value: 'path', label: t('search.sort.option.path') },
+                                        { value: 'extension', label: t('search.sort.option.extension') }
                                     ].map(option => (
                                         <label key={option.value} className="radio-option">
                                             <input
@@ -1422,45 +1422,45 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                                 <div className="search-control-section">
                                     <h4 style={{ margin: 'var(--space-md) 0 var(--space-sm) 0', fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-medium)' }}>{t('search.engineStatsTitle')}</h4>
                                     <div className="search-engine-info-compact">
-                                        <div className="info-grid">
-                                            <div className="info-item">
-                                                <span className="info-label">Engine Status:</span>
-                                                <span className="info-value">{searchEngineInfo.status || t('common.unknown')}</span>
-                                            </div>
-                                            <div className="info-item">
-                                                <span className="info-label">Indexed Files:</span>
-                                                <span className="info-value">{searchEngineInfo.stats?.trie_size || 0}</span>
-                                            </div>
-                                            <div className="info-item">
-                                                <span className="info-label">Cache Size:</span>
-                                                <span className="info-value">{searchEngineInfo.stats?.cache_size || 0}</span>
-                                            </div>
-                                            <div className="info-item">
-                                                <span className="info-label">Total Searches:</span>
-                                                <span className="info-value">{searchMetrics.total_searches || 0}</span>
-                                            </div>
-                                            <div className="info-item">
-                                                <span className="info-label">Avg Search Time:</span>
-                                                <span className="info-value">{searchMetrics.average_search_time_ms || 0}ms</span>
-                                            </div>
-                                            <div className="info-item">
-                                                <span className="info-label">Cache Hit Rate:</span>
-                                                <span className="info-value">
-                                                    {searchMetrics.cache_hit_rate ? 
-                                                        `${(searchMetrics.cache_hit_rate * 100).toFixed(1)}%` :
-                                                        t('common.notAvailableShort')
-                                                    }
-                                                </span>
-                                            </div>
-                                            {searchEngineInfo.last_updated && (
+                                            <div className="info-grid">
                                                 <div className="info-item">
-                                                    <span className="info-label">Last Updated:</span>
+                                                    <span className="info-label">{t('search.engineStats.engineStatus')}</span>
+                                                    <span className="info-value">{searchEngineInfo.status || t('common.unknown')}</span>
+                                                </div>
+                                                <div className="info-item">
+                                                    <span className="info-label">{t('search.engineStats.indexedFiles')}</span>
+                                                    <span className="info-value">{searchEngineInfo.stats?.trie_size || 0}</span>
+                                                </div>
+                                                <div className="info-item">
+                                                    <span className="info-label">{t('search.engineStats.cacheSize')}</span>
+                                                    <span className="info-value">{searchEngineInfo.stats?.cache_size || 0}</span>
+                                                </div>
+                                                <div className="info-item">
+                                                    <span className="info-label">{t('search.engineStats.totalSearches')}</span>
+                                                    <span className="info-value">{searchMetrics.total_searches || 0}</span>
+                                                </div>
+                                                <div className="info-item">
+                                                    <span className="info-label">{t('search.engineStats.avgSearchTime')}</span>
+                                                    <span className="info-value">{searchMetrics.average_search_time_ms || 0}ms</span>
+                                                </div>
+                                                <div className="info-item">
+                                                    <span className="info-label">{t('search.engineStats.cacheHitRate')}</span>
                                                     <span className="info-value">
-                                                        {new Date(searchEngineInfo.last_updated).toLocaleString()}
+                                                        {searchMetrics.cache_hit_rate ? 
+                                                            `${(searchMetrics.cache_hit_rate * 100).toFixed(1)}%` :
+                                                            t('common.notAvailableShort')
+                                                        }
                                                     </span>
                                                 </div>
-                                            )}
-                                        </div>
+                                                {searchEngineInfo.last_updated && (
+                                                    <div className="info-item">
+                                                        <span className="info-label">{t('search.engineStats.lastUpdated')}</span>
+                                                        <span className="info-value">
+                                                            {new Date(searchEngineInfo.last_updated).toLocaleString()}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </div>
 
                                         {/* Manual Indexing Control */}
                                         <div className="index-management" style={{ marginTop: 'var(--space-md)' }}>
@@ -1523,7 +1523,7 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                                                 disabled={isSearching || isIndexing || !systemInfo?.user_home_dir}
                                                 style={{ marginLeft: '8px' }}
                                             >
-                                                Test Index (Documents)
+                                                {t('search.testIndexDocuments')}
                                             </Button>
                                         </div>
                                     </div>
@@ -1591,9 +1591,12 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                                     <div className="progress-details">
                                         <div className="progress-stats">
                                             <span>
-                                                {indexingProgress.files_indexed} indexed / {indexingProgress.files_discovered} discovered
-                                                {indexingProgress.files_discovered === 0 && ' (starting...)'}
-                                                {indexingProgress.files_discovered > 0 && indexingProgress.files_indexed === 0 && ' (discovering & indexing...)'}
+                                                {t('search.indexingProgress.stats', {
+                                                    indexed: indexingProgress.files_indexed,
+                                                    discovered: indexingProgress.files_discovered
+                                                })}
+                                                {indexingProgress.files_discovered === 0 && ` ${t('search.indexingProgress.startingHint')}`}
+                                                {indexingProgress.files_discovered > 0 && indexingProgress.files_indexed === 0 && ` ${t('search.indexingProgress.discoveringAndIndexingHint')}`}
                                             </span>
                                             {indexingProgress.estimated_time_remaining && indexingProgress.files_indexed > 0 && (
                                                 <span>
@@ -1671,12 +1674,12 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                                 searchTerm={query}
                             />
                             <div className="no-results-help">
-                                <p>Tips:</p>
+                                <p>{t('search.noResults.tipsTitle')}</p>
                                 <ul>
-                                    <li>Make sure the backend has indexed your files</li>
-                                    <li>Try different keywords</li>
-                                    <li>Check spelling</li>
-                                    <li>Try using fewer or more specific terms</li>
+                                    <li>{t('search.noResults.tipIndexed')}</li>
+                                    <li>{t('search.noResults.tipKeywords')}</li>
+                                    <li>{t('search.noResults.tipSpelling')}</li>
+                                    <li>{t('search.noResults.tipSpecific')}</li>
                                 </ul>
                             </div>
                         </div>
@@ -1694,13 +1697,15 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                                     paddingLeft: '15px',
                                     paddingRight: '12px'
                                 }}>
-                                    {results.length} results • ranked by {
-                                        sortBy === 'relevance' ? 'relevance' :
-                                        sortBy === 'name' ? 'name' :
-                                        sortBy === 'path' ? 'path' :
-                                        sortBy === 'extension' ? 'file type' :
-                                        'relevance'
-                                    }
+                                    {t('search.resultsSummary', {
+                                        count: results.length,
+                                        sort:
+                                            sortBy === 'relevance' ? t('search.sort.label.relevance') :
+                                            sortBy === 'name' ? t('search.sort.label.name') :
+                                            sortBy === 'path' ? t('search.sort.label.path') :
+                                            sortBy === 'extension' ? t('search.sort.label.extension') :
+                                            t('search.sort.label.relevance')
+                                    })}
                                 </div>
                                 {results.map((result, index) => (
                                     <div key={index} className="result-item-container">
@@ -1716,11 +1721,11 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                                             <div
                                                 className="result-name-container"
                                                 onClick={() => openItemLocation(result)}
-                                                title={`Open location: ${result.directory}`}
+                                                title={t('search.openLocationTitle', { directory: result.directory })}
                                             >
                                                 <span className="result-name">{result.name}</span>
                                                 {result.isDirectory && (
-                                                    <span className="result-type-indicator">(Directory)</span>
+                                                    <span className="result-type-indicator">({t('search.directoryIndicator')})</span>
                                                 )}
                                             </div>
                                             <div
@@ -1732,7 +1737,7 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                                             </div>
                                             {currentDirectory && result.path.startsWith(currentDirectory) && (
                                                 <div className="result-context-indicator">
-                                                    <span className="context-dot">•</span> In current directory
+                                                    <span className="context-dot">•</span> {t('search.inCurrentDirectory')}
                                                 </div>
                                             )}
                                         </div>
@@ -1741,7 +1746,7 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                                             <button
                                                 className="action-button-container"
                                                 onClick={() => openItemLocation(result)}
-                                                title="Open containing folder"
+                                                title={t('search.openContainingFolder')}
                                             >
                                                 <span className="icon icon-folder"></span>
                                             </button>
