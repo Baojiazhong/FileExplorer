@@ -1,11 +1,17 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import Icon from '../common/Icon';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { useI18n } from '../../i18n';
 import { formatFileSize, formatDate } from '../../utils/formatters';
+import { useImageZoom } from '../../hooks/useImageZoom';
 
-export function PreviewContent({ payload }) {
+export function PreviewContent({ payload, variant }) {
   const { t } = useI18n();
+  const zoom = useImageZoom();
+
+  useEffect(() => {
+    zoom.reset();
+  }, [payload]);
 
   if (!payload) return null;
 
@@ -47,6 +53,31 @@ export function PreviewContent({ payload }) {
         return (
           <div className="preview-unknown">
             <p>{t('preview.notAvailable')}</p>
+          </div>
+        );
+      }
+      const isModal = variant === 'modal';
+      const isZoomed = zoom.scale !== 1;
+      if (isModal) {
+        return (
+          <div className={`preview-image-container preview-image-zoomable${isZoomed ? ' preview-image-fullscreen' : ''}`} {...zoom.containerProps}>
+            <img
+              ref={zoom.imgRef}
+              src={src}
+              alt={payload.name}
+              className="preview-image"
+              style={zoom.imageStyle}
+              draggable={false}
+              onLoad={zoom.reset}
+            />
+            <div className="preview-image-info">
+              <span className="preview-file-size">{formatFileSize(payload.bytes)}</span>
+            </div>
+            {zoom.zoomPercent !== 100 && (
+              <div className="preview-zoom-indicator" onDoubleClick={(e) => e.stopPropagation()}>
+                {zoom.zoomPercent}%
+              </div>
+            )}
           </div>
         );
       }
