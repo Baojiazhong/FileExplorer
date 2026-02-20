@@ -44,22 +44,19 @@ const ContextMenu = ({ position, items = [], onClose }) => {
         setAdjustedPosition({ x: adjustedX, y: adjustedY });
     }, [position, items]);
 
-    /**
-     * Closes menu when clicked outside
-     */
     useEffect(() => {
-        const handleOutsideClick = (e) => {
+        const handleOutsideEvent = (e) => {
             if (menuRef.current && !menuRef.current.contains(e.target)) {
                 if (onClose) onClose();
             }
         };
 
-        // Use capture phase to ensure the click is captured
-        // before it bubbles to other elements
-        document.addEventListener('click', handleOutsideClick, { capture: true });
+        document.addEventListener('mousedown', handleOutsideEvent);
+        document.addEventListener('contextmenu', handleOutsideEvent);
 
         return () => {
-            document.removeEventListener('click', handleOutsideClick, { capture: true });
+            document.removeEventListener('mousedown', handleOutsideEvent);
+            document.removeEventListener('contextmenu', handleOutsideEvent);
         };
     }, [onClose]);
 
@@ -131,8 +128,8 @@ const ContextMenu = ({ position, items = [], onClose }) => {
                             onSubmenuOpen={() => handleSubmenuOpen(item.id)}
                             onSubmenuClose={handleSubmenuClose}
                             onAction={() => {
-                                if (onClose) onClose();
                                 if (item.action) item.action();
+                                if (onClose) onClose();
                             }}
                         />
                     );

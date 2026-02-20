@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useFileSystem } from './FileSystemProvider';
 import { useHistory } from './HistoryProvider';
@@ -130,7 +130,7 @@ export default function ContextMenuProvider({ children }) {
             console.error('Failed to copy path:', error);
             showError(t('contextMenu.clipboard.copyPathFailed'));
         }
-    }, [isSftpPath, parseSftpPath]);
+    }, [t, isSftpPath, parseSftpPath]);
 
     // Add as template
     const addAsTemplate = useCallback(async (item) => {
@@ -173,7 +173,7 @@ export default function ContextMenuProvider({ children }) {
         } finally {
             setIsProcessing(false);
         }
-    }, [isSftpPath]);
+    }, [t, isSftpPath]);
 
     // Copy items to clipboard
     const copyToClipboard = useCallback(async (items) => {
@@ -323,7 +323,7 @@ export default function ContextMenuProvider({ children }) {
         } finally {
             setIsProcessing(false);
         }
-    }, [clipboard, currentPath, loadDirectory, isSftpPath, copySftpItem, moveSftpItem, generateUniqueDestPath]);
+    }, [t, clipboard, currentPath, loadDirectory, isSftpPath, copySftpItem, moveSftpItem, generateUniqueDestPath]);
 
     // Delete items
     const deleteItems = useCallback(async (items) => {
@@ -354,7 +354,7 @@ export default function ContextMenuProvider({ children }) {
         } finally {
             setIsProcessing(false);
         }
-    }, [moveToTrash]);
+    }, [t, moveToTrash]);
 
     // Rename item - dispatch event to open rename modal
     const renameItem = useCallback((item) => {
@@ -474,7 +474,7 @@ export default function ContextMenuProvider({ children }) {
                 setIsProcessing(false);
             }
         }
-    }, [currentPath, loadDirectory, isSftpPath, downloadAndOpenSftpFile, parseSftpPath]);
+    }, [t, currentPath, loadDirectory, isSftpPath, downloadAndOpenSftpFile, parseSftpPath]);
 
     // Unzip item
     const unzipItem = useCallback(async (item) => {
@@ -517,7 +517,7 @@ export default function ContextMenuProvider({ children }) {
         } finally {
             setIsProcessing(false);
         }
-    }, [currentPath, loadDirectory, isSftpPath, downloadAndOpenSftpFile]);
+    }, [t, currentPath, loadDirectory, isSftpPath, downloadAndOpenSftpFile]);
 
     // Generate hash for a file - VERBESSERT MIT DEBUG
     const generateHash = useCallback(async (item) => {
@@ -571,7 +571,8 @@ export default function ContextMenuProvider({ children }) {
         } finally {
             setIsProcessing(false);
         }
-    }, [isSftpPath, downloadAndOpenSftpFile]);
+    }, [t, isSftpPath, downloadAndOpenSftpFile]);
+
 
     // Generate hash and save to file - VERBESSERT MIT DEBUG
     const generateHashToFile = useCallback(async (item) => {
@@ -622,7 +623,8 @@ export default function ContextMenuProvider({ children }) {
 
         document.dispatchEvent(event);
         console.log('✅ Event dispatched successfully');
-    }, [isSftpPath, downloadAndOpenSftpFile]);
+    }, [t, isSftpPath, downloadAndOpenSftpFile]);
+
 
     // Compare file with hash - VERBESSERT MIT DEBUG
     const compareHash = useCallback(async (item) => {
@@ -673,7 +675,8 @@ export default function ContextMenuProvider({ children }) {
 
         document.dispatchEvent(event);
         console.log('✅ Event dispatched successfully');
-    }, [isSftpPath, downloadAndOpenSftpFile]);
+    }, [t, isSftpPath, downloadAndOpenSftpFile]);
+
 
     // Get current folder metadata by loading parent directory
     const getCurrentFolderMetadata = useCallback(async (folderPath) => {
@@ -1050,7 +1053,7 @@ export default function ContextMenuProvider({ children }) {
         );
 
         return menuItems;
-    }, [selectedItems, clipboard, isProcessing, currentPath, copyToClipboard, cutToClipboard, pasteFromClipboard, deleteItems, renameItem, loadDirectory, showProperties, addToFavorites, removeFromFavorites, updateNavigationHistory, zipItems, unzipItem, isInFavorites, getCurrentFolderMetadata, generateHash, generateHashToFile, compareHash, copyPath, addAsTemplate, isSftpPath, downloadAndOpenSftpFile, parseSftpPath]);
+    }, [t, selectedItems, clipboard, isProcessing, currentPath, copyToClipboard, cutToClipboard, pasteFromClipboard, deleteItems, renameItem, loadDirectory, showProperties, addToFavorites, removeFromFavorites, updateNavigationHistory, zipItems, unzipItem, isInFavorites, getCurrentFolderMetadata, generateHash, generateHashToFile, compareHash, copyPath, addAsTemplate, isSftpPath, downloadAndOpenSftpFile, parseSftpPath]);
 
     // Open context menu
     const openContextMenu = useCallback((e, contextTarget = null) => {
@@ -1071,7 +1074,7 @@ export default function ContextMenuProvider({ children }) {
         setIsOpen(false);
     }, []);
 
-    const contextValue = {
+    const contextValue = useMemo(() => ({
         isOpen,
         position,
         target,
@@ -1080,14 +1083,14 @@ export default function ContextMenuProvider({ children }) {
         isProcessing,
         openContextMenu,
         closeContextMenu,
-        removeFromFavorites, // Export this for Sidebar to use
+        removeFromFavorites,
         copyToClipboard,
         cutToClipboard,
         pasteFromClipboard,
         deleteItems,
         renameItem,
         showProperties,
-    };
+    }), [isOpen, position, target, items, clipboard, isProcessing, openContextMenu, closeContextMenu, removeFromFavorites, copyToClipboard, cutToClipboard, pasteFromClipboard, deleteItems, renameItem, showProperties]);
 
     return (
         <ContextMenuContext.Provider value={contextValue}>
