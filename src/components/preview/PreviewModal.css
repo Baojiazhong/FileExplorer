@@ -67,6 +67,24 @@
   /* Remove fixed width/height to allow content-based sizing */
 }
 
+.preview-modal.preview-modal--pdf {
+  width: calc(100vw - 2rem);
+  height: calc(100vh - 2rem);
+  min-width: 0;
+  min-height: 0;
+}
+
+.preview-modal.preview-modal--pdf .preview-modal-content {
+  overflow: hidden;
+}
+
+.preview-modal.preview-modal--pdf .preview-pdf-container {
+  min-height: 0;
+  max-height: none;
+  height: 100%;
+}
+
+
 
 /* Preview Modal Header */
 .preview-modal-header {

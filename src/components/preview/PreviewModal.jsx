@@ -15,6 +15,8 @@ export function PreviewModal({ payload, onClose, isLoading }) {
   const { t } = useI18n();
   if (!payload && !isLoading) return null;
 
+  const isPdf = payload?.kind === 'Pdf';
+
   return (
     <div
       className="preview-modal-backdrop"
@@ -24,7 +26,7 @@ export function PreviewModal({ payload, onClose, isLoading }) {
         onClose();
       }}
     >
-      <div className="preview-modal" onClick={(e) => e.stopPropagation()}>
+      <div className={`preview-modal${isPdf ? ' preview-modal--pdf' : ''}`} onClick={(e) => e.stopPropagation()}>
         <header
           className="preview-modal-header"
           style={{
