@@ -150,7 +150,7 @@ export default function ContextMenuProvider({ children }) {
                     const tempPath = await downloadAndOpenSftpFile(item.path, false);
                     
                     if (!tempPath) {
-                        throw new Error('Failed to download SFTP file');
+                        throw new Error(t('contextMenu.sftp.downloadFileFailed'));
                     }
                     
                     templatePath = tempPath;

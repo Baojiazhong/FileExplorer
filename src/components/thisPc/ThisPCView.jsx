@@ -314,7 +314,7 @@ const ThisPCView = () => {
                     loadVolumes();
                 }, 1000);
             } else {
-                throw new Error(commandResponse.stderr || commandResponse.stdout || 'Ejection failed');
+                throw new Error(commandResponse.stderr || commandResponse.stdout || t('sidebar.drives.ejectionFailedFallback'));
             }
         } catch (error) {
             console.error('Failed to eject volume:', error);

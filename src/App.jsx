@@ -1,7 +1,9 @@
 import React from 'react';
 import I18nProvider from './i18n/I18nProvider.jsx';
-import { LOCALES, normalizeLocale } from './i18n';
+import { LOCALES, normalizeLocale, resolveEffectiveLocale, createTranslator } from './i18n';
 import { useI18n } from './i18n';
+import enUS from './i18n/locales/en-US';
+import zhCN from './i18n/locales/zh-CN';
 import SettingsProvider, { useSettings } from './providers/SettingsProvider';
 import ThemeProvider from './providers/ThemeProvider';
 import AppStateProvider from './providers/AppStateProvider';
@@ -79,6 +81,8 @@ function AppProviders() {
 
 // Simple fallback for error cases
 function ErrorFallback() {
+    const dictionaries = { [LOCALES.EN_US]: enUS, [LOCALES.ZH_CN]: zhCN };
+    const t = createTranslator({ dictionaries, locale: resolveEffectiveLocale(LOCALES.AUTO) });
     return (
         <div style={{
             padding: '20px',
@@ -91,9 +95,9 @@ function ErrorFallback() {
             borderRadius: '8px',
             boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
         }}>
-            <h1 style={{ color: '#d32f2f' }}>Fast File Explorer</h1>
-            <p>The application could not be loaded properly. Try refreshing the page.</p>
-            <p>If the problem persists, check the console (F12) for error messages.</p>
+            <h1 style={{ color: '#d32f2f' }}>{t('errorFallback.title')}</h1>
+            <p>{t('errorFallback.message')}</p>
+            <p>{t('errorFallback.helpMessage')}</p>
             <button
                 onClick={() => window.location.reload()}
                 style={{
@@ -106,7 +110,7 @@ function ErrorFallback() {
                     marginTop: '15px'
                 }}
             >
-                Reload Page
+                {t('errorFallback.reloadButton')}
             </button>
         </div>
     );

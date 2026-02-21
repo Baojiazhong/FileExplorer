@@ -349,21 +349,21 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
 
         if (os === 'windows') {
             dirs.push(
-                { name: 'Desktop', path: `${homeDir}\\Desktop`, icon: 'desktop' },
-                { name: 'Documents', path: `${homeDir}\\Documents`, icon: 'documents' },
-                { name: 'Downloads', path: `${homeDir}\\Downloads`, icon: 'downloads' },
-                { name: 'Pictures', path: `${homeDir}\\Pictures`, icon: 'pictures' },
-                { name: 'Music', path: `${homeDir}\\Music`, icon: 'music' },
-                { name: 'Videos', path: `${homeDir}\\Videos`, icon: 'videos' }
+                { name: t('thisPc.userFolders.desktop'), path: `${homeDir}\\Desktop`, icon: 'desktop' },
+                { name: t('thisPc.userFolders.documents'), path: `${homeDir}\\Documents`, icon: 'documents' },
+                { name: t('thisPc.userFolders.downloads'), path: `${homeDir}\\Downloads`, icon: 'downloads' },
+                { name: t('thisPc.userFolders.pictures'), path: `${homeDir}\\Pictures`, icon: 'pictures' },
+                { name: t('thisPc.userFolders.music'), path: `${homeDir}\\Music`, icon: 'music' },
+                { name: t('thisPc.userFolders.videos'), path: `${homeDir}\\Videos`, icon: 'videos' }
             );
         } else {
             dirs.push(
-                { name: 'Desktop', path: `${homeDir}/Desktop`, icon: 'desktop' },
-                { name: 'Documents', path: `${homeDir}/Documents`, icon: 'documents' },
-                { name: 'Downloads', path: `${homeDir}/Downloads`, icon: 'downloads' },
-                { name: 'Pictures', path: `${homeDir}/Pictures`, icon: 'pictures' },
-                { name: 'Music', path: `${homeDir}/Music`, icon: 'music' },
-                { name: 'Videos', path: `${homeDir}/Movies`, icon: 'videos' }
+                { name: t('thisPc.userFolders.desktop'), path: `${homeDir}/Desktop`, icon: 'desktop' },
+                { name: t('thisPc.userFolders.documents'), path: `${homeDir}/Documents`, icon: 'documents' },
+                { name: t('thisPc.userFolders.downloads'), path: `${homeDir}/Downloads`, icon: 'downloads' },
+                { name: t('thisPc.userFolders.pictures'), path: `${homeDir}/Pictures`, icon: 'pictures' },
+                { name: t('thisPc.userFolders.music'), path: `${homeDir}/Music`, icon: 'music' },
+                { name: t('thisPc.userFolders.videos'), path: `${homeDir}/Movies`, icon: 'videos' }
             );
         }
 
@@ -593,7 +593,7 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
                                                                 loadVolumes();
                                                             }, 1000);
                                                         } else {
-                                                            throw new Error(commandResponse.stderr || commandResponse.stdout || 'Ejection failed');
+                                                            throw new Error(commandResponse.stderr || commandResponse.stdout || t('sidebar.drives.ejectionFailedFallback'));
                                                         }
                                                     } catch (error) {
                                                         console.error('Failed to eject volume:', error);

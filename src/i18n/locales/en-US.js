@@ -341,6 +341,7 @@ const enUS = {
             ejectConfirm: 'Are you sure you want to safely eject {name}?',
             ejectSuccess: '{name} has been safely ejected.',
             ejectFailed: 'Failed to eject {name}: {message}',
+            ejectionFailedFallback: 'Ejection failed',
         },
     },
     explorer: {
@@ -631,6 +632,7 @@ const enUS = {
             addFailed: 'Failed to add template: {message}',
         },
         sftp: {
+            downloadFileFailed: 'Failed to download SFTP file',
             downloadForTemplateFailed: 'Failed to download SFTP file: {message}',
             downloadForHashFailed: 'Failed to download SFTP file: {message}',
             moveBetweenSftpAndLocalUnsupported: 'Moving between SFTP and local file systems is not yet supported',
@@ -892,6 +894,12 @@ const enUS = {
             music: 'Music',
             videos: 'Videos',
         },
+    },
+    errorFallback: {
+        title: 'Fast File Explorer',
+        message: 'The application could not be loaded properly. Try refreshing the page.',
+        helpMessage: 'If the problem persists, check the console (F12) for error messages.',
+        reloadButton: 'Reload Page',
     },
     permission: {
         modalTitle: 'Access Required: {name}',

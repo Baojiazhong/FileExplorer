@@ -338,6 +338,7 @@ const zhCN = {
             ejectConfirm: '确定要安全弹出 {name} 吗？',
             ejectSuccess: '{name} 已安全弹出。',
             ejectFailed: '弹出 {name} 失败：{message}',
+            ejectionFailedFallback: '弹出失败',
         },
     },
     explorer: {
@@ -661,6 +662,7 @@ const zhCN = {
             addFailed: '添加 Template 失败：{message}',
         },
         sftp: {
+            downloadFileFailed: '下载 SFTP 文件失败',
             downloadForTemplateFailed: '下载 SFTP 文件失败：{message}',
             downloadForHashFailed: '下载 SFTP 文件失败：{message}',
             moveBetweenSftpAndLocalUnsupported: '暂不支持在 SFTP 与本地文件系统之间移动',
@@ -921,6 +923,12 @@ const zhCN = {
             music: '音乐',
             videos: '视频',
         },
+    },
+    errorFallback: {
+        title: 'Fast File Explorer',
+        message: '应用程序无法正常加载。请尝试刷新页面。',
+        helpMessage: '如果问题持续存在，请按 F12 打开控制台查看错误信息。',
+        reloadButton: '重新加载页面',
     },
     permission: {
         modalTitle: '需要访问权限：{name}',
