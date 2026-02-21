@@ -57,10 +57,9 @@ export function PreviewContent({ payload, variant }) {
         );
       }
       const isModal = variant === 'modal';
-      const isZoomed = zoom.scale !== 1;
       if (isModal) {
         return (
-          <div className={`preview-image-container preview-image-zoomable${isZoomed ? ' preview-image-fullscreen' : ''}`} {...zoom.containerProps}>
+          <div className={`preview-image-container preview-image-zoomable${zoom.isZoomed ? ' preview-image-fullscreen' : ''}`} {...zoom.containerProps}>
             <img
               ref={zoom.imgRef}
               src={src}
@@ -73,11 +72,12 @@ export function PreviewContent({ payload, variant }) {
             <div className="preview-image-info">
               <span className="preview-file-size">{formatFileSize(payload.bytes)}</span>
             </div>
-            {zoom.zoomPercent !== 100 && (
-              <div className="preview-zoom-indicator" onDoubleClick={(e) => e.stopPropagation()}>
-                {zoom.zoomPercent}%
-              </div>
-            )}
+            <div
+              ref={zoom.indicatorRef}
+              className="preview-zoom-indicator"
+              style={{ display: 'none' }}
+              onDoubleClick={(e) => e.stopPropagation()}
+            />
           </div>
         );
       }
