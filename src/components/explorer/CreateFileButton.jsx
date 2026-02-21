@@ -132,7 +132,7 @@ const CreateFileButton = () => {
                 if (shouldCreateCopy) {
                     const extension = itemName.includes('.') ? '.' + itemName.split('.').pop() : '';
                     const baseName = extension ? itemName.replace(extension, '') : itemName;
-                    const copyName = `${baseName} - Copy${extension}`;
+                    const copyName = `${baseName}${t('explorer.create.copySuffix')}${extension}`;
                     setItemName(copyName);
                     return; // Don't close modal, let user try again
                 }

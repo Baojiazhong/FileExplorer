@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { useI18n } from '../i18n';
 
 // Create context
 const ThemeContext = createContext({
@@ -10,6 +11,7 @@ const ThemeContext = createContext({
 
 // Theme provider component
 export default function ThemeProvider({ children }) {
+    const { t } = useI18n();
     const [theme, setThemeState] = useState('light');
     const [isLoading, setIsLoading] = useState(true);
 
@@ -189,7 +191,7 @@ export default function ThemeProvider({ children }) {
                     color: '#6b7280',
                     fontSize: '14px'
                 }}>
-                    Loading theme...
+                    {t('common.loadingTheme')}
                 </div>
                 <style>{`
                     @keyframes spin {

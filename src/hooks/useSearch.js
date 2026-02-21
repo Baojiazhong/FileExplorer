@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { searchFiles, parseSearchQuery, DEFAULT_SEARCH_OPTIONS } from '../utils/search';
 import { useHistory } from '../providers/HistoryProvider';
+import { useI18n } from '../i18n';
 
 /**
  * Hook for handling file search functionality.
@@ -8,6 +9,7 @@ import { useHistory } from '../providers/HistoryProvider';
  * @returns {Object} Search state and functions.
  */
 const useSearch = (initialOptions = DEFAULT_SEARCH_OPTIONS) => {
+    const { t } = useI18n();
     const [query, setQuery] = useState('');
     const [options, setOptions] = useState({ ...initialOptions });
     const [results, setResults] = useState(null);
@@ -60,7 +62,7 @@ const useSearch = (initialOptions = DEFAULT_SEARCH_OPTIONS) => {
             setResults(searchResults);
         } catch (err) {
             console.error('Search failed:', err);
-            setError(err.message || 'Search failed');
+            setError(err.message || t('search.searchFailed'));
             setResults(null);
         } finally {
             setIsSearching(false);

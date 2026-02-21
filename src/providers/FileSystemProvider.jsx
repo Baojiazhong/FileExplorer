@@ -136,20 +136,20 @@ export default function FileSystemProvider({ children }) {
                     console.log(`Successfully loaded SFTP directory: ${path}`);
                     return true;
                 } else {
-                    throw new Error('Failed to load SFTP directory');
+                    throw new Error(t('fileSystem.loadSftpDirFailed'));
                 }
             }
 
             // Regular file system path
             const timeoutPromise = new Promise((_, reject) => {
-                setTimeout(() => reject(new Error(`Directory loading timed out: ${path}`)), 10000);
+                setTimeout(() => reject(new Error(t('fileSystem.loadDirTimedOut', { path }))), 10000);
             });
 
             const loadPromise = invoke('open_directory', { path });
             const dirContent = await Promise.race([loadPromise, timeoutPromise]);
 
             if (!dirContent) {
-                throw new Error(`Empty response from open_directory: ${path}`);
+                throw new Error(t('fileSystem.emptyDirResponse', { path }));
             }
 
             try {
@@ -160,7 +160,7 @@ export default function FileSystemProvider({ children }) {
                 console.log(`Successfully loaded directory: ${path}`);
                 return true;
             } catch (parseError) {
-                throw new Error(`Failed to parse directory data: ${parseError.message}`);
+                throw new Error(t('fileSystem.parseDirFailed', { message: parseError.message }));
             }
         } catch (err) {
             console.error(`Failed to load directory: ${path}`, err);

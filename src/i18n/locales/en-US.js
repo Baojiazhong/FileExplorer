@@ -7,6 +7,7 @@ const enUS = {
         confirm: 'Confirm',
         create: 'Create',
         loading: 'Loading…',
+        loadingTheme: 'Loading theme…',
         testing: 'Testing…',
         closeModal: 'Close modal',
         tryAgain: 'Try Again',
@@ -147,6 +148,14 @@ const enUS = {
     },
     settings: {
         title: 'Settings',
+        loading: 'Loading settings…',
+        errors: {
+            loadFailed: 'Failed to load settings from backend',
+            loadAndSaveDefaultFailed: 'Failed to load and save default settings',
+            updateKeyFailed: 'Failed to update {key}: {message}',
+            updateFailed: 'Failed to update settings: {message}',
+            resetFailed: 'Failed to reset settings: {message}',
+        },
         tabs: {
             appearance: 'Appearance',
             behavior: 'Behavior',
@@ -387,6 +396,7 @@ const enUS = {
             createCopy: 'Create Copy',
             alreadyExists: 'An item named "{name}" already exists. Would you like to create a copy instead?',
             failed: 'Failed to create {type}: {message}',
+            copySuffix: ' - Copy',
         },
         rename: {
             fileExistsTitle: 'File Exists',
@@ -479,6 +489,7 @@ const enUS = {
         },
     },
     search: {
+        searchFailed: 'Search failed',
         globalTitle: 'Global Search',
         searching: 'Searching…',
         calculating: 'Calculating…',
@@ -635,6 +646,10 @@ const enUS = {
             downloadFileFailed: 'Failed to download SFTP file',
             downloadForTemplateFailed: 'Failed to download SFTP file: {message}',
             downloadForHashFailed: 'Failed to download SFTP file: {message}',
+            downloadForZipFailed: 'Failed to download {name} for zipping',
+            downloadForExtractFailed: 'Failed to download SFTP zip file for extraction',
+            downloadForHashGenerationFailed: 'Failed to download SFTP file for hash generation',
+            downloadForHashComparisonFailed: 'Failed to download SFTP file for hash comparison',
             moveBetweenSftpAndLocalUnsupported: 'Moving between SFTP and local file systems is not yet supported',
             copyBetweenSftpAndLocalUnsupported: 'Copying between SFTP and local file systems is not yet supported',
         },
@@ -667,6 +682,10 @@ const enUS = {
     fileSystem: {
         loadVolumesFailed: 'Failed to load volumes: {message}',
         loadDirFailed: 'Failed to load directory: {message}',
+        loadSftpDirFailed: 'Failed to load SFTP directory',
+        loadDirTimedOut: 'Directory loading timed out: {path}',
+        emptyDirResponse: 'Empty response from open_directory: {path}',
+        parseDirFailed: 'Failed to parse directory data: {message}',
         accessDeniedUserDir: 'Access denied to "{name}". This app needs permission to access your {name} folder. Please grant permission in System Preferences > Security & Privacy > Privacy > Files and Folders.',
         permissionDenied: 'Permission denied: Cannot access "{name}". You may need to grant additional permissions to this application.',
         initTimeout: 'Failed to initialize directory within the time limit',

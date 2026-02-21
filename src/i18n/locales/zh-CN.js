@@ -7,6 +7,7 @@ const zhCN = {
         confirm: '确认',
         create: '创建',
         loading: '加载中…',
+        loadingTheme: '正在加载主题…',
         testing: '测试中…',
         closeModal: '关闭弹窗',
         tryAgain: '重试',
@@ -147,6 +148,14 @@ const zhCN = {
     },
     settings: {
         title: '设置',
+        loading: '正在加载设置…',
+        errors: {
+            loadFailed: '从后端加载设置失败',
+            loadAndSaveDefaultFailed: '加载并保存默认设置失败',
+            updateKeyFailed: '更新 {key} 失败：{message}',
+            updateFailed: '更新设置失败：{message}',
+            resetFailed: '重置设置失败：{message}',
+        },
         tabs: {
             appearance: '外观',
             behavior: '行为',
@@ -384,6 +393,7 @@ const zhCN = {
             createCopy: '创建副本',
             alreadyExists: '已存在名为“{name}”的项目。要创建一个副本吗？',
             failed: '创建{type}失败：{message}',
+            copySuffix: ' - 副本',
         },
         rename: {
             fileExistsTitle: '文件已存在',
@@ -476,6 +486,7 @@ const zhCN = {
         },
     },
     search: {
+        searchFailed: '搜索失败',
         globalTitle: '全局搜索',
         searching: '搜索中…',
         calculating: '计算中…',
@@ -665,6 +676,10 @@ const zhCN = {
             downloadFileFailed: '下载 SFTP 文件失败',
             downloadForTemplateFailed: '下载 SFTP 文件失败：{message}',
             downloadForHashFailed: '下载 SFTP 文件失败：{message}',
+            downloadForZipFailed: '下载 {name} 用于压缩失败',
+            downloadForExtractFailed: '下载 SFTP 压缩文件用于解压失败',
+            downloadForHashGenerationFailed: '下载 SFTP 文件用于哈希生成失败',
+            downloadForHashComparisonFailed: '下载 SFTP 文件用于哈希比较失败',
             moveBetweenSftpAndLocalUnsupported: '暂不支持在 SFTP 与本地文件系统之间移动',
             copyBetweenSftpAndLocalUnsupported: '暂不支持在 SFTP 与本地文件系统之间复制',
         },
@@ -697,6 +712,10 @@ const zhCN = {
     fileSystem: {
         loadVolumesFailed: '加载卷信息失败：{message}',
         loadDirFailed: '加载目录失败：{message}',
+        loadSftpDirFailed: '加载 SFTP 目录失败',
+        loadDirTimedOut: '目录加载超时：{path}',
+        emptyDirResponse: 'open_directory 返回空响应：{path}',
+        parseDirFailed: '解析目录数据失败：{message}',
         accessDeniedUserDir: '无法访问"{name}"。此应用需要访问你的 {name} 文件夹的权限。请在"系统偏好设置 > 安全性与隐私 > 隐私 > 文件和文件夹"中授予权限。',
         permissionDenied: '权限不足：无法访问"{name}"。你可能需要为此应用授予额外权限。',
         initTimeout: '目录初始化超时',

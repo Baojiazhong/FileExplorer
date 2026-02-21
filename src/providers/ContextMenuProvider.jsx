@@ -412,7 +412,7 @@ export default function ContextMenuProvider({ children }) {
                 for (const item of items) {
                     const tempPath = await downloadAndOpenSftpFile(item.path, false);
                     if (!tempPath) {
-                        throw new Error(`Failed to download ${item.name} for zipping`);
+                        throw new Error(t('contextMenu.sftp.downloadForZipFailed', { name: item.name }));
                     }
                     tempPaths.push(tempPath);
                 }
@@ -487,7 +487,7 @@ export default function ContextMenuProvider({ children }) {
                 console.log('📡 SFTP zip file detected, downloading for extraction...');
                 const tempZipPath = await downloadAndOpenSftpFile(item.path, false);
                 if (!tempZipPath) {
-                    throw new Error('Failed to download SFTP zip file for extraction');
+                    throw new Error(t('contextMenu.sftp.downloadForExtractFailed'));
                 }
                 
                 // Extract to temp directory first
@@ -541,7 +541,7 @@ export default function ContextMenuProvider({ children }) {
                 console.log('📡 SFTP file detected, downloading for hash generation...');
                 const tempPath = await downloadAndOpenSftpFile(item.path, false);
                 if (!tempPath) {
-                    throw new Error('Failed to download SFTP file for hash generation');
+                    throw new Error(t('contextMenu.sftp.downloadForHashGenerationFailed'));
                 }
                 hashPath = tempPath;
                 console.log('✅ SFTP file downloaded to:', hashPath);
@@ -594,7 +594,7 @@ export default function ContextMenuProvider({ children }) {
             try {
                 const tempPath = await downloadAndOpenSftpFile(item.path, false);
                 if (!tempPath) {
-                    throw new Error('Failed to download SFTP file for hash generation');
+                    throw new Error(t('contextMenu.sftp.downloadForHashGenerationFailed'));
                 }
                 // Create a modified item with the temp path for hash generation
                 processedItem = {
@@ -646,7 +646,7 @@ export default function ContextMenuProvider({ children }) {
             try {
                 const tempPath = await downloadAndOpenSftpFile(item.path, false);
                 if (!tempPath) {
-                    throw new Error('Failed to download SFTP file for hash comparison');
+                    throw new Error(t('contextMenu.sftp.downloadForHashComparisonFailed'));
                 }
                 // Create a modified item with the temp path for hash comparison
                 processedItem = {
@@ -702,7 +702,7 @@ export default function ContextMenuProvider({ children }) {
 
             // If not found in directories, create a basic folder object
             return {
-                name: folderName || 'Root',
+                name: folderName || t('tabs.rootTitle'),
                 path: folderPath,
                 isDirectory: true,
                 sub_file_count: 0,
@@ -719,7 +719,7 @@ export default function ContextMenuProvider({ children }) {
             console.error('Failed to get folder metadata:', error);
 
             // Return a basic folder object as fallback
-            const folderName = folderPath.split(/[/\\]/).pop() || 'Root';
+            const folderName = folderPath.split(/[/\\]/).pop() || t('tabs.rootTitle');
             return {
                 name: folderName,
                 path: folderPath,
