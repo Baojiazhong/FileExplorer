@@ -222,6 +222,9 @@ const zhCN = {
                 suggestions: '启用搜索建议',
                 highlight: '高亮匹配结果',
             },
+            suggestions: {
+                useHint: '按 Tab 或点击使用',
+            },
             index: {
                 title: '搜索索引',
                 description: '建立索引可以提升搜索速度，但会占用磁盘空间。',
@@ -543,6 +546,7 @@ const zhCN = {
             useHint: '按 Tab 或点击使用',
         },
         backgroundIndexingStarted: '后台索引已启动，请稍候…',
+        backgroundIndexingFinished: '后台索引已完成。',
         searchingIndexedFiles: '正在搜索已索引文件…',
         resultsSummary: '{count} 个结果 • 排序：{sort}',
         openLocationTitle: '打开位置：{directory}',
