@@ -1187,13 +1187,6 @@ fn unzip_sync(zip_paths: Vec<String>, destination_path: Option<String>) -> Resul
                 })?;
             }
         }
-
-        // Remove the zip file after successful extraction
-        if let Err(e) = fs::remove_file(zip_path) {
-            log_error!("Failed to remove zip file after extraction: {}", e);
-            // Note: We don't return an error here since extraction was successful
-            // The user can manually delete the zip file if needed
-        }
     }
 
     Ok(())

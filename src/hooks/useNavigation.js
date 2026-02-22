@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import { useHistory } from '../providers/HistoryProvider';
 import { useFileSystem } from '../providers/FileSystemProvider';
 
@@ -64,11 +65,16 @@ const useNavigation = () => {
     }, [currentPath, navigateToPath]);
 
     // Navigate to home directory
-    const navigateToHome = useCallback(() => {
-        // This would typically depend on the OS
-        // For demo purposes, we'll use a placeholder
-        const homePath = '/home/user';
-        navigateToPath(homePath);
+    const navigateToHome = useCallback(async () => {
+        try {
+            const metaDataJson = await invoke('get_meta_data_as_json');
+            const metaData = JSON.parse(metaDataJson);
+            if (metaData.user_home_dir) {
+                navigateToPath(metaData.user_home_dir);
+            }
+        } catch (error) {
+            console.error('Failed to get home directory:', error);
+        }
     }, [navigateToPath]);
 
     // Refresh current directory

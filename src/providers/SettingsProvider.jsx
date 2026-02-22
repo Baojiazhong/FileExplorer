@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useI18n } from '../i18n';
 
@@ -112,6 +112,7 @@ export const SettingsContext = createContext({
 export default function SettingsProvider({ children }) {
     const { t } = useI18n();
     const [settings, setSettings] = useState(defaultSettings);
+    const errorTimerRef = useRef(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
 
@@ -161,6 +162,9 @@ export default function SettingsProvider({ children }) {
     // Load settings on mount
     useEffect(() => {
         loadSettings();
+        return () => {
+            if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
+        };
     }, []);
 
     // Update a single setting
@@ -198,7 +202,8 @@ export default function SettingsProvider({ children }) {
             }));
 
             // Clear error after a few seconds
-            setTimeout(() => setError(null), 5000);
+            if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
+            errorTimerRef.current = setTimeout(() => setError(null), 5000);
         }
     };
 
@@ -236,7 +241,8 @@ export default function SettingsProvider({ children }) {
             }));
 
             // Clear error after a few seconds
-            setTimeout(() => setError(null), 5000);
+            if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
+            errorTimerRef.current = setTimeout(() => setError(null), 5000);
         }
     };
 
@@ -265,7 +271,8 @@ export default function SettingsProvider({ children }) {
             setSettings({ ...defaultSettings });
 
             // Clear error after a few seconds
-            setTimeout(() => setError(null), 5000);
+            if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
+            errorTimerRef.current = setTimeout(() => setError(null), 5000);
         }
     };
 

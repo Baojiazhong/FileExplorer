@@ -32,15 +32,16 @@ const NetworkView = () => {
 
         loadConnections();
         
-        // Listen for connection updates
         const handler = () => loadConnections();
-        window.addEventListener('sftp-connections-updated', handler);
-        window.addEventListener('storage', (e) => {
+        const storageHandler = (e) => {
             if (e.key === 'fileExplorerSftpConnections') loadConnections();
-        });
+        };
+        window.addEventListener('sftp-connections-updated', handler);
+        window.addEventListener('storage', storageHandler);
         
         return () => {
             window.removeEventListener('sftp-connections-updated', handler);
+            window.removeEventListener('storage', storageHandler);
         };
     }, []);
 

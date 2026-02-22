@@ -130,6 +130,83 @@ export const formatDate = (dateString, includeTime = false) => {
  * @param {string} filename - The filename to extract the extension from.
  * @returns {string} The human-readable file type.
  */
+const FILE_TYPE_KEYS = {
+    'pdf': 'fileTypes.documents.pdf',
+    'doc': 'fileTypes.documents.word',
+    'docx': 'fileTypes.documents.word',
+    'xls': 'fileTypes.documents.excel',
+    'xlsx': 'fileTypes.documents.excel',
+    'ppt': 'fileTypes.documents.powerpoint',
+    'pptx': 'fileTypes.documents.powerpoint',
+    'txt': 'fileTypes.documents.text',
+    'rtf': 'fileTypes.documents.richText',
+    'odt': 'fileTypes.documents.openDocumentText',
+    'ods': 'fileTypes.documents.openDocumentSpreadsheet',
+    'odp': 'fileTypes.documents.openDocumentPresentation',
+    'csv': 'fileTypes.documents.csv',
+    'md': 'fileTypes.documents.markdown',
+    'jpg': 'fileTypes.images.jpeg',
+    'jpeg': 'fileTypes.images.jpeg',
+    'png': 'fileTypes.images.png',
+    'gif': 'fileTypes.images.gif',
+    'bmp': 'fileTypes.images.bmp',
+    'svg': 'fileTypes.images.svg',
+    'webp': 'fileTypes.images.webp',
+    'tiff': 'fileTypes.images.tiff',
+    'ico': 'fileTypes.images.ico',
+    'mp3': 'fileTypes.audio.mp3',
+    'wav': 'fileTypes.audio.wav',
+    'ogg': 'fileTypes.audio.ogg',
+    'flac': 'fileTypes.audio.flac',
+    'm4a': 'fileTypes.audio.m4a',
+    'aac': 'fileTypes.audio.aac',
+    'mp4': 'fileTypes.video.mp4',
+    'avi': 'fileTypes.video.avi',
+    'mov': 'fileTypes.video.mov',
+    'wmv': 'fileTypes.video.wmv',
+    'mkv': 'fileTypes.video.mkv',
+    'webm': 'fileTypes.video.webm',
+    'zip': 'fileTypes.archives.zip',
+    'rar': 'fileTypes.archives.rar',
+    '7z': 'fileTypes.archives.sevenZip',
+    'tar': 'fileTypes.archives.tar',
+    'gz': 'fileTypes.archives.gz',
+    'bz2': 'fileTypes.archives.bz2',
+    'html': 'fileTypes.code.html',
+    'css': 'fileTypes.code.css',
+    'js': 'fileTypes.code.js',
+    'jsx': 'fileTypes.code.jsx',
+    'ts': 'fileTypes.code.ts',
+    'tsx': 'fileTypes.code.tsx',
+    'json': 'fileTypes.code.json',
+    'xml': 'fileTypes.code.xml',
+    'yaml': 'fileTypes.code.yaml',
+    'yml': 'fileTypes.code.yaml',
+    'toml': 'fileTypes.code.toml',
+    'py': 'fileTypes.code.py',
+    'java': 'fileTypes.code.java',
+    'c': 'fileTypes.code.c',
+    'cpp': 'fileTypes.code.cpp',
+    'h': 'fileTypes.code.h',
+    'cs': 'fileTypes.code.cs',
+    'php': 'fileTypes.code.php',
+    'rb': 'fileTypes.code.rb',
+    'go': 'fileTypes.code.go',
+    'rs': 'fileTypes.code.rs',
+    'swift': 'fileTypes.code.swift',
+    'kt': 'fileTypes.code.kt',
+    'sql': 'fileTypes.code.sql',
+    'exe': 'fileTypes.executables.exe',
+    'msi': 'fileTypes.executables.msi',
+    'app': 'fileTypes.executables.app',
+    'dmg': 'fileTypes.executables.dmg',
+    'deb': 'fileTypes.executables.deb',
+    'rpm': 'fileTypes.executables.rpm',
+    'apk': 'fileTypes.executables.apk',
+    'iso': 'fileTypes.other.iso',
+    'torrent': 'fileTypes.other.torrent',
+};
+
 export const getFileType = (filename) => {
     const t = getTranslator();
 
@@ -139,99 +216,7 @@ export const getFileType = (filename) => {
 
     const extension = filename.split('.').pop().toLowerCase();
 
-    const fileTypes = {
-        // Documents
-        'pdf': 'fileTypes.documents.pdf',
-        'doc': 'fileTypes.documents.word',
-        'docx': 'fileTypes.documents.word',
-        'xls': 'fileTypes.documents.excel',
-        'xlsx': 'fileTypes.documents.excel',
-        'ppt': 'fileTypes.documents.powerpoint',
-        'pptx': 'fileTypes.documents.powerpoint',
-        'txt': 'fileTypes.documents.text',
-        'rtf': 'fileTypes.documents.richText',
-        'odt': 'fileTypes.documents.openDocumentText',
-        'ods': 'fileTypes.documents.openDocumentSpreadsheet',
-        'odp': 'fileTypes.documents.openDocumentPresentation',
-        'csv': 'fileTypes.documents.csv',
-        'md': 'fileTypes.documents.markdown',
-
-        // Images
-        'jpg': 'fileTypes.images.jpeg',
-        'jpeg': 'fileTypes.images.jpeg',
-        'png': 'fileTypes.images.png',
-        'gif': 'fileTypes.images.gif',
-        'bmp': 'fileTypes.images.bmp',
-        'svg': 'fileTypes.images.svg',
-        'webp': 'fileTypes.images.webp',
-        'tiff': 'fileTypes.images.tiff',
-        'ico': 'fileTypes.images.ico',
-
-        // Audio
-        'mp3': 'fileTypes.audio.mp3',
-        'wav': 'fileTypes.audio.wav',
-        'ogg': 'fileTypes.audio.ogg',
-        'flac': 'fileTypes.audio.flac',
-        'm4a': 'fileTypes.audio.m4a',
-        'aac': 'fileTypes.audio.aac',
-
-        // Video
-        'mp4': 'fileTypes.video.mp4',
-        'avi': 'fileTypes.video.avi',
-        'mov': 'fileTypes.video.mov',
-        'wmv': 'fileTypes.video.wmv',
-        'mkv': 'fileTypes.video.mkv',
-        'webm': 'fileTypes.video.webm',
-
-        // Archives
-        'zip': 'fileTypes.archives.zip',
-        'rar': 'fileTypes.archives.rar',
-        '7z': 'fileTypes.archives.sevenZip',
-        'tar': 'fileTypes.archives.tar',
-        'gz': 'fileTypes.archives.gz',
-        'bz2': 'fileTypes.archives.bz2',
-
-        // Programming
-        'html': 'fileTypes.code.html',
-        'css': 'fileTypes.code.css',
-        'js': 'fileTypes.code.js',
-        'jsx': 'fileTypes.code.jsx',
-        'ts': 'fileTypes.code.ts',
-        'tsx': 'fileTypes.code.tsx',
-        'json': 'fileTypes.code.json',
-        'xml': 'fileTypes.code.xml',
-        'yaml': 'fileTypes.code.yaml',
-        'yml': 'fileTypes.code.yaml',
-        'toml': 'fileTypes.code.toml',
-        'py': 'fileTypes.code.py',
-        'java': 'fileTypes.code.java',
-        'c': 'fileTypes.code.c',
-        'cpp': 'fileTypes.code.cpp',
-        'h': 'fileTypes.code.h',
-        'cs': 'fileTypes.code.cs',
-        'php': 'fileTypes.code.php',
-        'rb': 'fileTypes.code.rb',
-        'go': 'fileTypes.code.go',
-        'rs': 'fileTypes.code.rs',
-        'swift': 'fileTypes.code.swift',
-        'kt': 'fileTypes.code.kt',
-        'sql': 'fileTypes.code.sql',
-
-        // Executables
-        'exe': 'fileTypes.executables.exe',
-        'msi': 'fileTypes.executables.msi',
-        'app': 'fileTypes.executables.app',
-        'dmg': 'fileTypes.executables.dmg',
-        'deb': 'fileTypes.executables.deb',
-        'rpm': 'fileTypes.executables.rpm',
-        'apk': 'fileTypes.executables.apk',
-
-        // Other
-        'iso': 'fileTypes.other.iso',
-        'torrent': 'fileTypes.other.torrent',
-    };
-
-    const key = fileTypes[extension];
+    const key = FILE_TYPE_KEYS[extension];
     if (key) return t(key, { ext: extension.toUpperCase() });
 
     return t('fileTypes.byExtension', { ext: extension.toUpperCase() });
