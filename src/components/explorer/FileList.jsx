@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useI18n } from '../../i18n';
 import { getFileType } from '../../utils/formatters';
 import { useFileSystem } from '../../providers/FileSystemProvider';
@@ -163,32 +163,27 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
      * Returns sorted data based on current sort configuration
      * @returns {Array} Sorted array of files and directories
      */
-    const getSortedData = () => {
+    const sortedItems = useMemo(() => {
         if (!data || (!data.directories?.length && !data.files?.length)) {
             return [];
         }
 
         const { key, direction } = sortConfig;
 
-        // Combine directories and files for sorting
         const combinedItems = [
             ...(data.directories || []).map(dir => ({ ...dir, isDirectory: true })),
             ...(data.files || []).map(file => ({ ...file, isDirectory: false }))
         ];
 
-        // Always put directories first
-        const sortedItems = [...combinedItems].sort((a, b) => {
-            // Directories always come before files
+        return [...combinedItems].sort((a, b) => {
             if (a.isDirectory && !b.isDirectory) return -1;
             if (!a.isDirectory && b.isDirectory) return 1;
 
             let aValue, bValue;
             if (key === 'size_in_bytes') {
-                // Folders: always sort as 0 (or -1) so they group together and don't mix with files
                 aValue = a.isDirectory ? -1 : a.size_in_bytes || 0;
                 bValue = b.isDirectory ? -1 : b.size_in_bytes || 0;
             } else if (key === 'type') {
-                // Folders: always 'Folder', Files: use getFileType
                 aValue = a.isDirectory ? t('details.folderType') : (a.name ? getFileType(a.name) : '');
                 bValue = b.isDirectory ? t('details.folderType') : (b.name ? getFileType(b.name) : '');
                 aValue = aValue.toLowerCase();
@@ -209,9 +204,9 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
             if (aValue > bValue) return direction === 'asc' ? 1 : -1;
             return 0;
         });
+    }, [data, sortConfig, t]);
 
-        return sortedItems;
-    };
+    const selectedPathSet = useMemo(() => new Set(selectedItems.map(s => s.path)), [selectedItems]);
 
     /**
      * Handles click on the container (empty space)
@@ -233,7 +228,7 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
         e.preventDefault();
         e.stopPropagation();
 
-        const currentSortedItems = getSortedData();
+        const currentSortedItems = sortedItems;
         
         // Determine if we clicked on an item or empty space
         const clickedItem = e.target.closest('[data-path]');
@@ -241,9 +236,6 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
 
         openContextMenu(e, item);
     };
-
-    // Get sorted data - call this before useEffects that need it
-    const sortedItems = getSortedData();
 
     /**
      * Sets up keyboard event listeners for multi-selection
@@ -395,7 +387,7 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
                         });
                     } else if (e.ctrlKey || e.metaKey) {
                         // Cmd/Ctrl+Arrow: add/remove focused item to selection
-                        const isAlreadySelected = selectedItems.some(selected => selected.path === item.path);
+                        const isAlreadySelected = selectedPathSet.has(item.path);
                         if (isAlreadySelected) {
                             // Deselect by clearing and re-selecting others
                             const otherSelected = selectedItems.filter(selected => selected.path !== item.path);
@@ -574,7 +566,7 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
         }
 
         // For single click, handle selection
-        const isAlreadySelected = selectedItems.some(selected => selected.path === item.path);
+        const isAlreadySelected = selectedPathSet.has(item.path);
 
         if (isShiftKeyPressed && lastSelectedIndex !== -1) {
             // Multi-select with shift key
@@ -671,7 +663,7 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
                             key={item.path}
                             item={item}
                             viewMode={viewMode}
-                            isSelected={selectedItems.some(selected => selected.path === item.path)}
+                            isSelected={selectedPathSet.has(item.path)}
                             isFocused={focusedItem && focusedItem.path === item.path}
                             onClick={(e) => handleItemClick(item, index)}
                             onDoubleClick={() => handleItemClick(item, index, true)}

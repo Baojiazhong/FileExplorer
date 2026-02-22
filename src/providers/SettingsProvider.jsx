@@ -128,24 +128,7 @@ export default function SettingsProvider({ children }) {
         } catch (error) {
             console.error('Failed to load settings:', error);
             setError(t('settings.errors.loadFailed'));
-
-            // Use default settings if loading fails
             setSettings({ ...defaultSettings });
-
-            // Try to save default settings to backend
-            try {
-                const updatedSettingsJson = await invoke('update_multiple_settings_command', {
-                    updates: mapUpdatesToBackendKeys(defaultSettings),
-                });
-
-                if (updatedSettingsJson) {
-                    const updatedSettings = JSON.parse(updatedSettingsJson);
-                    setSettings(normalizeSettings(updatedSettings));
-                }
-            } catch (saveError) {
-                console.error('Failed to save default settings:', saveError);
-                setError(t('settings.errors.loadAndSaveDefaultFailed'));
-            }
         } finally {
             setIsLoading(false);
         }
