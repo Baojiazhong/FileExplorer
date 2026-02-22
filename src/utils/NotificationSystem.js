@@ -448,9 +448,13 @@ export const showPrompt = (message, titleOrOptions) => {
                     return true;
                 }
 
-                // Block app-level shortcuts while modal is open.
-                e.preventDefault();
-                return true;
+                // Block app-level shortcuts while modal is open,
+                // but allow normal character input.
+                if (e.ctrlKey || e.altKey || e.metaKey) {
+                    e.preventDefault();
+                    return true;
+                }
+                return false;
             },
             {
                 name: 'Prompt dialog keys',
