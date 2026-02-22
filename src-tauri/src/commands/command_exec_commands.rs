@@ -3,7 +3,7 @@ use crate::log_info;
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::path::Path;
-use std::process::{Command, Stdio};
+use std::process::Stdio;
 use std::time::Duration;
 use tokio::process::Command as TokioCommand;
 use tokio::time::timeout;
@@ -88,7 +88,7 @@ pub async fn execute_command(
         "-c"
     };
 
-    let mut cmd = Command::new(&shell_path);
+    let mut cmd = TokioCommand::new(&shell_path);
     cmd.arg(shell_arg).arg(&command);
 
     // Set working directory if provided, with validation
@@ -97,13 +97,11 @@ pub async fn execute_command(
         if path.exists() && path.is_dir() {
             cmd.current_dir(wd);
         } else {
-            // If working directory doesn't exist, try to use home directory
             if let Ok(home_dir) = env::var("HOME") {
                 cmd.current_dir(home_dir);
             }
         }
     } else {
-        // Set a reasonable default working directory
         if let Ok(home_dir) = env::var("HOME") {
             cmd.current_dir(home_dir);
         }
@@ -119,7 +117,7 @@ pub async fn execute_command(
     cmd.stdout(Stdio::piped());
     cmd.stderr(Stdio::piped());
 
-    let output = cmd.output().map_err(|e| {
+    let output = cmd.output().await.map_err(|e| {
         let error_msg = match e.kind() {
             std::io::ErrorKind::NotFound => format!(
                 "Command '{}' not found. Make sure it's installed and in your PATH.",
@@ -226,7 +224,7 @@ pub async fn execute_command_improved(
         "-c"
     };
 
-    let mut cmd = Command::new(&shell_path);
+    let mut cmd = TokioCommand::new(&shell_path);
     cmd.arg(shell_arg).arg(&command);
 
     // Set working directory with validation
@@ -236,7 +234,6 @@ pub async fn execute_command_improved(
             cmd.current_dir(wd);
         } else {
             log_info!("Working directory '{}' not found, using default", wd);
-            // Use home directory as fallback
             if let Ok(home_dir) = env::var("HOME") {
                 cmd.current_dir(home_dir);
             }
@@ -248,12 +245,10 @@ pub async fn execute_command_improved(
     cmd.env("COLORTERM", "truecolor");
 
     if !cfg!(target_os = "windows") {
-        // Preserve PATH and add common binary directories
         let current_path = env::var("PATH").unwrap_or_default();
         let extended_path = format!("{}:/usr/local/bin:/usr/bin:/bin", current_path);
         cmd.env("PATH", extended_path);
 
-        // Set locale for proper character encoding
         cmd.env("LC_ALL", "en_US.UTF-8");
         cmd.env("LANG", "en_US.UTF-8");
     }
@@ -264,6 +259,7 @@ pub async fn execute_command_improved(
 
     let output = cmd
         .output()
+        .await
         .map_err(|e| {
             let error_msg = match e.kind() {
                 std::io::ErrorKind::NotFound => {

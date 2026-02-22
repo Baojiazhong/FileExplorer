@@ -11,6 +11,10 @@ use std::path::Path;
 use zip::write::FileOptions;
 use zip::ZipWriter;
 
+fn spawn_blocking_err() -> String {
+    Error::new(ErrorCode::InternalError, "Task join error".to_string()).to_json()
+}
+
 /// Opens a file at the given path and returns its contents as a string.
 /// Should only be used for text files.
 ///
@@ -40,38 +44,39 @@ use zip::ZipWriter;
 #[allow(dead_code)] //remove once the command is used again
 #[tauri::command]
 pub async fn open_file(path: &str) -> Result<String, String> {
-    let path_obj = Path::new(path);
+    let path = path.to_string();
+    tokio::task::spawn_blocking(move || {
+        let path_obj = Path::new(&path);
 
-    // Check if path exists
-    if !path_obj.exists() {
-        log_error!("File does not exist: {}", path);
-        return Err(Error::new(
-            ErrorCode::ResourceNotFound,
-            format!("File does not exist: {}", path),
-        )
-        .to_json());
-    }
+        if !path_obj.exists() {
+            log_error!("File does not exist: {}", path);
+            return Err(Error::new(
+                ErrorCode::ResourceNotFound,
+                format!("File does not exist: {}", path),
+            )
+            .to_json());
+        }
 
-    // Check if path is a file
-    if !path_obj.is_file() {
-        log_error!("Path is not a file: {}", path);
-        return Err(Error::new(
-            ErrorCode::InvalidInput,
-            format!("Path is not a file: {}", path),
-        )
-        .to_json());
-    }
+        if !path_obj.is_file() {
+            log_error!("Path is not a file: {}", path);
+            return Err(Error::new(
+                ErrorCode::InvalidInput,
+                format!("Path is not a file: {}", path),
+            )
+            .to_json());
+        }
 
-    // Read the file
-    //fs::read_to_string(path).map_err(|err| format!("Failed to read file: {}", err))
-    fs::read_to_string(path).map_err(|err| {
-        log_error!("Failed to open file: {}", err);
-        Error::new(
-            ErrorCode::InternalError,
-            format!("Failed to read file: {}", err),
-        )
-        .to_json()
+        fs::read_to_string(&path).map_err(|err| {
+            log_error!("Failed to open file: {}", err);
+            Error::new(
+                ErrorCode::InternalError,
+                format!("Failed to read file: {}", err),
+            )
+            .to_json()
+        })
     })
+    .await
+    .map_err(|_| spawn_blocking_err())?
 }
 
 #[tauri::command]
@@ -170,156 +175,156 @@ pub async fn open_with_dialog(path: &str) -> Result<(), String> {
 /// ```
 #[tauri::command]
 pub async fn open_directory(path: String) -> Result<String, String> {
-    let path_obj = Path::new(&path);
+    tokio::task::spawn_blocking(move || {
+        let path_obj = Path::new(&path);
 
-    // Check if path exists
-    if !path_obj.exists() {
-        log_error!("Directory does not exist: {}", path);
-        return Err(Error::new(
-            ErrorCode::ResourceNotFound,
-            format!("Directory does not exist: {}", path),
-        )
-        .to_json());
-    }
-
-    // Check if path is a directory
-    if !path_obj.is_dir() {
-        log_error!("Path is not a directory: {}", path);
-        return Err(Error::new(
-            ErrorCode::InvalidInput,
-            format!("Path is not a directory: {}", path),
-        )
-        .to_json());
-    }
-
-    let mut directories = Vec::new();
-    let mut files = Vec::new();
-
-    for entry in read_dir(path_obj).map_err(|err| {
-        log_error!("Failed to read directory: {}", err);
-        Error::new(
-            ErrorCode::InternalError,
-            format!("Failed to read directory: {}", err),
-        )
-        .to_json()
-    })? {
-        let entry = entry.map_err(|err| {
-            log_error!("Failed to read entry: {}", err);
-            Error::new(
-                ErrorCode::InternalError,
-                format!("Failed to read entry: {}", err),
+        if !path_obj.exists() {
+            log_error!("Directory does not exist: {}", path);
+            return Err(Error::new(
+                ErrorCode::ResourceNotFound,
+                format!("Directory does not exist: {}", path),
             )
-            .to_json()
-        })?;
-
-        let file_type = entry.file_type().map_err(|err| {
-            log_error!("Failed to get file type: {}", err);
-            Error::new(
-                ErrorCode::InternalError,
-                format!("Failed to get file type: {}", err),
-            )
-            .to_json()
-        })?;
-
-        let path_of_entry = entry.path();
-        let metadata = entry.metadata().map_err(|err| {
-            log_error!("Failed to get metadata: {}", err);
-            Error::new(
-                ErrorCode::InternalError,
-                format!("Failed to get metadata: {}", err),
-            )
-            .to_json()
-        })?;
-
-        let name = entry
-            .file_name()
-            .to_str()
-            .unwrap_or("[invalid name]")
-            .to_string();
-        let is_hidden = models::is_hidden(&name, &metadata);
-
-        if file_type.is_dir() {
-            directories.push(models::Directory {
-                name,
-                path: path_of_entry
-                    .to_str()
-                    .unwrap_or("[invalid path]")
-                    .to_string(),
-                is_symlink: path_of_entry.is_symlink(),
-                is_hidden,
-                access_rights_as_string: get_access_permission_string(metadata.permissions(), true),
-                access_rights_as_number: get_access_permission_number(metadata.permissions(), true),
-                size_in_bytes: 0,
-                sub_file_count: path_of_entry.to_str().map(count_subfiles).unwrap_or(0),
-                sub_dir_count: path_of_entry
-                    .to_str()
-                    .map(count_subdirectories)
-                    .unwrap_or(0),
-                created: metadata
-                    .created()
-                    .map_or("1970-01-01 00:00:00".to_string(), |time| {
-                        format_system_time(time)
-                    }),
-                last_modified: metadata
-                    .modified()
-                    .map_or("1970-01-01 00:00:00".to_string(), |time| {
-                        format_system_time(time)
-                    }),
-                accessed: metadata
-                    .accessed()
-                    .map_or("1970-01-01 00:00:00".to_string(), |time| {
-                        format_system_time(time)
-                    }),
-            });
-        } else if file_type.is_file() {
-            files.push(models::File {
-                name,
-                path: path_of_entry
-                    .to_str()
-                    .unwrap_or("[invalid path]")
-                    .to_string(),
-                is_symlink: path_of_entry.is_symlink(),
-                is_hidden,
-                access_rights_as_string: get_access_permission_string(
-                    metadata.permissions(),
-                    false,
-                ),
-                access_rights_as_number: get_access_permission_number(
-                    metadata.permissions(),
-                    false,
-                ),
-                size_in_bytes: metadata.len(),
-                created: metadata
-                    .created()
-                    .map_or("1970-01-01 00:00:00".to_string(), |time| {
-                        format_system_time(time)
-                    }),
-                last_modified: metadata
-                    .modified()
-                    .map_or("1970-01-01 00:00:00".to_string(), |time| {
-                        format_system_time(time)
-                    }),
-                accessed: metadata
-                    .accessed()
-                    .map_or("1970-01-01 00:00:00".to_string(), |time| {
-                        format_system_time(time)
-                    }),
-            });
+            .to_json());
         }
-    }
 
-    let entries = Entries { directories, files };
+        if !path_obj.is_dir() {
+            log_error!("Path is not a directory: {}", path);
+            return Err(Error::new(
+                ErrorCode::InvalidInput,
+                format!("Path is not a directory: {}", path),
+            )
+            .to_json());
+        }
 
-    // Convert the Entries struct to a JSON string
-    let json = serde_json::to_string(&entries).map_err(|err| {
-        log_error!("Failed to serialize entries: {}", err);
-        Error::new(
-            ErrorCode::InternalError,
-            format!("Failed to serialize entries: {}", err),
-        )
-        .to_json()
-    })?;
-    Ok(json)
+        let mut directories = Vec::new();
+        let mut files = Vec::new();
+
+        for entry in read_dir(path_obj).map_err(|err| {
+            log_error!("Failed to read directory: {}", err);
+            Error::new(
+                ErrorCode::InternalError,
+                format!("Failed to read directory: {}", err),
+            )
+            .to_json()
+        })? {
+            let entry = entry.map_err(|err| {
+                log_error!("Failed to read entry: {}", err);
+                Error::new(
+                    ErrorCode::InternalError,
+                    format!("Failed to read entry: {}", err),
+                )
+                .to_json()
+            })?;
+
+            let file_type = entry.file_type().map_err(|err| {
+                log_error!("Failed to get file type: {}", err);
+                Error::new(
+                    ErrorCode::InternalError,
+                    format!("Failed to get file type: {}", err),
+                )
+                .to_json()
+            })?;
+
+            let path_of_entry = entry.path();
+            let metadata = entry.metadata().map_err(|err| {
+                log_error!("Failed to get metadata: {}", err);
+                Error::new(
+                    ErrorCode::InternalError,
+                    format!("Failed to get metadata: {}", err),
+                )
+                .to_json()
+            })?;
+
+            let name = entry
+                .file_name()
+                .to_str()
+                .unwrap_or("[invalid name]")
+                .to_string();
+            let is_hidden = models::is_hidden(&name, &metadata);
+
+            if file_type.is_dir() {
+                directories.push(models::Directory {
+                    name,
+                    path: path_of_entry
+                        .to_str()
+                        .unwrap_or("[invalid path]")
+                        .to_string(),
+                    is_symlink: path_of_entry.is_symlink(),
+                    is_hidden,
+                    access_rights_as_string: get_access_permission_string(metadata.permissions(), true),
+                    access_rights_as_number: get_access_permission_number(metadata.permissions(), true),
+                    size_in_bytes: 0,
+                    sub_file_count: path_of_entry.to_str().map(count_subfiles).unwrap_or(0),
+                    sub_dir_count: path_of_entry
+                        .to_str()
+                        .map(count_subdirectories)
+                        .unwrap_or(0),
+                    created: metadata
+                        .created()
+                        .map_or("1970-01-01 00:00:00".to_string(), |time| {
+                            format_system_time(time)
+                        }),
+                    last_modified: metadata
+                        .modified()
+                        .map_or("1970-01-01 00:00:00".to_string(), |time| {
+                            format_system_time(time)
+                        }),
+                    accessed: metadata
+                        .accessed()
+                        .map_or("1970-01-01 00:00:00".to_string(), |time| {
+                            format_system_time(time)
+                        }),
+                });
+            } else if file_type.is_file() {
+                files.push(models::File {
+                    name,
+                    path: path_of_entry
+                        .to_str()
+                        .unwrap_or("[invalid path]")
+                        .to_string(),
+                    is_symlink: path_of_entry.is_symlink(),
+                    is_hidden,
+                    access_rights_as_string: get_access_permission_string(
+                        metadata.permissions(),
+                        false,
+                    ),
+                    access_rights_as_number: get_access_permission_number(
+                        metadata.permissions(),
+                        false,
+                    ),
+                    size_in_bytes: metadata.len(),
+                    created: metadata
+                        .created()
+                        .map_or("1970-01-01 00:00:00".to_string(), |time| {
+                            format_system_time(time)
+                        }),
+                    last_modified: metadata
+                        .modified()
+                        .map_or("1970-01-01 00:00:00".to_string(), |time| {
+                            format_system_time(time)
+                        }),
+                    accessed: metadata
+                        .accessed()
+                        .map_or("1970-01-01 00:00:00".to_string(), |time| {
+                            format_system_time(time)
+                        }),
+                });
+            }
+        }
+
+        let entries = Entries { directories, files };
+
+        serde_json::to_string(&entries).map_err(|err| {
+            log_error!("Failed to serialize entries: {}", err);
+            Error::new(
+                ErrorCode::InternalError,
+                format!("Failed to serialize entries: {}", err),
+            )
+            .to_json()
+        })
+    })
+    .await
+    .map_err(|_| spawn_blocking_err())?
 }
 
 /// Creates a file at the given absolute path. Returns a string if there was an error.
@@ -347,48 +352,50 @@ pub async fn open_directory(path: String) -> Result<String, String> {
 /// ```
 #[tauri::command]
 pub async fn create_file(folder_path_abs: &str, file_name: &str) -> Result<(), String> {
-    // Check if the folder path exists and is valid
-    let path = Path::new(folder_path_abs);
-    if !path.exists() {
-        log_error!("Directory does not exist: {}", folder_path_abs);
-        // Check if the folder path exists
-        return Err(Error::new(
-            ErrorCode::ResourceNotFound,
-            format!("Directory does not exist: {}", folder_path_abs),
-        )
-        .to_json());
-    }
-    if !path.is_dir() {
-        log_error!("Path is no directory: {}", folder_path_abs);
-        return Err(Error::new(
-            ErrorCode::InvalidInput,
-            format!("Path is no directory: {}", folder_path_abs),
-        )
-        .to_json());
-    }
-
-    // Concatenate the folder path and filename
-    let file_path = path.join(file_name);
-
-    // Create the file
-    match fs::File::create(&file_path) {
-        Ok(_) => Ok(()),
-        Err(err) => {
-            log_error!(
-                "File could not be created: {} error: {}",
-                folder_path_abs,
-                err
-            );
-            Err(Error::new(
-                ErrorCode::InternalError,
-                format!(
-                    "File could not be created: {} error: {}",
-                    folder_path_abs, err
-                ),
+    let folder_path_abs = folder_path_abs.to_string();
+    let file_name = file_name.to_string();
+    tokio::task::spawn_blocking(move || {
+        let path = Path::new(&folder_path_abs);
+        if !path.exists() {
+            log_error!("Directory does not exist: {}", folder_path_abs);
+            return Err(Error::new(
+                ErrorCode::ResourceNotFound,
+                format!("Directory does not exist: {}", folder_path_abs),
             )
-            .to_json())
+            .to_json());
         }
-    }
+        if !path.is_dir() {
+            log_error!("Path is no directory: {}", folder_path_abs);
+            return Err(Error::new(
+                ErrorCode::InvalidInput,
+                format!("Path is no directory: {}", folder_path_abs),
+            )
+            .to_json());
+        }
+
+        let file_path = path.join(&file_name);
+
+        match fs::File::create(&file_path) {
+            Ok(_) => Ok(()),
+            Err(err) => {
+                log_error!(
+                    "File could not be created: {} error: {}",
+                    folder_path_abs,
+                    err
+                );
+                Err(Error::new(
+                    ErrorCode::InternalError,
+                    format!(
+                        "File could not be created: {} error: {}",
+                        folder_path_abs, err
+                    ),
+                )
+                .to_json())
+            }
+        }
+    })
+    .await
+    .map_err(|_| spawn_blocking_err())?
 }
 
 /// Creates a directory at the given absolute path. Returns a string if there was an error.
@@ -416,48 +423,51 @@ pub async fn create_file(folder_path_abs: &str, file_name: &str) -> Result<(), S
 /// ```
 #[tauri::command]
 pub async fn create_directory(folder_path_abs: &str, folder_name: &str) -> Result<(), String> {
-    // Check if the folder path exists and is valid
-    let parent_path = Path::new(folder_path_abs);
-    if !parent_path.exists() {
-        log_error!("Parent directory does not exist: {}", folder_path_abs);
-        return Err(Error::new(
-            ErrorCode::ResourceNotFound,
-            format!("Parent directory does not exist: {}", folder_path_abs),
-        )
-        .to_json());
-    }
-
-    if !parent_path.is_dir() {
-        log_error!(format!("Path is no directory: {}", folder_path_abs).as_str());
-        return Err(Error::new(
-            ErrorCode::InvalidInput,
-            format!("Path is no directory: {}", folder_path_abs),
-        )
-        .to_json());
-    }
-
-    // Concatenate the parent path and new directory name
-    let dir_path = parent_path.join(folder_name);
-
-    // Create the directory
-    match fs::create_dir(&dir_path) {
-        Ok(_) => Ok(()),
-        Err(err) => {
-            log_error!(
-                "Failed to create directory: {} err: {}",
-                folder_path_abs,
-                err
-            );
-            Err(Error::new(
-                ErrorCode::InternalError,
-                format!(
-                    "Failed to create directory: {} err: {}",
-                    folder_path_abs, err
-                ),
+    let folder_path_abs = folder_path_abs.to_string();
+    let folder_name = folder_name.to_string();
+    tokio::task::spawn_blocking(move || {
+        let parent_path = Path::new(&folder_path_abs);
+        if !parent_path.exists() {
+            log_error!("Parent directory does not exist: {}", folder_path_abs);
+            return Err(Error::new(
+                ErrorCode::ResourceNotFound,
+                format!("Parent directory does not exist: {}", folder_path_abs),
             )
-            .to_json())
+            .to_json());
         }
-    }
+
+        if !parent_path.is_dir() {
+            log_error!(format!("Path is no directory: {}", folder_path_abs).as_str());
+            return Err(Error::new(
+                ErrorCode::InvalidInput,
+                format!("Path is no directory: {}", folder_path_abs),
+            )
+            .to_json());
+        }
+
+        let dir_path = parent_path.join(&folder_name);
+
+        match fs::create_dir(&dir_path) {
+            Ok(_) => Ok(()),
+            Err(err) => {
+                log_error!(
+                    "Failed to create directory: {} err: {}",
+                    folder_path_abs,
+                    err
+                );
+                Err(Error::new(
+                    ErrorCode::InternalError,
+                    format!(
+                        "Failed to create directory: {} err: {}",
+                        folder_path_abs, err
+                    ),
+                )
+                .to_json())
+            }
+        }
+    })
+    .await
+    .map_err(|_| spawn_blocking_err())?
 }
 
 /// Renames a file or directory at the given path.
@@ -485,41 +495,44 @@ pub async fn create_directory(folder_path_abs: &str, folder_name: &str) -> Resul
 /// ```
 #[tauri::command]
 pub async fn rename(old_path: &str, new_path: &str) -> Result<(), String> {
-    let old_path_obj = Path::new(old_path);
-    let new_path_obj = Path::new(new_path);
+    let old_path = old_path.to_string();
+    let new_path = new_path.to_string();
+    tokio::task::spawn_blocking(move || {
+        let old_path_obj = Path::new(&old_path);
+        let new_path_obj = Path::new(&new_path);
 
-    // Check if the old path exists
-    if !old_path_obj.exists() {
-        log_error!("File does not exist: {}", old_path);
-        return Err(Error::new(
-            ErrorCode::ResourceNotFound,
-            format!("File does not exist: {}", old_path),
-        )
-        .to_json());
-    }
-
-    // Check if the new path is valid
-    if new_path_obj.exists() {
-        log_error!("New path already exists: {}", new_path);
-        return Err(Error::new(
-            ErrorCode::ResourceAlreadyExists,
-            format!("New path already exists: {}", new_path),
-        )
-        .to_json());
-    }
-
-    // Rename the file or directory
-    match fs::rename(old_path, new_path) {
-        Ok(_) => Ok(()),
-        Err(err) => {
-            log_error!("Failed to rename: {}", err);
-            Err(Error::new(
-                ErrorCode::InternalError,
-                format!("Failed to rename: {}", err),
+        if !old_path_obj.exists() {
+            log_error!("File does not exist: {}", old_path);
+            return Err(Error::new(
+                ErrorCode::ResourceNotFound,
+                format!("File does not exist: {}", old_path),
             )
-            .to_json())
+            .to_json());
         }
-    }
+
+        if new_path_obj.exists() {
+            log_error!("New path already exists: {}", new_path);
+            return Err(Error::new(
+                ErrorCode::ResourceAlreadyExists,
+                format!("New path already exists: {}", new_path),
+            )
+            .to_json());
+        }
+
+        match fs::rename(&old_path, &new_path) {
+            Ok(_) => Ok(()),
+            Err(err) => {
+                log_error!("Failed to rename: {}", err);
+                Err(Error::new(
+                    ErrorCode::InternalError,
+                    format!("Failed to rename: {}", err),
+                )
+                .to_json())
+            }
+        }
+    })
+    .await
+    .map_err(|_| spawn_blocking_err())?
 }
 
 /// Deletes a file at the given path. Returns a string if there was an error.
@@ -547,17 +560,22 @@ pub async fn rename(old_path: &str, new_path: &str) -> Result<(), String> {
 /// ```
 #[tauri::command]
 pub async fn move_to_trash(path: &str) -> Result<(), String> {
-    match trash::delete(path) {
-        Ok(_) => Ok(()),
-        Err(err) => {
-            log_error!("Failed to move file or directory to trash: {}", err);
-            Err(Error::new(
-                ErrorCode::InternalError,
-                format!("Failed to move file or directory to trash: {}", err),
-            )
-            .to_json())
+    let path = path.to_string();
+    tokio::task::spawn_blocking(move || {
+        match trash::delete(&path) {
+            Ok(_) => Ok(()),
+            Err(err) => {
+                log_error!("Failed to move file or directory to trash: {}", err);
+                Err(Error::new(
+                    ErrorCode::InternalError,
+                    format!("Failed to move file or directory to trash: {}", err),
+                )
+                .to_json())
+            }
         }
-    }
+    })
+    .await
+    .map_err(|_| spawn_blocking_err())?
 }
 
 /// Generates a unique destination path by appending a number if the path already exists.
@@ -636,9 +654,7 @@ fn generate_unique_path(original_path: &str) -> String {
 ///     }
 /// });
 /// ```
-#[tauri::command]
-pub async fn copy_file_or_dir(source_path: &str, destination_path: &str) -> Result<u64, String> {
-    // Check if the source path exists
+fn copy_file_or_dir_sync(source_path: &str, destination_path: &str) -> Result<u64, String> {
     if !Path::new(source_path).exists() {
         log_error!("Source path does not exist: {}", source_path);
         return Err(Error::new(
@@ -648,14 +664,11 @@ pub async fn copy_file_or_dir(source_path: &str, destination_path: &str) -> Resu
         .to_json());
     }
 
-    // Generate a unique destination path if the original already exists
     let final_destination_path = generate_unique_path(destination_path);
 
     if Path::new(source_path).is_dir() {
-        // If the source is a directory, recursively copy it
         let mut total_size = 0;
 
-        // Create the destination directory
         fs::create_dir_all(&final_destination_path).map_err(|err| {
             log_error!("Failed to create destination directory: {}", err);
             Error::new(
@@ -665,7 +678,6 @@ pub async fn copy_file_or_dir(source_path: &str, destination_path: &str) -> Resu
             .to_json()
         })?;
 
-        // Read all entries in the source directory
         for entry in read_dir(source_path).map_err(|err| {
             log_error!("Failed to read source directory: {}", err);
             Error::new(
@@ -688,7 +700,6 @@ pub async fn copy_file_or_dir(source_path: &str, destination_path: &str) -> Resu
             let dest_path = Path::new(&final_destination_path).join(file_name);
 
             if entry_path.is_file() {
-                // Copy file
                 let size = fs::copy(&entry_path, &dest_path).map_err(|err| {
                     log_error!("Failed to copy file: {}", err);
                     Error::new(
@@ -699,19 +710,16 @@ pub async fn copy_file_or_dir(source_path: &str, destination_path: &str) -> Resu
                 })?;
                 total_size += size;
             } else if entry_path.is_dir() {
-                // Recursively copy subdirectory
-                let sub_size = Box::pin(copy_file_or_dir(
+                let sub_size = copy_file_or_dir_sync(
                     entry_path.to_str().unwrap_or("[invalid source path]"),
                     dest_path.to_str().unwrap_or("[invalid dest path]"),
-                ))
-                .await?;
+                )?;
                 total_size += sub_size;
             }
         }
 
         Ok(total_size)
     } else {
-        // Copy a single file
         let size = fs::copy(source_path, &final_destination_path).map_err(|err| {
             log_error!("Failed to copy file: {}", err);
             Error::new(
@@ -722,6 +730,17 @@ pub async fn copy_file_or_dir(source_path: &str, destination_path: &str) -> Resu
         })?;
         Ok(size)
     }
+}
+
+#[tauri::command]
+pub async fn copy_file_or_dir(source_path: &str, destination_path: &str) -> Result<u64, String> {
+    let source_path = source_path.to_string();
+    let destination_path = destination_path.to_string();
+    tokio::task::spawn_blocking(move || {
+        copy_file_or_dir_sync(&source_path, &destination_path)
+    })
+    .await
+    .map_err(|_| spawn_blocking_err())?
 }
 /// Zips files and directories to a destination zip file.
 /// If only one source path is provided and no destination is specified, creates a zip file with the same name.
@@ -756,6 +775,17 @@ pub async fn copy_file_or_dir(source_path: &str, destination_path: &str) -> Resu
 /// ```
 #[tauri::command]
 pub async fn zip(
+    source_paths: Vec<String>,
+    destination_path: Option<String>,
+) -> Result<(), String> {
+    tokio::task::spawn_blocking(move || {
+        zip_sync(source_paths, destination_path)
+    })
+    .await
+    .map_err(|_| spawn_blocking_err())?
+}
+
+fn zip_sync(
     source_paths: Vec<String>,
     destination_path: Option<String>,
 ) -> Result<(), String> {
@@ -931,6 +961,14 @@ pub async fn zip(
 /// ```
 #[tauri::command]
 pub async fn unzip(zip_paths: Vec<String>, destination_path: Option<String>) -> Result<(), String> {
+    tokio::task::spawn_blocking(move || {
+        unzip_sync(zip_paths, destination_path)
+    })
+    .await
+    .map_err(|_| spawn_blocking_err())?
+}
+
+fn unzip_sync(zip_paths: Vec<String>, destination_path: Option<String>) -> Result<(), String> {
     if zip_paths.is_empty() {
         log_error!("No zip files provided");
         return Err(
