@@ -50,14 +50,10 @@ const RenameModal = ({ isOpen, onClose, item, onRename }) => {
      */
     const handleSubmit = (e) => {
         e?.preventDefault?.();
-        console.log('RenameModal handleSubmit called with:', { newName, itemName: item?.name });
 
-        
         if (newName && newName.trim() && newName.trim() !== item.name) {
-            console.log('RenameModal: Calling onRename with:', item, newName.trim());
             onRename(item, newName.trim());
         } else {
-            console.log('RenameModal: Not calling onRename - conditions not met');
         }
         onClose();
     };

@@ -129,21 +129,9 @@ const GlobalSearch = ({ isOpen, onClose }) => {
     // Debounced autocompletion - load suggestions as user types
     useEffect(() => {
         const timeoutId = setTimeout(async () => {
-            console.log('Autocompletion trigger:', {
-                query: query.trim(),
-                queryLength: query.trim().length,
-                searchEngineInfo: !!searchEngineInfo,
-                searchEngineStatus: searchEngineInfo?.status,
-                trieSize: searchEngineInfo?.stats?.trie_size,
-                suppressSuggestions,
-                isInputFocused
-            });
-
-            if (query.trim().length >= 2 && !suppressSuggestions && !isSearching && isInputFocused && searchEngineInfo) {
-                console.log('Loading suggestions for:', query.trim());
+if (query.trim().length >= 2 && !suppressSuggestions && !isSearching && isInputFocused && searchEngineInfo) {
                 await loadSuggestions(query.trim());
             } else {
-                console.log('Not loading suggestions - conditions not met');
                 setSuggestions([]);
                 setSelectedSuggestionIndex(-1);
             }
@@ -156,26 +144,15 @@ const GlobalSearch = ({ isOpen, onClose }) => {
     useEffect(() => {
         const initializeSearchEngine = async () => {
             if (volumes.length > 0 && searchEngineInfo) {
-                console.log('Initializing search engine with volumes:', volumes);
-                console.log('Search engine info:', searchEngineInfo);
-
                 // Check if search engine has no indexed files
                 const hasNoIndexedFiles = !searchEngineInfo.stats?.trie_size || searchEngineInfo.stats.trie_size === 0;
-
-                console.log('Has no indexed files:', hasNoIndexedFiles, 'Is indexing:', isIndexing);
-
                 const AUTO_INDEX_ENABLED = false;
 
                 if (hasNoIndexedFiles && !isIndexing && AUTO_INDEX_ENABLED) {
-                    console.log('Search engine is empty, starting auto-indexing...');
-                    
                     // Auto-index just the home directory to test the increased file limits
                     const autoIndexDirectories = [
                         '/Users/daniel'  // Home directory - will test the 150,000 file limit
                     ];
-
-                    console.log('Auto-indexing directories:', autoIndexDirectories);
-
                     // Filter to only existing directories
                     const validDirectories = [];
                     for (const dir of autoIndexDirectories) {
@@ -183,20 +160,16 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                             // Check if directory exists by attempting to invoke a simple command
                             validDirectories.push(dir);
                         } catch (error) {
-                            console.log(`Skipping non-existent directory: ${dir}`);
                         }
                     }
 
                     if (validDirectories.length > 0) {
                         await startAutoIndexing(validDirectories.map(dir => ({ mount_point: dir })));
                     } else {
-                        console.log('No valid directories found for auto-indexing');
                     }
                 } else {
-                    console.log('Skipping auto-indexing - either has files, already indexing, or auto-index disabled');
                 }
             } else {
-                console.log('Not initializing search engine - volumes:', volumes.length, 'searchEngineInfo:', !!searchEngineInfo);
             }
         };
 
@@ -301,13 +274,8 @@ const GlobalSearch = ({ isOpen, onClose }) => {
     // Start polling for progress when indexing begins
     const startProgressPolling = () => {
         if (progressIntervalRef.current) return; // Already polling
-
-        console.log('Starting progress polling...');
-
         progressIntervalRef.current = setInterval(async () => {
             try {
-                console.log('Polling for progress...');
-                
                 // Primary method: Use documented get_search_engine_info
                 const info = await invoke('get_search_engine_info');
                 
@@ -325,16 +293,8 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                         start_time: info.progress.start_time || Date.now()
                     });
                 }
-
-                console.log('Progress poll result:', {
-                    status: info.status,
-                    isStillIndexing,
-                    progress: info.progress
-                });
-
-                // Check if indexing is complete
+// Check if indexing is complete
                 if (!isStillIndexing) {
-                    console.log('Indexing completed, stopping polling. Final status:', info.status);
                     setIsIndexing(false);
                     setIsLoadingStatus(false); // Reset loading status when polling detects completion
                     stopProgressPolling();
@@ -355,7 +315,6 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                     setIndexingProgress(progress);
                     
                     if (status !== 'Indexing' && status !== '"Indexing"') {
-                        console.log('Indexing completed (fallback), stopping polling. Final status:', status);
                         setIsIndexing(false);
                         setIsLoadingStatus(false); // Reset loading status in fallback case too
                         stopProgressPolling();
@@ -407,18 +366,12 @@ const GlobalSearch = ({ isOpen, onClose }) => {
     const checkIndexingStatus = async () => {
         setIsLoadingStatus(true);
         try {
-            console.log('Checking indexing status using documented API...');
-            
             // Use documented get_search_engine_info command
             const info = await invoke('get_search_engine_info');
-            
-            console.log('Initial search engine info:', info);
-            
             // Check if indexing is in progress based on engine status
             const isCurrentlyIndexing = info.status && (info.status === 'Indexing' || info.status === '"Indexing"');
 
             if (isCurrentlyIndexing) {
-                console.log('Indexing already in progress, starting UI updates...');
                 setIsIndexing(true);
                 
                 // Set progress from search engine info if available
@@ -435,7 +388,6 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                 
                 startProgressPolling();
             } else {
-                console.log('No indexing in progress');
                 setIsIndexing(false);
             }
             
@@ -451,12 +403,7 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                     invoke('get_indexing_status'),
                     invoke('get_indexing_progress')
                 ]);
-
-                console.log('Fallback - Initial indexing status:', status);
-                console.log('Fallback - Initial indexing progress:', progress);
-
                 if (status === 'Indexing' || status === '"Indexing"') {
-                    console.log('Indexing already in progress (fallback), starting UI updates...');
                     setIsIndexing(true);
                     setIndexingProgress(progress);
                     startProgressPolling();
@@ -475,10 +422,8 @@ const GlobalSearch = ({ isOpen, onClose }) => {
     // Load system information
     const loadSystemInfo = async () => {
         try {
-            console.log('Loading system info...');
             const metaDataJson = await invoke('get_meta_data_as_json');
             const metaData = JSON.parse(metaDataJson);
-            console.log('System info loaded:', metaData);
             setSystemInfo(metaData);
         } catch (error) {
             console.error('Failed to load system info:', error);
@@ -489,18 +434,13 @@ const GlobalSearch = ({ isOpen, onClose }) => {
     // Load search engine information
     const loadSearchEngineInfo = async () => {
         try {
-            console.log('Loading search engine info...');
             const info = await invoke('get_search_engine_info');
-            console.log('Search engine info loaded:', info);
             setSearchEngineInfo(info);
             
             // Check if indexing is in progress based on engine status and progress
             const isCurrentlyIndexing = info.status && (info.status === 'Indexing' || info.status === '"Indexing"');
-            console.log('Engine status indicates indexing:', isCurrentlyIndexing);
-            
             // Update indexing state based on search engine info
             if (isCurrentlyIndexing && !isIndexing) {
-                console.log('Starting indexing UI based on engine status...');
                 setIsIndexing(true);
                 // Set progress from search engine info if available
                 if (info.progress) {
@@ -515,7 +455,6 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                 }
                 startProgressPolling();
             } else if (!isCurrentlyIndexing && isIndexing) {
-                console.log('Stopping indexing UI based on engine status...');
                 setIsIndexing(false);
                 setIsLoadingStatus(false); // Reset loading status when indexing completes
                 stopProgressPolling();
@@ -551,13 +490,11 @@ const GlobalSearch = ({ isOpen, onClose }) => {
 
         // Check if search engine is ready based on documented status
         if (!searchEngineInfo || searchEngineInfo.status === 'Indexing' || searchEngineInfo.status === '"Indexing"') {
-            console.log('Search blocked - search engine not ready or indexing in progress');
             return;
         }
 
         // Check if there are indexed files to search
         if (!searchEngineInfo.stats?.trie_size || searchEngineInfo.stats.trie_size === 0) {
-            console.log('Search blocked - no files indexed yet');
             setResults([]);
             return;
         }
@@ -575,14 +512,12 @@ const GlobalSearch = ({ isOpen, onClose }) => {
 
             // Use extension filtering if extensions are selected
             if (selectedExtensions.length > 0) {
-                console.log(`Searching with extensions: ${selectedExtensions.join(', ')}`);
                 searchResults = await invoke('search_with_extension', {
                     query: query.trim(),
                     extensions: selectedExtensions
                 });
             } else {
                 // Use basic search
-                console.log(`Performing basic search for: "${query.trim()}"`);
                 searchResults = await invoke('search', {
                     query: query.trim()
                 });
@@ -590,9 +525,6 @@ const GlobalSearch = ({ isOpen, onClose }) => {
 
             const searchEndTime = performance.now();
             const searchTime = searchEndTime - searchStartTime;
-            
-            console.log(`Search completed in ${searchTime.toFixed(2)}ms with ${searchResults.length} results`);
-
             // Convert API results to our format and apply frontend filtering
             let formattedResults = searchResults.map(([path, score]) => {
                 const fileName = path.split(/[/\\]/).pop() || path;
@@ -640,7 +572,6 @@ const GlobalSearch = ({ isOpen, onClose }) => {
             if (query.trim().length >= 3) {
                 const errorMessage = error.message || error;
                 if (errorMessage.includes('No search engine available')) {
-                    console.warn('Search engine not ready:', errorMessage);
                 } else {
                     console.error('Search error:', errorMessage);
                 }
@@ -667,51 +598,28 @@ const GlobalSearch = ({ isOpen, onClose }) => {
     };
 
     const loadSuggestions = async (prefix) => {
-        console.log('loadSuggestions called with prefix:', prefix);
-
         if (!searchEngineInfo || searchEngineInfo.status === 'Indexing' || searchEngineInfo.status === '"Indexing"') {
-            console.log('Search engine not ready for suggestions:', { 
-                hasInfo: !!searchEngineInfo, 
-                status: searchEngineInfo?.status 
-            });
-            return;
+return;
         }
 
         if (!searchEngineInfo.stats?.trie_size || searchEngineInfo.stats.trie_size === 0) {
-            console.log('No indexed files for suggestions:', { 
-                trieSize: searchEngineInfo.stats?.trie_size 
-            });
-
-            setShowSuggestions(false);
+setShowSuggestions(false);
             setSuggestions([]);
             return;
         }
-
-        console.log('Calling get_suggestions API...');
         setIsLoadingSuggestions(true);
         try {
             const suggestionResults = await invoke('get_suggestions', {
                 prefix: prefix,
                 limit: 8
             });
-
-            console.log('Raw suggestion results:', suggestionResults);
-
             const uniqueSuggestions = [...new Set(suggestionResults)]
                 .filter(suggestion => suggestion.toLowerCase() !== prefix.toLowerCase())
                 .slice(0, 8);
-
-            console.log('Processed suggestions:', uniqueSuggestions);
-
             setSuggestions(uniqueSuggestions);
             setSelectedSuggestionIndex(-1);
             setShowSuggestions(uniqueSuggestions.length > 0);
-            
-            console.log('Suggestions state updated:', {
-                suggestions: uniqueSuggestions,
-                showSuggestions: uniqueSuggestions.length > 0
-            });
-        } catch (error) {
+} catch (error) {
             console.error('Failed to load suggestions:', error);
             console.error('Error details:', {
                 message: error.message,
@@ -794,7 +702,6 @@ const GlobalSearch = ({ isOpen, onClose }) => {
         try {
             // Note: This would be a new backend command we'd need to implement
             // For now, we'll just track it in the frontend
-            console.log('Recording path usage:', path);
             // await invoke('record_path_usage', { path });
         } catch (error) {
             console.error('Failed to record path usage:', error);
@@ -826,12 +733,8 @@ const GlobalSearch = ({ isOpen, onClose }) => {
     // Auto-start indexing for volumes
     const startAutoIndexing = async (volumesToIndex = volumes) => {
         if (volumesToIndex.length === 0 || isIndexing) {
-            console.log('Skipping auto-indexing - no volumes or already indexing');
             return;
         }
-
-        console.log('Starting auto-indexing for volumes:', volumesToIndex);
-
         setIsIndexing(true);
         setIndexingProgress({
             files_indexed: 0,
@@ -846,27 +749,18 @@ const GlobalSearch = ({ isOpen, onClose }) => {
         startProgressPolling();
 
         try {
-            console.log('Background indexing finished for external volumes...');
-
             // Index all volumes in background
             for (const volume of volumesToIndex) {
-                console.log(`Adding ${volume.mount_point} to search index...`);
-
                 // Check if the volume path exists and is accessible
                 try {
                     const result = await invoke('add_paths_recursive_async', {
                         folder: volume.mount_point
                     });
-
-                    console.log(`Indexing result for ${volume.mount_point}:`, result);
                 } catch (volumeError) {
                     console.error(`Failed to index volume ${volume.mount_point}:`, volumeError);
                     // Continue with other volumes even if one fails
                 }
             }
-
-            console.log('Auto-indexing initiated successfully');
-
         } catch (error) {
             console.error('Auto-indexing failed:', error);
             setIsIndexing(false);
@@ -884,8 +778,6 @@ const GlobalSearch = ({ isOpen, onClose }) => {
             return;
         }
 
-        console.log('Starting manual indexing for home directory:', systemInfo.user_home_dir);
-
         setIsIndexing(true);
         setIndexingProgress({
             files_indexed: 0,
@@ -900,8 +792,6 @@ const GlobalSearch = ({ isOpen, onClose }) => {
         startProgressPolling();
 
         try {
-            console.log(`Manually indexing home directory: ${systemInfo.user_home_dir}...`);
-
             // Try async version first, fallback to sync version
             let result;
             try {
@@ -909,18 +799,11 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                     folder: systemInfo.user_home_dir
                 });
             } catch (asyncError) {
-                console.log('Async indexing failed, trying sync version:', asyncError);
                 result = await invoke('add_paths_recursive', {
                     folder: systemInfo.user_home_dir
                 });
             }
-
-            console.log(`Manual indexing result for ${systemInfo.user_home_dir}:`, result);
-            console.log('Manual indexing initiated successfully');
-            
             // Don't show alert immediately - let polling handle completion notification
-            console.log('Indexing started successfully. Progress will be shown above.');
-
         } catch (error) {
             console.error('Manual indexing failed:', error);
             showError(t('search.failedStartIndexing', { message: error.message || error }));
@@ -941,10 +824,7 @@ const GlobalSearch = ({ isOpen, onClose }) => {
         }
 
         try {
-            console.log('Clearing search engine...');
             await invoke('clear_search_engine');
-            console.log('Search engine cleared successfully');
-            
             // Update UI state
             setResults([]);
             setQuery('');
@@ -997,17 +877,9 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                                 value={query}
                                 onChange={(e) => setQuery(e.target.value)}
                                 onFocus={() => {
-                                    console.log('Input focus event triggered', {
-                                        query: query.trim(),
-                                        queryLength: query.trim().length,
-                                        searchEngineInfo: !!searchEngineInfo,
-                                        suppressSuggestions,
-                                        isSearching
-                                    });
-                                    setIsInputFocused(true);
+setIsInputFocused(true);
                                     // Trigger suggestions if there's existing text when input is focused
                                     if (query.trim().length >= 2 && searchEngineInfo && !suppressSuggestions && !isSearching) {
-                                        console.log('Input focused with existing query, loading suggestions:', query.trim());
                                         setTimeout(() => loadSuggestions(query.trim()), 50);
                                     }
                                 }}
@@ -1134,7 +1006,6 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                                 type="button"
                                 className="filter-toggle-btn"
                                 onClick={() => {
-                                    console.log('Filter button clicked, current state:', filtersExpanded);
                                     setFiltersExpanded(!filtersExpanded);
                                 }}
                                 title={t('search.filtersToggleTitle')}
@@ -1486,7 +1357,6 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                                                         return;
                                                     }
 
-                                                    console.log('Starting test indexing...');
                                                     setIsIndexing(true);
                                                     setIndexingProgress({
                                                         files_indexed: 0,
@@ -1503,14 +1373,9 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                                                         const documentsPath = systemInfo.current_running_os === 'windows' 
                                                             ? `${systemInfo.user_home_dir}\\Documents`
                                                             : `${systemInfo.user_home_dir}/Documents`;
-                                                        
-                                                        console.log(`Testing indexing with: ${documentsPath}`);
-                                                        
                                                         const result = await invoke('add_paths_recursive_async', {
                                                             folder: documentsPath
                                                         });
-                                                        
-                                                        console.log('Test indexing result:', result);
                                                     } catch (error) {
                                                         console.error('Test indexing failed:', error);
                                                         showError(t('search.testIndexingFailed', { message: error.message || error }));

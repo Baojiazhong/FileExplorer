@@ -62,17 +62,11 @@ const ThisPCView = () => {
      */
     const loadUserFolders = async () => {
         if (!systemInfo) return;
-
-        console.log('Loading user folders for OS:', systemInfo.current_running_os);
-        console.log('User home directory:', systemInfo.user_home_dir);
-
         const folders = [];
 
         try {
             // Get all possible paths for each folder type
             const videoPaths = getVideosPaths();
-            console.log('Video paths to check:', videoPaths);
-
             // Common user folder paths - some folders might have multiple possible names
             const folderConfigs = [
                 {
@@ -116,19 +110,13 @@ const ThisPCView = () => {
             // Check which folders exist for each configuration
             for (const config of folderConfigs) {
                 let foundPath = null;
-
-                console.log(`Checking ${config.name} with paths:`, config.paths);
-
                 // Try each possible path for this folder type
                 for (const path of config.paths) {
-                    console.log(`Trying path: ${path}`);
                     try {
                         await invoke('open_directory', { path });
-                        console.log(`Path exists and is accessible: ${path}`);
                         foundPath = path;
                         break; // Use the first path that works
                     } catch (error) {
-                        console.log(`Path failed: ${path}`, error.message || error);
                         // This path doesn't exist or isn't accessible, try the next one
                         continue;
                     }
@@ -136,21 +124,17 @@ const ThisPCView = () => {
 
                 // If we found a working path, add it to the folders list
                 if (foundPath) {
-                    console.log(`Adding ${config.name} folder with path: ${foundPath}`);
                     folders.push({
                         name: config.name,
                         path: foundPath,
                         icon: config.icon
                     });
                 } else {
-                    console.log(`No accessible path found for ${config.name}`);
                 }
             }
         } catch (error) {
             console.error('Failed to load user folders:', error);
         }
-
-        console.log('Final user folders:', folders);
         setUserFolders(folders);
     };
 
@@ -216,7 +200,6 @@ const ThisPCView = () => {
      */
     const getVideosPaths = () => {
         if (!systemInfo) {
-            console.warn('getVideosPaths called without systemInfo');
             return [];
         }
 
@@ -233,8 +216,6 @@ const ThisPCView = () => {
                 `${systemInfo.user_home_dir}/Videos`
             ];
         }
-
-        console.log('Generated video paths:', paths);
         return paths;
     };
 
@@ -245,7 +226,6 @@ const ThisPCView = () => {
      * @async
      */
     const handleFolderClick = async (path) => {
-        console.log('Clicking folder with path:', path);
         try {
             await loadDirectory(path);
             navigateTo(path);

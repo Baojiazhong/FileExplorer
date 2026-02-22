@@ -115,21 +115,17 @@ export default function FileSystemProvider({ children }) {
             setIsLoading(false);
             return false;
         }
-
-        console.log(`Attempting to load directory: ${path}`);
         setIsLoading(true);
         setError(null);
 
         try {
             // Check if it's an SFTP path
             if (isSftpPath(path)) {
-                console.log(`Loading SFTP directory: ${path}`);
                 const sftpData = await loadSftpDirectory(path);
                 if (sftpData) {
                     const filteredData = filterDirectoryData(sftpData);
                     setCurrentDirData(filteredData);
                     navigateTo(path);
-                    console.log(`Successfully loaded SFTP directory: ${path}`);
                     return true;
                 } else {
                     throw new Error(t('fileSystem.loadSftpDirFailed'));
@@ -153,7 +149,6 @@ export default function FileSystemProvider({ children }) {
                 const filteredData = filterDirectoryData(dirData);
                 setCurrentDirData(filteredData);
                 navigateTo(path);
-                console.log(`Successfully loaded directory: ${path}`);
                 return true;
             } catch (parseError) {
                 throw new Error(t('fileSystem.parseDirFailed', { message: parseError.message }));
@@ -190,38 +185,29 @@ export default function FileSystemProvider({ children }) {
 
         try {
             // 1. Versuche zuerst, die Volumes zu laden
-            console.log("Attempting to load volumes...");
             const volumesList = await loadVolumes();
 
             if (volumesList && volumesList.length > 0) {
-                console.log(`Found volumes, using first mount point: ${volumesList[0].mount_point}`);
                 return volumesList[0].mount_point;
             }
-
-            console.warn('No volumes available, trying common paths instead');
-
             // 2. Liste gängiger Pfade für verschiedene Betriebssysteme
             //const commonPaths = ['/', 'C:\\', '/home', '/Users', '/tmp', '/var', '/opt'];
             const commonPaths = ['C:\\', '/Users', '/home'];
 
             // 3. Prüfe jeden Pfad einzeln
             for (const path of commonPaths) {
-                console.log(`Checking if path is accessible: ${path}`);
                 try {
                     // Verwende einen separaten try-catch für jeden Pfad
                     const result = await invoke('open_directory', { path });
                     if (result) {
-                        console.log(`Successfully found accessible path: ${path}`);
                         return path;
                     }
                 } catch (e) {
-                    console.log(`Path ${path} not accessible`);
                     // Fehler ignorieren und mit dem nächsten Pfad fortfahren
                 }
             }
 
             // 4. Hartcodierter Fallback als letzte Möglichkeit
-            console.warn('All paths failed, using hardcoded default');
             return '/';
         } catch (error) {
             console.error('Error in getDefaultDirectory:', error);
@@ -234,8 +220,6 @@ export default function FileSystemProvider({ children }) {
 
 // Verbesserte initializeFirstDirectory-Funktion
     const initializeFirstDirectory = useCallback(async () => {
-        console.log("Initializing first directory...");
-
         // 1. Start mit einem Timeout-Mechanismus
         let timeoutId = setTimeout(() => {
             console.error("Directory initialization timed out");
@@ -246,22 +230,17 @@ export default function FileSystemProvider({ children }) {
         try {
             // 2. Versuche ein Standardverzeichnis zu bekommen
             const defaultDir = await getDefaultDirectory();
-            console.log(`Got default directory: ${defaultDir}`);
-
             // 3. Versuche das Verzeichnis zu laden
             const success = await loadDirectory(defaultDir);
 
             if (!success) {
                 // 4. Wenn der erste Versuch fehlschlägt, versuche absolute Fallback-Pfade
-                console.warn("First directory load failed, trying fallbacks...");
                 const fallbacks = ['/', 'C:\\', '/tmp'];
                 //const fallbacks = ['C:\\', '/Users', '/home'];
 
                 for (const fallback of fallbacks) {
                     if (fallback !== defaultDir) {
-                        console.log(`Trying fallback directory: ${fallback}`);
                         if (await loadDirectory(fallback)) {
-                            console.log(`Successfully loaded fallback directory: ${fallback}`);
                             break;
                         }
                     }
@@ -281,17 +260,14 @@ export default function FileSystemProvider({ children }) {
     useEffect(() => {
         // Nur initialisieren, wenn noch kein Verzeichnis geladen wurde
         if (!currentDirData && !currentPath) {
-            console.log("No directory data or current path, initializing first directory...");
             initializeFirstDirectory();
         } else {
-            console.log("Directory already loaded or path set, skipping initialization");
         }
     }, [initializeFirstDirectory, currentDirData, currentPath]);
 
 // React to navigation/currentPath changes and hidden-files setting
     useEffect(() => {
         if (currentPath) {
-            console.log(`Current path changed to: ${currentPath}, loading directory...`);
             loadDirectory(currentPath);
         }
     }, [currentPath, loadDirectory, settings.show_hidden_files_and_folders]);
@@ -377,8 +353,6 @@ export default function FileSystemProvider({ children }) {
         setError(null);
 
         try {
-            console.log(`FileSystemProvider: Renaming "${oldPath}" -> "${newPath}"`);
-
             if (isSftpPath(oldPath)) {
                 const pathParts = newPath.split('/');
                 const newName = pathParts[pathParts.length - 1];
@@ -394,8 +368,6 @@ export default function FileSystemProvider({ children }) {
                 const dirPath = getDirectoryPath(oldPath);
                 await loadDirectory(dirPath);
             }
-
-            console.log('FileSystemProvider: Rename operation completed successfully');
         } catch (err) {
             console.error(`Failed to rename item: ${oldPath}`, err);
             setError(t('fileSystem.renameFailed', { message: err.message || err }));

@@ -338,7 +338,6 @@ const Terminal = ({ isOpen, onToggle }) => {
 
 
             case 'cd': {
-                console.log('[Terminal cd] Starting cd command with args:', args);
                 try {
                     if (args.length === 0) {
                         // No argument provided - go to home directory
@@ -356,12 +355,10 @@ const Terminal = ({ isOpen, onToggle }) => {
                             
                             if (homeDir) {
                                 await navigateTo(homeDir);
-                                console.log('[Terminal cd] Successfully navigated to home');
                                 return { type: 'output', content: '' }; // Silent success - empty content
                             }
                         } catch (error) {
                             // Fallback to current path
-                            console.log('[Terminal cd] Home navigation failed, showing current path');
                             return {
                                 type: 'output',
                                 content: currentPath || '/',
@@ -371,9 +368,6 @@ const Terminal = ({ isOpen, onToggle }) => {
 
                     let targetPath = args[0];
                     let resolvedPath;
-                    
-                    console.log('[Terminal cd] Input:', targetPath, 'Current path:', currentPath);
-                    
                     // Handle special cases
                     if (targetPath === '~') {
                         // Handle home directory
@@ -417,12 +411,8 @@ const Terminal = ({ isOpen, onToggle }) => {
                     
                     // Final path construction
                     const finalPath = stack.length > 0 ? '/' + stack.join('/') : '/';
-
-                    console.log('[Terminal cd] Resolved to:', finalPath);
-
                     // Try to navigate directly - let the file explorer handle validation
                     await navigateTo(finalPath);
-                    console.log('[Terminal cd] Navigation succeeded');
                     return { type: 'output', content: '' }; // Silent success - empty content
 
                 } catch (error) {
@@ -748,16 +738,10 @@ const Terminal = ({ isOpen, onToggle }) => {
 
         // Process command
         let response;
-
-        console.log('[Terminal] Processing command:', cmd.toLowerCase(), 'with args:', args);
-
         // Check for built-in commands first
         response = await handleBuiltinCommand(cmd.toLowerCase(), args);
-        console.log('[Terminal] Built-in command response:', response);
-
         // If not a built-in command, execute as system command
         if (response === null && cmd.toLowerCase() !== 'clear') {
-            console.log('[Terminal] Falling back to system command execution');
             response = await executeCommand(command);
         }
 

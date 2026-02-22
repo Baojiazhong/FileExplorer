@@ -287,7 +287,7 @@ const TemplateList = ({ onClose }) => {
                         {templates.map((template, index) => {
                             // Additional safety check
                             if (!template || typeof template !== 'object') {
-                                console.warn('Skipping invalid template:', template);
+
                                 return null;
                             }
 

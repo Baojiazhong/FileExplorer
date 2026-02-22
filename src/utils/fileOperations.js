@@ -241,7 +241,6 @@ export const hasClipboardFiles = async () => {
 export const copyFilesToClipboard = async (paths) => {
     // This is a mock since we don't have a direct Tauri API for this
     // In a real implementation, this would interact with the system clipboard
-    console.log('Copied to clipboard:', paths);
     return Promise.resolve();
 };
 
@@ -253,7 +252,6 @@ export const copyFilesToClipboard = async (paths) => {
 export const cutFilesToClipboard = async (paths) => {
     // This is a mock since we don't have a direct Tauri API for this
     // In a real implementation, this would interact with the system clipboard
-    console.log('Cut to clipboard:', paths);
     return Promise.resolve();
 };
 
@@ -265,6 +263,5 @@ export const cutFilesToClipboard = async (paths) => {
 export const pasteFilesFromClipboard = async (destinationPath) => {
     // This is a mock since we don't have a direct Tauri API for this
     // In a real implementation, this would interact with the system clipboard
-    console.log('Pasting to:', destinationPath);
     return Promise.resolve();
 };

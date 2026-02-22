@@ -94,22 +94,15 @@ const ContextMenuItem = ({
      */
     const handleClick = (e) => {
         e.stopPropagation();
-
-        console.log('ContextMenuItem clicked:', item.label);
-
         if (item.disabled) {
-            console.log('Item is disabled, ignoring click');
             return;
         }
 
         if (item.submenu) {
-            console.log('Opening submenu for:', item.label);
             onSubmenuOpen();
         } else if (onAction) {
-            console.log('Executing action for:', item.label);
             onAction();
         } else {
-            console.log('No action defined for:', item.label);
         }
     };
 
@@ -163,11 +156,9 @@ const ContextMenuItem = ({
                                     key={subItem.id || `sub-item-${index}`}
                                     item={subItem}
                                     onAction={() => {
-                                        console.log('Submenu item clicked:', subItem.label);
                                         if (subItem.action) {
                                             try {
                                                 subItem.action();
-                                                console.log('Submenu action executed successfully');
                                             } catch (error) {
                                                 console.error('Submenu action failed:', error);
                                             }

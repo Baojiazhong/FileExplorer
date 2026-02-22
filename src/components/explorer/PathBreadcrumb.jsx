@@ -28,7 +28,6 @@ const PathBreadcrumb = ({ onCopyPath, isVisible = true, onSearch }) => {
     const breadcrumbContainerRef = useRef(null);
 
 
-
     /**
      * Parses the current path into segments for breadcrumb navigation
      * Handles Windows, Unix, and SFTP paths

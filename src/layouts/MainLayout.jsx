@@ -401,18 +401,10 @@ const MainLayout = () => {
         const initializeSearchEngine = async () => {
             if (volumes.length > 0) {
                 try {
-                    console.log('MainLayout: Checking search engine status for auto-indexing...');
-
                     // Check if search engine has indexed files
                     const searchEngineInfo = await invoke('get_search_engine_info');
                     const hasNoIndexedFiles = !searchEngineInfo.stats?.trie_size || searchEngineInfo.stats.trie_size === 0;
-
-                    console.log('MainLayout: Search engine info:', searchEngineInfo);
-                    console.log('MainLayout: Has no indexed files:', hasNoIndexedFiles);
-
                     if (hasNoIndexedFiles) {
-                        console.log('MainLayout: Starting auto-indexing of home directory...');
-
                         // Get system info to get the proper home directory
                         const metaDataJson = await invoke('get_meta_data_as_json');
                         const metaData = JSON.parse(metaDataJson);
@@ -421,18 +413,12 @@ const MainLayout = () => {
                             console.error('MainLayout: User home directory not available');
                             return;
                         }
-
-                        console.log('MainLayout: Using home directory:', metaData.user_home_dir);
-
                         // Auto-index home directory on app startup
                         const result = await invoke('add_paths_recursive_async', {
                             folder: metaData.user_home_dir
                         });
-
-                        console.log('MainLayout: Auto-indexing initiated:', result);
                         showSuccess(t('search.backgroundIndexingFinished'));
                     } else {
-                        console.log('MainLayout: Search engine already has indexed files, skipping auto-indexing');
                     }
                 } catch (error) {
                     console.error('MainLayout: Auto-indexing failed:', error);
@@ -530,13 +516,10 @@ const MainLayout = () => {
          * @param {CustomEvent} e - Event with item details
          */
         const handleOpenHashFileModal = (e) => {
-            console.log('MainLayout: Received open-hash-file-modal event:', e.detail);
             if (e.detail && e.detail.item) {
-                console.log('Opening Hash File Modal for:', e.detail.item.name);
                 setHashModalItem(e.detail.item);
                 setIsHashFileModalOpen(true);
             } else {
-                console.log('Invalid event detail:', e.detail);
             }
         };
 
@@ -545,30 +528,24 @@ const MainLayout = () => {
          * @param {CustomEvent} e - Event with item details
          */
         const handleOpenHashCompareModal = (e) => {
-            console.log('MainLayout: Received open-hash-compare-modal event:', e.detail);
             if (e.detail && e.detail.item) {
-                console.log('Opening Hash Compare Modal for:', e.detail.item.name);
                 setHashModalItem(e.detail.item);
                 setIsHashCompareModalOpen(true);
             } else {
-                console.log('Invalid event detail:', e.detail);
             }
         };
 
         // Hash Display Modal Handler
         const handleOpenHashDisplayModal = (e) => {
-            console.log('Opening Hash Display Modal:', e.detail);
             if (e.detail?.hash && e.detail?.fileName) {
                 setHashDisplayData({ hash: e.detail.hash, fileName: e.detail.fileName });
                 setIsHashDisplayModalOpen(true);
             } else {
-                console.log('Invalid hash display event detail:', e.detail);
             }
         };
 
         // SFTP File Opened Handler
         const handleSftpFileOpened = (e) => {
-            console.log('SFTP File Opened:', e.detail);
             if (e.detail?.path && e.detail?.content !== undefined) {
                 const fileName = e.detail.path.split('/').pop() || t('common.unknownFile');
                 setTextViewerFileName(fileName);
@@ -592,9 +569,6 @@ const MainLayout = () => {
         document.addEventListener('open-hash-display-modal', handleOpenHashDisplayModal);
         document.addEventListener('sftp-file-opened', handleSftpFileOpened);
         document.addEventListener('force-explorer-view', handleForceExplorerView);
-
-        console.log('MainLayout: All event listeners registered');
-
         return () => {
             document.removeEventListener('open-templates', handleOpenTemplates);
             document.removeEventListener('show-properties', handleShowProperties);
@@ -608,7 +582,6 @@ const MainLayout = () => {
             document.removeEventListener('open-hash-display-modal', handleOpenHashDisplayModal);
             document.removeEventListener('sftp-file-opened', handleSftpFileOpened);
             document.removeEventListener('force-explorer-view', handleForceExplorerView);
-            console.log('MainLayout: All event listeners removed');
         };
     }, [navigateTo, updateSetting]);
 
@@ -710,27 +683,14 @@ const MainLayout = () => {
      * @param {string} newName - The new name
      */
     const handleRename = async (item, newName) => {
-        console.log('handleRename called with:', { item, newName });
-        
         if (!newName || newName === item.name) {
-            console.log('handleRename: Early return - newName is empty or same as current name');
             return;
         }
-
-        console.log(`Renaming "${replaceFileName(item.path, newName)}"`);
-
         try {
             const separator = item.path.includes('\\') ? '\\' : '/';
-
-            console.log("Debug - separator detected:", separator);
-            console.log("Debug - original path:", item.path);
-
             const pathParts = item.path.split(separator);
             pathParts[pathParts.length - 1] = newName;
             const newPath = pathParts.join(separator);
-
-            console.log("Debug - new path:", newPath);
-
             // Use FileSystemProvider's renameItem which handles both local and SFTP paths
             await fsRenameItem(item.path, newPath);
         } catch (error) {
@@ -1555,7 +1515,6 @@ const MainLayout = () => {
             <HashFileModal
                 isOpen={isHashFileModalOpen}
                 onClose={() => {
-                    console.log('Closing Hash File Modal');
                     setIsHashFileModalOpen(false);
                     setHashModalItem(null);
                 }}
@@ -1565,7 +1524,6 @@ const MainLayout = () => {
             <HashCompareModal
                 isOpen={isHashCompareModalOpen}
                 onClose={() => {
-                    console.log('Closing Hash Compare Modal');
                     setIsHashCompareModalOpen(false);
                     setHashModalItem(null);
                 }}
@@ -1575,7 +1533,6 @@ const MainLayout = () => {
             <HashDisplayModal
                 isOpen={isHashDisplayModalOpen}
                 onClose={() => {
-                    console.log('Closing Hash Display Modal');
                     setIsHashDisplayModalOpen(false);
                     setHashDisplayData({ hash: '', fileName: '' });
                 }}

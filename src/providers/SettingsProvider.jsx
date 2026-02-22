@@ -122,14 +122,9 @@ export default function SettingsProvider({ children }) {
         setError(null);
 
         try {
-            console.log('Loading settings from backend...');
             const settingsJson = await invoke('get_settings_as_json');
             const loadedSettings = JSON.parse(settingsJson);
-
-            console.log('Loaded settings:', loadedSettings);
-
             setSettings(normalizeSettings(loadedSettings));
-            console.log('Settings loaded successfully');
         } catch (error) {
             console.error('Failed to load settings:', error);
             setError(t('settings.errors.loadFailed'));
@@ -139,7 +134,6 @@ export default function SettingsProvider({ children }) {
 
             // Try to save default settings to backend
             try {
-                console.log('Saving default settings to backend...');
                 const updatedSettingsJson = await invoke('update_multiple_settings_command', {
                     updates: mapUpdatesToBackendKeys(defaultSettings),
                 });
@@ -148,8 +142,6 @@ export default function SettingsProvider({ children }) {
                     const updatedSettings = JSON.parse(updatedSettingsJson);
                     setSettings(normalizeSettings(updatedSettings));
                 }
-
-                console.log('Default settings saved successfully');
             } catch (saveError) {
                 console.error('Failed to save default settings:', saveError);
                 setError(t('settings.errors.loadAndSaveDefaultFailed'));
@@ -169,8 +161,6 @@ export default function SettingsProvider({ children }) {
 
     // Update a single setting
     const updateSetting = async (key, value) => {
-        console.log(`Updating setting: ${key} = ${value}`);
-
         try {
             // Update in backend
             const updatedSettingsJson = await invoke('update_settings_field', {
@@ -189,8 +179,6 @@ export default function SettingsProvider({ children }) {
                     [key]: value,
                 }));
             }
-
-            console.log(`Setting ${key} updated successfully`);
         } catch (error) {
             console.error(`Failed to update setting ${key}:`, error);
             setError(t('settings.errors.updateKeyFailed', { key, message: error.message || error }));
@@ -209,8 +197,6 @@ export default function SettingsProvider({ children }) {
 
     // Update multiple settings at once
     const updateMultipleSettings = async (updates) => {
-        console.log('Updating multiple settings:', updates);
-
         try {
             // Update in backend
             const updatedSettingsJson = await invoke('update_multiple_settings_command', {
@@ -228,8 +214,6 @@ export default function SettingsProvider({ children }) {
                     ...updates,
                 }));
             }
-
-            console.log('Multiple settings updated successfully');
         } catch (error) {
             console.error('Failed to update multiple settings:', error);
             setError(t('settings.errors.updateFailed', { message: error.message || error }));
@@ -248,8 +232,6 @@ export default function SettingsProvider({ children }) {
 
     // Reset settings to defaults
     const resetSettings = async () => {
-        console.log('Resetting settings to defaults');
-
         try {
             // Reset in backend
             const updatedSettingsJson = await invoke('reset_settings_command');
@@ -261,8 +243,6 @@ export default function SettingsProvider({ children }) {
             } else {
                 setSettings({ ...defaultSettings });
             }
-
-            console.log('Settings reset successfully');
         } catch (error) {
             console.error('Failed to reset settings:', error);
             setError(t('settings.errors.resetFailed', { message: error.message || error }));

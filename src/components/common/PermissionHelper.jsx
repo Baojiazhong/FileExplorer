@@ -35,7 +35,7 @@ const PermissionHelper = ({
 			}
 		} catch (error) {
 			setHasAccess(false);
-			console.log('Access check failed:', error);
+
 		} finally {
 			setIsChecking(false);
 		}

@@ -201,7 +201,6 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
                     pathParts.pop(); // Remove the file name
                     const parentPath = pathParts.length > 0 ? pathParts.join('/') : '.';
                     targetPath = createSftpPath(parsed.connection, parentPath);
-                    console.log('SFTP file favorite detected, navigating to parent:', targetPath);
                 }
             }
         }

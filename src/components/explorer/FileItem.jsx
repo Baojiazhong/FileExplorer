@@ -52,7 +52,6 @@ const FileItem = ({
     // Format modified date
     const modified = formatDate(item.last_modified);
 
-
     /**
      * Handles the rename operation with robust path handling
      * @param {Object} item - The item to rename
@@ -65,14 +64,10 @@ const FileItem = ({
             // Use the robust path utility to create the new path
             const newPath = replaceFileName(item.path, newName);
 
-            console.log(`Renaming: "${item.path}" -> "${newPath}"`);
-
             await invoke('rename', {
                 oldPath: item.path,
                 newPath: newPath
             });
-
-            console.log('Rename operation completed successfully');
 
             // Reload current directory
             if (currentPath) {

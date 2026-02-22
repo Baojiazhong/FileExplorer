@@ -70,13 +70,7 @@ const SettingsApplier = () => {
             document.documentElement.style.setProperty('--terminal-height', `${settings.terminal_height}px`);
         }
 
-        console.log('Settings applied to DOM:', {
-            font_size: settings.font_size,
-            accent_color: settings.accent_color,
-            enable_animations_and_transitions: settings.enable_animations_and_transitions,
-            terminal_height: settings.terminal_height
-        });
-
+    
     }, [settings.font_size, settings.accent_color, settings.enable_animations_and_transitions, settings.terminal_height]);
 
     // This component doesn't render anything

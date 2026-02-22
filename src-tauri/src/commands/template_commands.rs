@@ -159,7 +159,7 @@ pub async fn add_template_impl(
 
     // Update the template paths in the metadata state
     let update_result = {
-        let metadata_state = state.lock().unwrap();
+        let metadata_state = state.lock().map_err(|_| "Failed to acquire lock".to_string())?;
         metadata_state.update_template_paths()
     };
 
@@ -322,7 +322,7 @@ pub async fn remove_template_impl(
 
             // Update the template paths in the metadata state
             let update_result = {
-                let metadata_state = state.lock().unwrap();
+                let metadata_state = state.lock().map_err(|_| "Failed to acquire lock".to_string())?;
                 metadata_state.update_template_paths()
             };
 
@@ -351,7 +351,7 @@ pub async fn remove_template_impl(
 async fn get_template_paths_from_state(
     state: Arc<Mutex<MetaDataState>>,
 ) -> Result<Vec<PathBuf>, ()> {
-    let meta_data_state = state.lock().unwrap();
+    let meta_data_state = state.lock().map_err(|_| ())?;
     let inner_meta_data = meta_data_state
         .0
         .lock()

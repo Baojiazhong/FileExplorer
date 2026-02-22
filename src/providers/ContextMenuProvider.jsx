@@ -183,7 +183,6 @@ export default function ContextMenuProvider({ children }) {
         try {
             await navigator.clipboard.writeText(paths);
         } catch (err) {
-            console.warn('Failed to copy to system clipboard:', err);
         }
     }, []);
 
@@ -194,7 +193,6 @@ export default function ContextMenuProvider({ children }) {
         try {
             await navigator.clipboard.writeText(paths);
         } catch (err) {
-            console.warn('Failed to copy to system clipboard:', err);
         }
     }, []);
 
@@ -297,11 +295,6 @@ export default function ContextMenuProvider({ children }) {
                             continue;
                         }
                     } else {
-                        // Local file system copy
-                        console.log('DEBUG: About to invoke copy_file_or_dir with params:', {
-                            sourcePath: sourcePath,
-                            destinationPath: destPath
-                        });
                         await invoke('copy_file_or_dir', {
                             sourcePath: sourcePath,
                             destinationPath: destPath
@@ -484,7 +477,6 @@ export default function ContextMenuProvider({ children }) {
         try {
             if (isSftpPath(item.path)) {
                 // Handle SFTP zip files - download first, then extract
-                console.log('📡 SFTP zip file detected, downloading for extraction...');
                 const tempZipPath = await downloadAndOpenSftpFile(item.path, false);
                 if (!tempZipPath) {
                     throw new Error(t('contextMenu.sftp.downloadForExtractFailed'));
@@ -521,16 +513,11 @@ export default function ContextMenuProvider({ children }) {
 
     // Generate hash for a file - VERBESSERT MIT DEBUG
     const generateHash = useCallback(async (item) => {
-        console.log('🔧 generateHash called with:', item?.name, item?.path);
-
         if (!item || item.isDirectory || 'sub_file_count' in item) {
-            console.log('❌ Item invalid for hash generation');
             showError(t('contextMenu.hash.onlyFiles'));
 
             return;
         }
-
-        console.log('🚀 Starting hash generation...');
         setIsProcessing(true);
 
         try {
@@ -538,27 +525,19 @@ export default function ContextMenuProvider({ children }) {
             
             // Handle SFTP files by downloading them first
             if (isSftpPath(item.path)) {
-                console.log('📡 SFTP file detected, downloading for hash generation...');
                 const tempPath = await downloadAndOpenSftpFile(item.path, false);
                 if (!tempPath) {
                     throw new Error(t('contextMenu.sftp.downloadForHashGenerationFailed'));
                 }
                 hashPath = tempPath;
-                console.log('✅ SFTP file downloaded to:', hashPath);
+
             }
-            
-            console.log('📞 Calling Tauri invoke gen_hash_and_return_string...');
             const hash = await invoke('gen_hash_and_return_string', { path: hashPath });
-
-            console.log('✅ Hash generated:', hash.substring(0, 20) + '...');
-
             // Try to copy hash to clipboard, with fallback if it fails
             try {
                 await navigator.clipboard.writeText(hash);
                 showSuccess(t('contextMenu.hash.generatedCopied', { prefix: hash.substring(0, 16) }));
             } catch (clipboardError) {
-                console.warn('📋 Clipboard access failed, showing hash display modal instead:', clipboardError);
-                
                 // Show the hash in a modal for manual copying
                 const event = new CustomEvent('open-hash-display-modal', {
                     detail: { hash: hash, fileName: item.name }
@@ -573,13 +552,9 @@ export default function ContextMenuProvider({ children }) {
         }
     }, [t, isSftpPath, downloadAndOpenSftpFile]);
 
-
     // Generate hash and save to file - VERBESSERT MIT DEBUG
     const generateHashToFile = useCallback(async (item) => {
-        console.log('🔧 generateHashToFile called with:', item?.name);
-
         if (!item || item.isDirectory || 'sub_file_count' in item) {
-            console.log('❌ Item invalid for hash file generation');
             showError(t('contextMenu.hash.onlyFiles'));
 
             return;
@@ -589,7 +564,6 @@ export default function ContextMenuProvider({ children }) {
         let processedItem = item;
         
         if (isSftpPath(item.path)) {
-            console.log('📡 SFTP file detected for hash file generation...');
             setIsProcessing(true);
             try {
                 const tempPath = await downloadAndOpenSftpFile(item.path, false);
@@ -602,7 +576,6 @@ export default function ContextMenuProvider({ children }) {
                     path: tempPath,
                     originalPath: item.path // Keep original path for reference
                 };
-                console.log('✅ SFTP file downloaded for hash generation:', tempPath);
             } catch (error) {
                 console.error('Failed to download SFTP file for hash generation:', error);
                 showError(t('contextMenu.sftp.downloadForHashFailed', { message: error.message || error }));
@@ -612,9 +585,6 @@ export default function ContextMenuProvider({ children }) {
                 setIsProcessing(false);
             }
         }
-
-        console.log('📤 Dispatching open-hash-file-modal event...');
-
         // Dispatch event to open hash file modal
         const event = new CustomEvent('open-hash-file-modal', {
             detail: { item: processedItem },
@@ -622,16 +592,11 @@ export default function ContextMenuProvider({ children }) {
         });
 
         document.dispatchEvent(event);
-        console.log('✅ Event dispatched successfully');
     }, [t, isSftpPath, downloadAndOpenSftpFile]);
-
 
     // Compare file with hash - VERBESSERT MIT DEBUG
     const compareHash = useCallback(async (item) => {
-        console.log('🔧 compareHash called with:', item?.name);
-
         if (!item || item.isDirectory || 'sub_file_count' in item) {
-            console.log('❌ Item invalid for hash comparison');
             showError(t('contextMenu.hashCompare.onlyFiles'));
 
             return;
@@ -641,7 +606,6 @@ export default function ContextMenuProvider({ children }) {
         let processedItem = item;
         
         if (isSftpPath(item.path)) {
-            console.log('📡 SFTP file detected for hash comparison...');
             setIsProcessing(true);
             try {
                 const tempPath = await downloadAndOpenSftpFile(item.path, false);
@@ -654,7 +618,6 @@ export default function ContextMenuProvider({ children }) {
                     path: tempPath,
                     originalPath: item.path // Keep original path for reference
                 };
-                console.log('✅ SFTP file downloaded for hash comparison:', tempPath);
             } catch (error) {
                 console.error('Failed to download SFTP file for hash comparison:', error);
                 showError(t('contextMenu.sftp.downloadForHashFailed', { message: error.message || error }));
@@ -664,9 +627,6 @@ export default function ContextMenuProvider({ children }) {
                 setIsProcessing(false);
             }
         }
-
-        console.log('📤 Dispatching open-hash-compare-modal event...');
-
         // Dispatch event to open hash compare modal
         const event = new CustomEvent('open-hash-compare-modal', {
             detail: { item: processedItem },
@@ -674,9 +634,7 @@ export default function ContextMenuProvider({ children }) {
         });
 
         document.dispatchEvent(event);
-        console.log('✅ Event dispatched successfully');
     }, [t, isSftpPath, downloadAndOpenSftpFile]);
-
 
     // Get current folder metadata by loading parent directory
     const getCurrentFolderMetadata = useCallback(async (folderPath) => {
@@ -977,7 +935,6 @@ export default function ContextMenuProvider({ children }) {
 
         // Add hash options for files only - as submenu - MIT DEBUG
         if (isFile && selectedItems.length === 1) {
-            console.log('🔨 Adding hash submenu for file:', contextTarget.name);
             menuItems.push(
                 { type: 'separator' },
                 {
@@ -992,7 +949,6 @@ export default function ContextMenuProvider({ children }) {
                             icon: 'hash',
                             disabled: isProcessing,
                             action: () => {
-                                console.log('🎯 Generate Hash clicked!', contextTarget?.name);
                                 generateHash(contextTarget);
                             }
                         },
@@ -1002,7 +958,6 @@ export default function ContextMenuProvider({ children }) {
                             icon: 'hash',
                             disabled: isProcessing,
                             action: () => {
-                                console.log('🎯 Hash to File clicked!', contextTarget?.name);
                                 generateHashToFile(contextTarget);
                             }
                         },
@@ -1013,7 +968,6 @@ export default function ContextMenuProvider({ children }) {
                             icon: 'hash',
                             disabled: isProcessing,
                             action: () => {
-                                console.log('🎯 Compare Hash clicked!', contextTarget?.name);
                                 compareHash(contextTarget);
                             }
                         }
@@ -1058,9 +1012,6 @@ export default function ContextMenuProvider({ children }) {
     // Open context menu
     const openContextMenu = useCallback((e, contextTarget = null) => {
         e.preventDefault();
-
-        console.log('🎯 Opening context menu for:', contextTarget?.name || 'empty space');
-
         const menuItems = getMenuItemsForContext(contextTarget);
 
         setPosition({ x: e.clientX, y: e.clientY });

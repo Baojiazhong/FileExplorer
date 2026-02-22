@@ -197,7 +197,6 @@ const setByDottedPath = (obj, dottedPath, value) => {
 };
 
 export const mockInvoke = async (command, params) => {
-    console.log(`Mock Tauri invoke: ${command}`, params);
 
     // Simulate network delay
     await new Promise(resolve => setTimeout(resolve, 300));
@@ -289,31 +288,24 @@ export const mockInvoke = async (command, params) => {
 
         // Mock implementations for file operations
         case 'open_file':
-            console.log(`Mock: Opening file ${params.file_path}`);
             return "File content would be here";
 
         case 'create_file':
-            console.log(`Mock: Creating file ${params.file_name} in ${params.folder_path_abs}`);
             return;
 
         case 'create_directory':
-            console.log(`Mock: Creating directory ${params.directory_name} in ${params.folder_path_abs}`);
             return;
 
         case 'rename':
-            console.log(`Mock: Renaming ${params.old_path} to ${params.new_path}`);
             return;
 
         case 'move_to_trash':
-            console.log(`Mock: Moving ${params.path} to trash`);
             return;
 
         case 'zip':
-            console.log(`Mock: Zipping ${params.source_paths.join(', ')} to ${params.destination_path || 'auto'}`);
             return;
 
         case 'unzip':
-            console.log(`Mock: Unzipping ${params.zip_paths.join(', ')} to ${params.destination_path || 'auto'}`);
             return;
 
         default:
@@ -327,8 +319,6 @@ export const mockInvoke = async (command, params) => {
 export const initMockTauriApi = () => {
     // Check if we're in a development environment without Tauri
     if (typeof window.__TAURI__ === 'undefined') {
-        console.log('Initializing mock Tauri API for development');
-
         // Create a mock __TAURI__ object
         window.__TAURI__ = {
             invoke: mockInvoke

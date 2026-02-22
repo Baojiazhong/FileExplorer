@@ -63,9 +63,6 @@ export default function ThemeProvider({ children }) {
     // Function to set theme and update settings
     const setTheme = async (newTheme) => {
         if (newTheme === theme) return;
-
-        console.log(`Setting theme to: ${newTheme}`);
-
         // Apply theme to DOM immediately for better UX
         applyThemeToDOM(newTheme);
 
@@ -76,7 +73,6 @@ export default function ThemeProvider({ children }) {
             // Save to settings using the correct key 'darkmode'
             const isDark = newTheme === 'dark';
             await invoke('update_settings_field', { key: 'darkmode', value: isDark });
-            console.log('Theme saved to settings successfully');
         } catch (error) {
             console.error('Failed to save theme setting:', error);
             // Don't revert the theme change since it's already applied and might work
@@ -96,30 +92,23 @@ export default function ThemeProvider({ children }) {
 
             try {
                 // Try to get theme from settings using the correct key 'darkmode'
-                console.log('Loading theme from settings...');
                 const isDarkMode = await invoke('get_setting_field', { key: 'darkmode' });
 
                 if (isDarkMode !== null && isDarkMode !== undefined) {
                     const themeValue = isDarkMode ? 'dark' : 'light';
-                    console.log(`Loaded theme from settings: ${themeValue} (darkmode: ${isDarkMode})`);
                     setThemeState(themeValue);
                     applyThemeToDOM(themeValue);
                 } else {
-                    console.log('No saved theme found, checking system preference');
                     // Try to match system preference
                     if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                        console.log('System prefers dark theme');
                         setThemeState('dark');
                         applyThemeToDOM('dark');
                     } else {
-                        console.log('Using default light theme');
                         setThemeState('light');
                         applyThemeToDOM('light');
                     }
                 }
             } catch (error) {
-                console.warn('Could not load theme from settings:', error);
-
                 // Fallback to system preference
                 if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
                     setThemeState('dark');

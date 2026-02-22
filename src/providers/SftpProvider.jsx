@@ -60,10 +60,7 @@ export default function SftpProvider({ children }) {
 
     // Parse SFTP path to extract connection details and remote path
     const parseSftpPath = useCallback((path) => {
-        console.log('parseSftpPath called with:', path);
-        
         if (!isSftpPath(path)) {
-            console.log('Path is not SFTP path');
             return null;
         }
 
@@ -73,13 +70,10 @@ export default function SftpProvider({ children }) {
             if (connections.length === 0) {
                 try {
                     connections = JSON.parse(localStorage.getItem('fileExplorerSftpConnections') || '[]');
-                    console.log('Loaded fresh connections from localStorage:', connections);
                 } catch (err) {
                     connections = [];
                 }
             }
-            console.log('Available SFTP connections:', connections);
-
             // Handle different SFTP path formats:
             // sftp://user@host:port/path/to/file
             // sftp:connectionName:/path/to/file
@@ -92,7 +86,6 @@ export default function SftpProvider({ children }) {
                     conn.host === url.hostname && 
                     conn.port === (url.port || '22')
                 );
-                console.log('Found connection for URL format:', connection);
                 return {
                     connection,
                     remotePath: url.pathname || '/',
@@ -108,7 +101,6 @@ export default function SftpProvider({ children }) {
                     const connectionName = withoutPrefix;
                     const remotePath = '.';
                     const connection = connections.find(conn => conn.name === connectionName);
-                    console.log('Found connection for simple format:', connection, 'connectionName:', connectionName, 'available connections:', connections.map(c => c.name));
                     return {
                         connection,
                         remotePath,
@@ -119,7 +111,6 @@ export default function SftpProvider({ children }) {
                     const connectionName = withoutPrefix.substring(0, colonIndex);
                     const remotePath = withoutPrefix.substring(colonIndex + 1) || '.';
                     const connection = connections.find(conn => conn.name === connectionName);
-                    console.log('Found connection for colon format:', connection, 'connectionName:', connectionName, 'remotePath:', remotePath);
                     return {
                         connection,
                         remotePath,
@@ -147,8 +138,6 @@ export default function SftpProvider({ children }) {
 
     // Navigate to an SFTP connection
     const navigateToSftpConnection = useCallback(async (connection, remotePath = '.') => {
-        console.log('navigateToSftpConnection called with:', connection, remotePath);
-        
         if (!connection) {
             console.error('No connection provided to navigateToSftpConnection');
             return null;
@@ -160,8 +149,6 @@ export default function SftpProvider({ children }) {
             
             // Ensure remotePath is valid for SFTP command
             const sftpPath = remotePath || '.';
-            console.log('Using SFTP path:', sftpPath);
-            
             // Load directory using existing SFTP command
             const result = await invoke('load_dir', {
                 host: connection.host,
@@ -170,11 +157,7 @@ export default function SftpProvider({ children }) {
                 password: connection.password,
                 directory: sftpPath
             });
-            
-            console.log('SFTP load_dir result:', result);
             const dirData = JSON.parse(result);
-            console.log('Parsed SFTP directory data:', dirData);
-            
             // Transform data to match FileSystemProvider format
             const transformedData = {
                 directory: createSftpUrl(connection, remotePath),
@@ -201,8 +184,6 @@ export default function SftpProvider({ children }) {
                     };
                 })
             };
-            
-            console.log('Transformed SFTP data:', transformedData);
             return transformedData;
         } catch (error) {
             console.error('Failed to load SFTP directory:', error);
@@ -213,10 +194,7 @@ export default function SftpProvider({ children }) {
 
     // Load SFTP directory
     const loadSftpDirectory = useCallback(async (sftpPath) => {
-        console.log('loadSftpDirectory called with:', sftpPath);
         const parsed = parseSftpPath(sftpPath);
-        console.log('Parsed SFTP path:', parsed);
-        
         if (!parsed || !parsed.connection) {
             console.error('Invalid SFTP path or connection not found', { parsed, sftpPath });
             showError(t('sftpProvider.invalidPath'));
@@ -225,7 +203,7 @@ export default function SftpProvider({ children }) {
         
         try {
             const result = await navigateToSftpConnection(parsed.connection, parsed.remotePath);
-            console.log('navigateToSftpConnection result:', result);
+
             return result;
         } catch (error) {
             console.error('Error in loadSftpDirectory:', error);

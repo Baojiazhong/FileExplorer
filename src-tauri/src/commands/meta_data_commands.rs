@@ -113,7 +113,17 @@ pub fn get_meta_data_as_json_impl(state: Arc<Mutex<MetaDataState>>) -> Result<St
 
 #[tauri::command]
 pub fn update_meta_data(state: State<Arc<Mutex<MetaDataState>>>) -> Result<(), String> {
-    match state.lock().unwrap().refresh_volumes() {
+    match state
+        .lock()
+        .map_err(|_| {
+            Error::new(
+                ErrorCode::InternalError,
+                "Failed to acquire lock".to_string(),
+            )
+            .to_json()
+        })?
+        .refresh_volumes()
+    {
         Ok(_) => Ok(()),
         Err(e) => Err(Error::new(ErrorCode::InternalError, format!("Error: {}", e)).to_json()),
     }
