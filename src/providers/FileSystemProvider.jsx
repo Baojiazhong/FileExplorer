@@ -292,13 +292,13 @@ export default function FileSystemProvider({ children }) {
         }
     }, [initializeFirstDirectory, currentDirData, currentPath]);
 
-// Reagiere auf Navigation/currentPath Änderungen
+// React to navigation/currentPath changes and hidden-files setting
     useEffect(() => {
         if (currentPath) {
             console.log(`Current path changed to: ${currentPath}, loading directory...`);
             loadDirectory(currentPath);
         }
-    }, [currentPath, loadDirectory]);
+    }, [currentPath, loadDirectory, settings.show_hidden_files_and_folders]);
 
     // Open a file - enhanced with SFTP support
     const openFile = useCallback(async (filePath) => {
@@ -527,20 +527,6 @@ export default function FileSystemProvider({ children }) {
     useEffect(() => {
         loadVolumes();
     }, [loadVolumes]);
-
-    // Reload current directory when navigating back/forward
-    useEffect(() => {
-        if (currentPath) {
-            loadDirectory(currentPath);
-        }
-    }, [currentPath, loadDirectory]);
-
-    // Reload current directory when hidden files setting changes
-    useEffect(() => {
-        if (currentPath) {
-            loadDirectory(currentPath);
-        }
-    }, [settings.show_hidden_files_and_folders, currentPath, loadDirectory]);
 
     const contextValue = {
         currentDirData,
