@@ -113,7 +113,7 @@ async fn calculate_hash(method: ChecksumMethod, data: &[u8]) -> Result<String, H
 }
 
 async fn read_file(path: &Path) -> Result<Vec<u8>, HashError> {
-    if !path.exists() && path.is_dir() {
+    if !path.exists() || path.is_dir() {
         return Err(HashError::FileOperationError);
     }
     let mut file = File::open(path)

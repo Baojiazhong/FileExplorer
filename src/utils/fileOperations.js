@@ -179,7 +179,7 @@ export const generateHash = async (path) => {
  */
 export const copyMultipleItems = async (sourcePaths, destinationPath) => {
     const copyPromises = sourcePaths.map(sourcePath => {
-        const fileName = sourcePath.split('/').pop();
+        const fileName = sourcePath.split(/[/\\]/).pop();
         const destPath = `${destinationPath}/${fileName}`;
         return copyItem(sourcePath, destPath);
     });
@@ -195,7 +195,7 @@ export const copyMultipleItems = async (sourcePaths, destinationPath) => {
  */
 export const moveMultipleItems = async (sourcePaths, destinationPath) => {
     const movePromises = sourcePaths.map(sourcePath => {
-        const fileName = sourcePath.split('/').pop();
+        const fileName = sourcePath.split(/[/\\]/).pop();
         const destPath = `${destinationPath}/${fileName}`;
         return renameItem(sourcePath, destPath);
     });
@@ -211,7 +211,7 @@ export const moveMultipleItems = async (sourcePaths, destinationPath) => {
 export const getItemInfo = async (path) => {
     // This would need a specific endpoint in the backend
     // For now, we can use the directory endpoint and find the item
-    const parentPath = path.substring(0, path.lastIndexOf('/'));
+    const parentPath = path.substring(0, Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\')));
     const itemName = path.substring(path.lastIndexOf('/') + 1);
 
     const dirContent = await loadDirectory(parentPath);

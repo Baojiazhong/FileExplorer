@@ -17,8 +17,7 @@ export default function ThemeProvider({ children }) {
 
     // Function to apply theme to DOM
     const applyThemeToDOM = (newTheme) => {
-        // Update DOM class
-        document.documentElement.classList.remove(`theme-${theme}`);
+        document.documentElement.classList.remove('theme-light', 'theme-dark');
         document.documentElement.classList.add(`theme-${newTheme}`);
 
         // Update CSS variables

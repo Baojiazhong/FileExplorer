@@ -47,21 +47,17 @@ export default function HistoryProvider({ children }) {
 
     // Navigate to a specific path
     const navigateTo = useCallback((path) => {
-        if (path === currentPath) return;
-
         setHistory(prevHistory => {
-            // If we're not at the end of the history, trim the forward history
-            const newHistory = prevHistory.slice(0, currentIndex + 1);
+            const prevIndex = prevHistory.length - 1 >= 0 ? 
+                Math.min(currentIndex, prevHistory.length - 1) : -1;
+            if (prevHistory[prevIndex] === path) return prevHistory;
 
-            // Add the new path to history
+            const newHistory = prevHistory.slice(0, prevIndex + 1);
             newHistory.push(path);
-
-            // Set current index to the new end of history
             setCurrentIndex(newHistory.length - 1);
-
             return newHistory;
         });
-    }, [currentIndex, currentPath]);
+    }, [currentIndex]);
 
     // Navigate back in history
     const goBack = useCallback(() => {
