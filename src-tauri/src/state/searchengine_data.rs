@@ -649,7 +649,7 @@ impl SearchEngineState {
 
             // Yield control periodically to prevent blocking
             if depth % 10 == 0 {
-                std::thread::sleep(std::time::Duration::from_millis(1));
+                std::thread::yield_now();
             }
         }
 
@@ -770,7 +770,7 @@ impl SearchEngineState {
             }
 
             // Small delay between sub-batches to yield control and prevent blocking
-            std::thread::sleep(std::time::Duration::from_millis(2));
+            std::thread::yield_now();
         }
 
         Ok(())

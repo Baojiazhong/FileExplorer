@@ -73,7 +73,7 @@ export default function ContextMenuProvider({ children }) {
             console.error('Failed to add to favorites:', error);
             showError(t('contextMenu.favorites.addFailed'));
         }
-    }, []);
+    }, [t]);
 
     // Remove from favorites with live update
     const removeFromFavorites = useCallback((path) => {
@@ -735,7 +735,7 @@ export default function ContextMenuProvider({ children }) {
                 accessed: new Date().toISOString().replace('T', ' ').split('.')[0]
             };
         }
-    }, []);
+    }, [t]);
 
     // Show properties - dispatch event to open details panel
     const showProperties = useCallback(async (item) => {

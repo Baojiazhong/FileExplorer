@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { useSettings } from './useSettings';
+import useSettings from './useSettings';
 
 /**
  * Available view modes for the file explorer.

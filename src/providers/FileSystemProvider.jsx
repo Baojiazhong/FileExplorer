@@ -62,11 +62,7 @@ export default function FileSystemProvider({ children }) {
         return typeof entry.name === 'string' ? entry.name.startsWith('.') : false;
     }, []);
 
-    // Helper function to filter directory data based on hidden files setting
     const filterDirectoryData = useCallback((dirData) => {
-        if (!dirData) return dirData;
-        
-        // If show_hidden_files_and_folders is true, return data as-is
         if (settings.show_hidden_files_and_folders) {
             return dirData;
         }
@@ -110,7 +106,7 @@ export default function FileSystemProvider({ children }) {
             setVolumes(mockVolumes);
             return mockVolumes;
         }
-    }, []);
+    }, [t]);
 
     // Load directory contents - enhanced with SFTP support
     const loadDirectory = useCallback(async (path) => {
@@ -185,7 +181,7 @@ export default function FileSystemProvider({ children }) {
         } finally {
             setIsLoading(false);
         }
-    }, [navigateTo, filterDirectoryData, isSftpPath, loadSftpDirectory]);
+    }, [navigateTo, filterDirectoryData, isSftpPath, loadSftpDirectory, t]);
 
 // Verbesserte getDefaultDirectory-Funktion
     const getDefaultDirectory = useCallback(async () => {
@@ -279,7 +275,7 @@ export default function FileSystemProvider({ children }) {
             clearTimeout(timeoutId);
             setIsLoading(false);
         }
-    }, [getDefaultDirectory, loadDirectory]);
+    }, [getDefaultDirectory, loadDirectory, t]);
 
 // Rufe initializeFirstDirectory nur einmal beim Laden auf
     useEffect(() => {
@@ -319,7 +315,7 @@ export default function FileSystemProvider({ children }) {
         } finally {
             setIsLoading(false);
         }
-    }, [isSftpPath, downloadAndOpenSftpFile]);
+    }, [isSftpPath, downloadAndOpenSftpFile, t]);
 
     // Create a new file - enhanced with SFTP support
     const createFile = useCallback(async (folderPath, fileName) => {
@@ -346,7 +342,7 @@ export default function FileSystemProvider({ children }) {
         } finally {
             setIsLoading(false);
         }
-    }, [loadDirectory, isSftpPath, createSftpFile]);
+    }, [loadDirectory, isSftpPath, createSftpFile, t]);
 
     // Create a new directory - enhanced with SFTP support
     const createDirectory = useCallback(async (folderPath, directoryName) => {
@@ -373,7 +369,7 @@ export default function FileSystemProvider({ children }) {
         } finally {
             setIsLoading(false);
         }
-    }, [loadDirectory, isSftpPath, createSftpDirectory]);
+    }, [loadDirectory, isSftpPath, createSftpDirectory, t]);
 
     // Rename an item - enhanced with SFTP support
     const renameItem = useCallback(async (oldPath, newPath) => {
@@ -406,7 +402,7 @@ export default function FileSystemProvider({ children }) {
         } finally {
             setIsLoading(false);
         }
-    }, [loadDirectory, isSftpPath, renameSftpItem]);
+    }, [loadDirectory, isSftpPath, renameSftpItem, t]);
 
     // Move item to trash - enhanced with SFTP support
     const moveToTrash = useCallback(async (path) => {
@@ -441,7 +437,7 @@ export default function FileSystemProvider({ children }) {
         } finally {
             setIsLoading(false);
         }
-    }, [loadDirectory, isSftpPath, deleteSftpItem, currentPath]);
+    }, [loadDirectory, isSftpPath, deleteSftpItem, currentPath, t]);
 
     // Zip selected items
     const zipItems = useCallback(async (sourcePaths, destinationPath = null) => {
@@ -464,7 +460,7 @@ export default function FileSystemProvider({ children }) {
         } finally {
             setIsLoading(false);
         }
-    }, [currentPath, loadDirectory]);
+    }, [currentPath, loadDirectory, t]);
 
     // Unzip an item
     const unzipItem = useCallback(async (zipPath, destinationPath = null) => {
@@ -487,7 +483,7 @@ export default function FileSystemProvider({ children }) {
         } finally {
             setIsLoading(false);
         }
-    }, [currentPath, loadDirectory]);
+    }, [currentPath, loadDirectory, t]);
 
     // Select an item
     const selectItem = useCallback((item, isMultiSelect = false) => {
