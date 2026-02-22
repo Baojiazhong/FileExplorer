@@ -111,4 +111,4 @@ const SidebarItem = ({
     );
 };
 
-export default SidebarItem;
+export default React.memo(SidebarItem);

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useCallback, useRef, useMemo } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { showError, showSuccess } from '../utils/NotificationSystem';
 import { useI18n } from '../i18n';
@@ -506,7 +506,7 @@ export default function SftpProvider({ children }) {
         connectionCache.current.clear();
     }, []);
 
-    const value = {
+    const value = useMemo(() => ({
         sftpConnections,
         currentSftpConnection,
         currentSftpPath,
@@ -525,7 +525,7 @@ export default function SftpProvider({ children }) {
         disconnectSftp,
         createSftpUrl,
         createSftpPath
-    };
+    }), [sftpConnections, currentSftpConnection, currentSftpPath, loadSftpDirectory, createSftpFile, createSftpDirectory, deleteSftpItem, renameSftpItem, copySftpItem, moveSftpItem, openSftpFile, downloadAndOpenSftpFile, isSftpPath, parseSftpPath, navigateToSftpConnection, disconnectSftp, createSftpUrl, createSftpPath]);
 
     return (
         <SftpContext.Provider value={value}>

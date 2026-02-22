@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useI18n } from '../i18n';
 
@@ -274,7 +274,7 @@ export default function SettingsProvider({ children }) {
         loadSettings();
     };
 
-    const contextValue = {
+    const contextValue = useMemo(() => ({
         settings,
         isLoading,
         error,
@@ -282,7 +282,7 @@ export default function SettingsProvider({ children }) {
         updateMultipleSettings,
         resetSettings,
         reloadSettings,
-    };
+    }), [settings, isLoading, error, updateSetting, updateMultipleSettings, resetSettings, reloadSettings]);
 
     // Show loading state if settings are not loaded yet
     if (isLoading) {

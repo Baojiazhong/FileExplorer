@@ -237,4 +237,4 @@ const TemplateItem = ({ template, onUse, onRemove }) => {
     );
 };
 
-export default TemplateItem;
+export default React.memo(TemplateItem);

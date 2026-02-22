@@ -161,4 +161,4 @@ const FileIcon = ({ filename, isDirectory, size = 'medium' }) => {
     );
 };
 
-export default FileIcon;
+export default React.memo(FileIcon);

@@ -181,5 +181,5 @@ const ContextMenuItem = ({
     );
 };
 
-export default ContextMenuItem;
+export default React.memo(ContextMenuItem);
 

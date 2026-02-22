@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
 
 // Create context
 const AppStateContext = createContext({
@@ -35,7 +35,7 @@ export default function AppStateProvider({ children }) {
         setIsSidebarCollapsed(prev => !prev);
     }, []);
 
-    const contextValue = {
+    const contextValue = useMemo(() => ({
         isSearching,
         isTemplateViewOpen,
         isSidebarCollapsed,
@@ -44,7 +44,7 @@ export default function AppStateProvider({ children }) {
         toggleTemplateView,
         toggleSidebar,
         setCurrentView,
-    };
+    }), [isSearching, isTemplateViewOpen, isSidebarCollapsed, currentView, toggleTemplateView]);
 
     return (
         <AppStateContext.Provider value={contextValue}>

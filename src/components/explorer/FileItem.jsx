@@ -224,4 +224,4 @@ const FileItem = ({
     );
 };
 
-export default FileItem;
+export default React.memo(FileItem);

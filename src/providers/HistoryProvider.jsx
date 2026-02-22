@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 
 // Create history context
 const HistoryContext = createContext({
@@ -75,7 +75,7 @@ export default function HistoryProvider({ children }) {
         setCurrentIndex(prevIndex => prevIndex + 1);
     }, [canGoForward]);
 
-    const contextValue = {
+    const contextValue = useMemo(() => ({
         history,
         currentIndex,
         currentPath,
@@ -84,7 +84,7 @@ export default function HistoryProvider({ children }) {
         navigateTo,
         goBack,
         goForward,
-    };
+    }), [history, currentIndex, currentPath, canGoBack, canGoForward, navigateTo, goBack, goForward]);
 
     return (
         <HistoryContext.Provider value={contextValue}>

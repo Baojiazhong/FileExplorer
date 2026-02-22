@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useI18n } from '../i18n';
 
@@ -163,6 +163,8 @@ export default function ThemeProvider({ children }) {
         };
     }, []);
 
+    const contextValue = useMemo(() => ({ theme, toggleTheme, setTheme }), [theme]);
+
     // Don't render children until theme is loaded
     if (isLoading) {
         return (
@@ -203,7 +205,7 @@ export default function ThemeProvider({ children }) {
     }
 
     return (
-        <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
+        <ThemeContext.Provider value={contextValue}>
             {children}
         </ThemeContext.Provider>
     );

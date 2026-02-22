@@ -104,4 +104,4 @@ const Icon = ({ name, size = 'medium', color, className = '', ...rest }) => {
     return <span className={classes} style={style} aria-hidden="true" {...rest} />;
 };
 
-export default Icon;
+export default React.memo(Icon);

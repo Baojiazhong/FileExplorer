@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useHistory } from './HistoryProvider';
 import { useSettings } from './SettingsProvider';
@@ -528,7 +528,7 @@ export default function FileSystemProvider({ children }) {
         loadVolumes();
     }, [loadVolumes]);
 
-    const contextValue = {
+    const contextValue = useMemo(() => ({
         currentDirData,
         isLoading,
         selectedItems,
@@ -548,7 +548,7 @@ export default function FileSystemProvider({ children }) {
         zipItems,
         unzipItem,
         loadVolumes,
-    };
+    }), [currentDirData, isLoading, selectedItems, focusedItem, volumes, error, loadDirectory, openFile, createFile, createDirectory, renameItem, moveToTrash, selectItem, selectMultiple, clearSelection, setFocusedItemCallback, zipItems, unzipItem, loadVolumes]);
 
     return (
         <FileSystemContext.Provider value={contextValue}>

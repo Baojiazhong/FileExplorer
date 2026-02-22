@@ -72,4 +72,4 @@ const IconButton = ({
     return button;
 };
 
-export default IconButton;
+export default React.memo(IconButton);
