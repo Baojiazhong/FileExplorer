@@ -2,43 +2,62 @@ use crate::commands::preview_commands::PreviewPayload;
 use crate::models::SFTPDirectory;
 use base64::Engine;
 use ssh2::{Session, Sftp};
+use std::collections::HashMap;
 use std::fs;
 use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::path::Path;
+use std::sync::Mutex;
 
-fn connect_to_sftp_via_password(
-    host: String,
+pub struct SftpPool(pub Mutex<HashMap<String, Session>>);
+
+fn create_session(
+    host: &str,
     port: u16,
-    username: String,
-    password: String,
-) -> Result<Sftp, String> {
-    // Create the TCP connection string
+    username: &str,
+    password: &str,
+) -> Result<Session, String> {
     let connection_string = format!("{}:{}", host, port);
-    // Connect to the SSH server
     let tcp = TcpStream::connect(connection_string).map_err(|e| e.to_string())?;
     let mut session = Session::new().map_err(|_| "Could not initialize session".to_string())?;
     session.set_tcp_stream(tcp);
     session.handshake().map_err(|e| e.to_string())?;
-
-    // Generates a unique SFTP destination path by appending a number if the path already exists on the remote server.
-    // For example: "file.txt" -> "file (1).txt" -> "file (2).txt"
-    // For directories: "folder" -> "folder (1)" -> "folder (2)"
-    // Authenticate
     session
-        .userauth_password(&username, &password)
+        .userauth_password(username, password)
         .map_err(|e| e.to_string())?;
-
-    // Check if authentication was successful
     if !session.authenticated() {
         return Err("Authentication failed".to_string());
     }
+    Ok(session)
+}
 
-    // Open an SFTP session
-    session
-        .sftp()
-        .map_err(|e| e.to_string())
-        .map_err(|e| e.to_string())
+fn pool_key(host: &str, port: u16, username: &str) -> String {
+    format!("{}:{}:{}", host, port, username)
+}
+
+fn take_session(
+    pool: &SftpPool,
+    host: &str,
+    port: u16,
+    username: &str,
+    password: &str,
+) -> Result<Session, String> {
+    let key = pool_key(host, port, username);
+    if let Ok(mut map) = pool.0.lock() {
+        if let Some(session) = map.remove(&key) {
+            if session.authenticated() {
+                return Ok(session);
+            }
+        }
+    }
+    create_session(host, port, username, password)
+}
+
+fn return_session(pool: &SftpPool, host: &str, port: u16, username: &str, session: Session) {
+    let key = pool_key(host, port, username);
+    if let Ok(mut map) = pool.0.lock() {
+        map.insert(key, session);
+    }
 }
 
 #[allow(dead_code)]
@@ -48,8 +67,11 @@ pub fn connect_to_sftp(
     port: u16,
     username: String,
     password: String,
-) -> Result<Sftp, String> {
-    connect_to_sftp_via_password(host, port, username, password)
+    pool: tauri::State<'_, SftpPool>,
+) -> Result<(), String> {
+    let session = take_session(&pool, &host, port, &username, &password)?;
+    return_session(&pool, &host, port, &username, session);
+    Ok(())
 }
 
 #[tauri::command]
@@ -59,8 +81,10 @@ pub fn load_dir(
     username: String,
     password: String,
     directory: String,
+    pool: tauri::State<'_, SftpPool>,
 ) -> Result<String, String> {
-    let sftp = connect_to_sftp_via_password(host, port, username, password)?;
+    let session = take_session(&pool, &host, port, &username, &password)?;
+    let sftp = session.sftp().map_err(|e| e.to_string())?;
 
     // Read the directory entries
     let entries = sftp.readdir(&directory).map_err(|e| e.to_string())?;
@@ -95,7 +119,10 @@ pub fn load_dir(
     };
 
     // Serialize the SFTPDirectory to JSON
-    serde_json::to_string(&sftp_directory).map_err(|e| e.to_string())
+    let result = serde_json::to_string(&sftp_directory).map_err(|e| e.to_string());
+    drop(sftp);
+    return_session(&pool, &host, port, &username, session);
+    result
 }
 
 #[tauri::command]
@@ -105,8 +132,10 @@ pub fn open_file_sftp(
     username: String,
     password: String,
     file_path: String,
+    pool: tauri::State<'_, SftpPool>,
 ) -> Result<String, String> {
-    let sftp = connect_to_sftp_via_password(host, port, username, password)?;
+    let session = take_session(&pool, &host, port, &username, &password)?;
+    let sftp = session.sftp().map_err(|e| e.to_string())?;
 
     // Open the file
     let mut file = sftp.open(&file_path).map_err(|e| e.to_string())?;
@@ -116,6 +145,8 @@ pub fn open_file_sftp(
     file.read_to_string(&mut contents)
         .map_err(|e| e.to_string())?;
 
+    drop(sftp);
+    return_session(&pool, &host, port, &username, session);
     Ok(contents)
 }
 
@@ -126,12 +157,16 @@ pub fn create_file_sftp(
     username: String,
     password: String,
     file_path: String,
+    pool: tauri::State<'_, SftpPool>,
 ) -> Result<String, String> {
-    let sftp = connect_to_sftp_via_password(host, port, username, password)?;
+    let session = take_session(&pool, &host, port, &username, &password)?;
+    let sftp = session.sftp().map_err(|e| e.to_string())?;
 
     // Create the file
     sftp.create(file_path.as_ref()).map_err(|e| e.to_string())?;
 
+    drop(sftp);
+    return_session(&pool, &host, port, &username, session);
     Ok(format!("File created at: {}", file_path))
 }
 
@@ -142,12 +177,16 @@ pub fn delete_file_sftp(
     username: String,
     password: String,
     file_path: String,
+    pool: tauri::State<'_, SftpPool>,
 ) -> Result<String, String> {
-    let sftp = connect_to_sftp_via_password(host, port, username, password)?;
+    let session = take_session(&pool, &host, port, &username, &password)?;
+    let sftp = session.sftp().map_err(|e| e.to_string())?;
 
     // Delete the file
     sftp.unlink(file_path.as_ref()).map_err(|e| e.to_string())?;
 
+    drop(sftp);
+    return_session(&pool, &host, port, &username, session);
     Ok(format!("File deleted at: {}", file_path))
 }
 
@@ -159,13 +198,17 @@ pub fn rename_file_sftp(
     password: String,
     old_path: String,
     new_path: String,
+    pool: tauri::State<'_, SftpPool>,
 ) -> Result<String, String> {
-    let sftp = connect_to_sftp_via_password(host, port, username, password)?;
+    let session = take_session(&pool, &host, port, &username, &password)?;
+    let sftp = session.sftp().map_err(|e| e.to_string())?;
 
     // Rename the file
     sftp.rename(old_path.as_ref(), new_path.as_ref(), None)
         .map_err(|e| e.to_string())?;
 
+    drop(sftp);
+    return_session(&pool, &host, port, &username, session);
     Ok(format!("File renamed from {} to {}", old_path, new_path))
 }
 
@@ -177,8 +220,10 @@ pub fn copy_file_sftp(
     password: String,
     source_path: String,
     destination_path: String,
+    pool: tauri::State<'_, SftpPool>,
 ) -> Result<String, String> {
-    let sftp = connect_to_sftp_via_password(host, port, username, password)?;
+    let session = take_session(&pool, &host, port, &username, &password)?;
+    let sftp = session.sftp().map_err(|e| e.to_string())?;
 
     // Copy the file
     let mut source_file = sftp.open(&source_path).map_err(|e| e.to_string())?;
@@ -194,6 +239,8 @@ pub fn copy_file_sftp(
         .write_all(&buffer)
         .map_err(|e| e.to_string())?;
 
+    drop(sftp);
+    return_session(&pool, &host, port, &username, session);
     Ok(format!(
         "File copied from {} to {}",
         source_path, destination_path
@@ -208,13 +255,17 @@ pub fn move_file_sftp(
     password: String,
     source_path: String,
     destination_path: String,
+    pool: tauri::State<'_, SftpPool>,
 ) -> Result<String, String> {
-    let sftp = connect_to_sftp_via_password(host, port, username, password)?;
+    let session = take_session(&pool, &host, port, &username, &password)?;
+    let sftp = session.sftp().map_err(|e| e.to_string())?;
 
     // Move the file
     sftp.rename(source_path.as_ref(), destination_path.as_ref(), None)
         .map_err(|e| e.to_string())?;
 
+    drop(sftp);
+    return_session(&pool, &host, port, &username, session);
     Ok(format!(
         "File moved from {} to {}",
         source_path, destination_path
@@ -228,13 +279,17 @@ pub fn create_directory_sftp(
     username: String,
     password: String,
     directory_path: String,
+    pool: tauri::State<'_, SftpPool>,
 ) -> Result<String, String> {
-    let sftp = connect_to_sftp_via_password(host, port, username, password)?;
+    let session = take_session(&pool, &host, port, &username, &password)?;
+    let sftp = session.sftp().map_err(|e| e.to_string())?;
 
     // Create the directory
     sftp.mkdir(directory_path.as_ref(), 0o755)
         .map_err(|e| e.to_string())?;
 
+    drop(sftp);
+    return_session(&pool, &host, port, &username, session);
     Ok(format!("Directory created at: {}", directory_path))
 }
 
@@ -245,13 +300,17 @@ pub fn delete_directory_sftp(
     username: String,
     password: String,
     directory_path: String,
+    pool: tauri::State<'_, SftpPool>,
 ) -> Result<String, String> {
-    let sftp = connect_to_sftp_via_password(host, port, username, password)?;
+    let session = take_session(&pool, &host, port, &username, &password)?;
+    let sftp = session.sftp().map_err(|e| e.to_string())?;
 
     // Delete the directory
     sftp.rmdir(directory_path.as_ref())
         .map_err(|e| e.to_string())?;
 
+    drop(sftp);
+    return_session(&pool, &host, port, &username, session);
     Ok(format!("Directory deleted at: {}", directory_path))
 }
 
@@ -263,37 +322,32 @@ pub fn rename_directory_sftp(
     password: String,
     old_path: String,
     new_path: String,
+    pool: tauri::State<'_, SftpPool>,
 ) -> Result<String, String> {
-    let sftp = connect_to_sftp_via_password(host, port, username, password)?;
+    let session = take_session(&pool, &host, port, &username, &password)?;
+    let sftp = session.sftp().map_err(|e| e.to_string())?;
 
     // Rename the directory
     sftp.rename(old_path.as_ref(), new_path.as_ref(), None)
         .map_err(|e| e.to_string())?;
 
+    drop(sftp);
+    return_session(&pool, &host, port, &username, session);
     Ok(format!(
         "Directory renamed from {} to {}",
         old_path, new_path
     ))
 }
 
-#[tauri::command]
-pub fn copy_directory_sftp(
-    host: String,
-    port: u16,
-    username: String,
-    password: String,
-    source_path: String,
-    destination_path: String,
-) -> Result<String, String> {
-    let sftp =
-        connect_to_sftp_via_password(host.clone(), port, username.clone(), password.clone())?;
-
-    // Create the destination directory
+fn copy_directory_sftp_recursive(
+    sftp: &Sftp,
+    source_path: &str,
+    destination_path: &str,
+) -> Result<(), String> {
     sftp.mkdir(destination_path.as_ref(), 0o755)
         .map_err(|e| e.to_string())?;
 
-    // Read the source directory entries
-    let entries = sftp.readdir(&source_path).map_err(|e| e.to_string())?;
+    let entries = sftp.readdir(source_path).map_err(|e| e.to_string())?;
 
     for (path, stat) in entries {
         let file_name = path
@@ -303,7 +357,6 @@ pub fn copy_directory_sftp(
         let new_path = format!("{}/{}", destination_path, file_name);
 
         if stat.is_file() {
-            // Copy file
             let mut source_file = sftp.open(&path).map_err(|e| e.to_string())?;
             let mut destination_file = sftp.create(new_path.as_ref()).map_err(|e| e.to_string())?;
 
@@ -315,19 +368,31 @@ pub fn copy_directory_sftp(
                 .write_all(&buffer)
                 .map_err(|e| e.to_string())?;
         } else if stat.is_dir() {
-            // Recursively copy directory
-            let path_str = path.to_str().unwrap_or("[invalid_path]").to_string();
-            copy_directory_sftp(
-                host.clone(),
-                port,
-                username.clone(),
-                password.clone(),
-                path_str,
-                new_path,
-            )?;
+            let path_str = path.to_str().unwrap_or("[invalid_path]");
+            copy_directory_sftp_recursive(sftp, path_str, &new_path)?;
         }
     }
 
+    Ok(())
+}
+
+#[tauri::command]
+pub fn copy_directory_sftp(
+    host: String,
+    port: u16,
+    username: String,
+    password: String,
+    source_path: String,
+    destination_path: String,
+    pool: tauri::State<'_, SftpPool>,
+) -> Result<String, String> {
+    let session = take_session(&pool, &host, port, &username, &password)?;
+    let sftp = session.sftp().map_err(|e| e.to_string())?;
+
+    copy_directory_sftp_recursive(&sftp, &source_path, &destination_path)?;
+
+    drop(sftp);
+    return_session(&pool, &host, port, &username, session);
     Ok(format!(
         "Directory copied from {} to {}",
         source_path, destination_path
@@ -342,13 +407,17 @@ pub fn move_directory_sftp(
     password: String,
     source_path: String,
     destination_path: String,
+    pool: tauri::State<'_, SftpPool>,
 ) -> Result<String, String> {
-    let sftp = connect_to_sftp_via_password(host, port, username, password)?;
+    let session = take_session(&pool, &host, port, &username, &password)?;
+    let sftp = session.sftp().map_err(|e| e.to_string())?;
 
     // Move the directory
     sftp.rename(source_path.as_ref(), destination_path.as_ref(), None)
         .map_err(|e| e.to_string())?;
 
+    drop(sftp);
+    return_session(&pool, &host, port, &username, session);
     Ok(format!(
         "Directory moved from {} to {}",
         source_path, destination_path
@@ -415,8 +484,17 @@ pub fn build_preview_sftp(
     username: String,
     password: String,
     file_path: String,
+    pool: tauri::State<'_, SftpPool>,
 ) -> Result<PreviewPayload, String> {
-    let sftp = connect_to_sftp_via_password(host, port, username, password)?;
+    let session = take_session(&pool, &host, port, &username, &password)?;
+    let sftp = session.sftp().map_err(|e| e.to_string())?;
+    let result = build_preview_sftp_inner(&sftp, &file_path);
+    drop(sftp);
+    return_session(&pool, &host, port, &username, session);
+    result
+}
+
+fn build_preview_sftp_inner(sftp: &Sftp, file_path: &str) -> Result<PreviewPayload, String> {
     let name = filename_from_path(&file_path);
 
     // Get file stats to check if it's a directory or file
@@ -579,8 +657,10 @@ pub fn download_and_open_sftp_file(
     password: String,
     file_path: String,
     open_file: Option<bool>,
+    pool: tauri::State<'_, SftpPool>,
 ) -> Result<String, String> {
-    let sftp = connect_to_sftp_via_password(host, port, username, password)?;
+    let session = take_session(&pool, &host, port, &username, &password)?;
+    let sftp = session.sftp().map_err(|e| e.to_string())?;
 
     // Get the filename from the path
     let filename = filename_from_path(&file_path);
@@ -603,6 +683,11 @@ pub fn download_and_open_sftp_file(
 
     // Copy the file content
     std::io::copy(&mut remote_file, &mut local_file).map_err(|e| e.to_string())?;
+
+    // Done with SFTP, return session to pool
+    drop(remote_file);
+    drop(sftp);
+    return_session(&pool, &host, port, &username, session);
 
     // Only open the file if explicitly requested (default is true for backward compatibility)
     let should_open = open_file.unwrap_or(true);

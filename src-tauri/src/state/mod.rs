@@ -29,8 +29,10 @@ pub mod settings_data;
 pub use searchengine_data::SearchEngineState;
 pub use settings_data::*;
 
+use crate::commands::sftp_file_system_operation_commands::SftpPool;
 use logging::Logger;
 use meta_data::MetaDataState;
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tauri::{Builder, Wry};
 
@@ -39,6 +41,7 @@ pub fn setup_app_state(app: Builder<Wry>) -> Builder<Wry> {
     let meta_data_state = Arc::new(Mutex::new(MetaDataState::new()));
     let settings_state = Arc::new(Mutex::new(SettingsState::new()));
     let search_engine_state = Arc::new(Mutex::new(SearchEngineState::new(settings_state.clone())));
+    let sftp_pool = SftpPool(Mutex::new(HashMap::new()));
 
     // Initialize the logger with the settings state
     Logger::init(settings_state.clone());
@@ -47,4 +50,5 @@ pub fn setup_app_state(app: Builder<Wry>) -> Builder<Wry> {
     app.manage(meta_data_state)
         .manage(settings_state)
         .manage(search_engine_state)
+        .manage(sftp_pool)
 }
