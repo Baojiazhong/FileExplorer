@@ -375,6 +375,15 @@ pub async fn create_file(folder_path_abs: &str, file_name: &str) -> Result<(), S
 
         let file_path = path.join(&file_name);
 
+        if file_path.exists() {
+            log_error!("File already exists: {}", file_path.display());
+            return Err(Error::new(
+                ErrorCode::ResourceAlreadyExists,
+                format!("File already exists: {}", file_path.display()),
+            )
+            .to_json());
+        }
+
         match fs::File::create(&file_path) {
             Ok(_) => Ok(()),
             Err(err) => {

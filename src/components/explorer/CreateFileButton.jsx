@@ -21,35 +21,11 @@ const CreateFileButton = () => {
     const dropdownRef = useRef(null);
     const inputRef = useRef(null);
     const skipNextToggle = useRef(false);
+    const handleOptionClickRef = useRef(null);
 
-    const { createFile, createDirectory } = useFileSystem();
+    const { createFile, createDirectory, currentDirData } = useFileSystem();
     const { currentPath } = useHistory();
 
-    /**
-     * Sets up event listeners for custom create events
-     */
-    useEffect(() => {
-        const handleCreateFile = () => {
-            handleOptionClick('file');
-        };
-
-        const handleCreateFolder = () => {
-            handleOptionClick('folder');
-        };
-
-        document.addEventListener('create-file', handleCreateFile);
-        document.addEventListener('create-folder', handleCreateFolder);
-
-        return () => {
-            document.removeEventListener('create-file', handleCreateFile);
-            document.removeEventListener('create-folder', handleCreateFolder);
-        };
-    }, []);
-
-    /**
-     * Toggles the dropdown menu
-     */
-    // Prevent immediate reopen after closing
     const toggleDropdown = () => {
         if (skipNextToggle.current) {
             skipNextToggle.current = false;
@@ -58,18 +34,11 @@ const CreateFileButton = () => {
         setIsDropdownOpen(prev => !prev);
     };
 
-    /**
-     * Closes the dropdown menu
-     */
     const closeDropdown = () => {
         setIsDropdownOpen(false);
         skipNextToggle.current = true;
     };
 
-    /**
-     * Handles clicking an option in the dropdown
-     * @param {string} type - The type of item to create ('file' or 'folder')
-     */
     const handleOptionClick = (type) => {
         setCreationType(type);
         setItemName(getDefaultName(type));
@@ -86,13 +55,54 @@ const CreateFileButton = () => {
         }, 0);
     };
 
+    handleOptionClickRef.current = handleOptionClick;
+
+    /**
+     * Sets up event listeners for custom create events
+     */
+    useEffect(() => {
+        const handleCreateFile = () => {
+            handleOptionClickRef.current('file');
+        };
+
+        const handleCreateFolder = () => {
+            handleOptionClickRef.current('folder');
+        };
+
+        document.addEventListener('create-file', handleCreateFile);
+        document.addEventListener('create-folder', handleCreateFolder);
+
+        return () => {
+            document.removeEventListener('create-file', handleCreateFile);
+            document.removeEventListener('create-folder', handleCreateFolder);
+        };
+    }, []);
+
     /**
      * Gets default name for new items
      * @param {string} type - The type of item ('file' or 'folder')
      * @returns {string} Default name for the item
      */
     const getDefaultName = (type) => {
-        return type === 'file' ? t('explorer.create.defaultNewFile') : t('explorer.create.defaultNewFolder');
+        const baseName = type === 'file' ? t('explorer.create.defaultNewFile') : t('explorer.create.defaultNewFolder');
+        if (!currentDirData) return baseName;
+
+        const existingNames = new Set([
+            ...(currentDirData.files || []).map(f => f.name),
+            ...(currentDirData.directories || []).map(d => d.name),
+        ]);
+
+        if (!existingNames.has(baseName)) return baseName;
+
+        const dotIndex = type === 'file' ? baseName.lastIndexOf('.') : -1;
+        const nameWithoutExt = dotIndex > 0 ? baseName.slice(0, dotIndex) : baseName;
+        const ext = dotIndex > 0 ? baseName.slice(dotIndex) : '';
+
+        let counter = 1;
+        while (existingNames.has(`${nameWithoutExt}(${counter})${ext}`)) {
+            counter++;
+        }
+        return `${nameWithoutExt}(${counter})${ext}`;
     };
 
     /**
@@ -122,7 +132,8 @@ const CreateFileButton = () => {
             console.error('Failed to create item:', error);
 
             // Check for specific error types
-            if (error.message && error.message.includes('already exists')) {
+            const errorMsg = typeof error === 'string' ? error : (error.message || '');
+            if (errorMsg.includes('already exists')) {
                 const shouldCreateCopy = await showConfirm(t('explorer.create.alreadyExists', { name: itemName }), {
                     title: t('common.confirm'),
                     confirmText: t('explorer.create.createCopy'),

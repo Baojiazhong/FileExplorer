@@ -342,6 +342,7 @@ export default function FileSystemProvider({ children }) {
         } catch (err) {
             console.error(`Failed to create file: ${fileName}`, err);
             setError(t('fileSystem.createFileFailed', { message: err.message || err }));
+            throw err;
         } finally {
             setIsLoading(false);
         }
@@ -368,6 +369,7 @@ export default function FileSystemProvider({ children }) {
         } catch (err) {
             console.error(`Failed to create directory: ${directoryName}`, err);
             setError(t('fileSystem.createDirFailed', { message: err.message || err }));
+            throw err;
         } finally {
             setIsLoading(false);
         }
