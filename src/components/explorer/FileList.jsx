@@ -218,12 +218,10 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
      * @param {React.MouseEvent} e - The click event
      */
     const handleContainerClick = (e) => {
-        // Only clear if clicking directly on the container, not on items
-        // Also check that it's not a scroll-related interaction
-        if (e.target === e.currentTarget && e.detail !== 0) {
-            clearSelection();
-            setLastSelectedIndex(-1);
-        }
+        if (e.detail === 0) return;
+        if (e.target.closest('.file-item') || e.target.closest('.file-list-header')) return;
+        clearSelection();
+        setLastSelectedIndex(-1);
     };
 
     /**
