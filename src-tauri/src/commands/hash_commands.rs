@@ -69,61 +69,62 @@ async fn get_checksum_method(
         .clone())
 }
 
-fn calculate_md5(data: &[u8]) -> String {
-    let mut hasher = Md5Hasher::new();
-    hasher.update(data);
-    let result = hasher.finalize();
-    hex::encode(result)
-}
-
-fn calculate_sha256(data: &[u8]) -> String {
-    let mut hasher = Sha256::new();
-    hasher.update(data);
-    format!("{:x}", hasher.finalize())
-}
-
-fn calculate_sha384(data: &[u8]) -> String {
-    let mut hasher = Sha384::new();
-    hasher.update(data);
-    format!("{:x}", hasher.finalize())
-}
-
-fn calculate_sha512(data: &[u8]) -> String {
-    let mut hasher = Sha512::new();
-    hasher.update(data);
-    format!("{:x}", hasher.finalize())
-}
-
-fn calculate_crc32(data: &[u8]) -> String {
-    let mut hasher = Hasher::new();
-    hasher.update(data);
-    let checksum = hasher.finalize();
-    format!("{:08x}", checksum)
-}
-
-async fn calculate_hash(method: ChecksumMethod, data: &[u8]) -> Result<String, HashError> {
-    let result = match method {
-        ChecksumMethod::MD5 => calculate_md5(data),
-        ChecksumMethod::SHA256 => calculate_sha256(data),
-        ChecksumMethod::SHA384 => calculate_sha384(data),
-        ChecksumMethod::SHA512 => calculate_sha512(data),
-        ChecksumMethod::CRC32 => calculate_crc32(data),
-    };
-    Ok(result)
-}
-
-async fn read_file(path: &Path) -> Result<Vec<u8>, HashError> {
+async fn calculate_hash_streaming(method: ChecksumMethod, path: &Path) -> Result<String, HashError> {
     if !path.exists() || path.is_dir() {
         return Err(HashError::FileOperationError);
     }
     let mut file = File::open(path)
         .await
         .map_err(|_| HashError::FileOperationError)?;
-    let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer)
-        .await
-        .map_err(|_| HashError::FileOperationError)?;
-    Ok(buffer)
+    let mut buf = vec![0u8; 64 * 1024];
+
+    match method {
+        ChecksumMethod::MD5 => {
+            let mut hasher = Md5Hasher::new();
+            loop {
+                let n = file.read(&mut buf).await.map_err(|_| HashError::FileOperationError)?;
+                if n == 0 { break; }
+                hasher.update(&buf[..n]);
+            }
+            Ok(hex::encode(hasher.finalize()))
+        }
+        ChecksumMethod::SHA256 => {
+            let mut hasher = Sha256::new();
+            loop {
+                let n = file.read(&mut buf).await.map_err(|_| HashError::FileOperationError)?;
+                if n == 0 { break; }
+                hasher.update(&buf[..n]);
+            }
+            Ok(format!("{:x}", hasher.finalize()))
+        }
+        ChecksumMethod::SHA384 => {
+            let mut hasher = Sha384::new();
+            loop {
+                let n = file.read(&mut buf).await.map_err(|_| HashError::FileOperationError)?;
+                if n == 0 { break; }
+                hasher.update(&buf[..n]);
+            }
+            Ok(format!("{:x}", hasher.finalize()))
+        }
+        ChecksumMethod::SHA512 => {
+            let mut hasher = Sha512::new();
+            loop {
+                let n = file.read(&mut buf).await.map_err(|_| HashError::FileOperationError)?;
+                if n == 0 { break; }
+                hasher.update(&buf[..n]);
+            }
+            Ok(format!("{:x}", hasher.finalize()))
+        }
+        ChecksumMethod::CRC32 => {
+            let mut hasher = Hasher::new();
+            loop {
+                let n = file.read(&mut buf).await.map_err(|_| HashError::FileOperationError)?;
+                if n == 0 { break; }
+                hasher.update(&buf[..n]);
+            }
+            Ok(format!("{:08x}", hasher.finalize()))
+        }
+    }
 }
 
 /// Generates a hash for the given file and returns it as a string.
@@ -169,10 +170,7 @@ pub async fn gen_hash_and_return_string_impl(
     let checksum_method = get_checksum_method(state)
         .await
         .map_err(|e| e.to_string())?;
-    let data = read_file(Path::new(&path))
-        .await
-        .map_err(|e| e.to_string())?;
-    let hash = calculate_hash(checksum_method, &data)
+    let hash = calculate_hash_streaming(checksum_method, Path::new(&path))
         .await
         .map_err(|e| e.to_string())?;
 
@@ -230,10 +228,7 @@ pub async fn gen_hash_and_save_to_file_impl(
     let checksum_method = get_checksum_method(state)
         .await
         .map_err(|e| e.to_string())?;
-    let data = read_file(Path::new(&source_path))
-        .await
-        .map_err(|e| e.to_string())?;
-    let hash = calculate_hash(checksum_method, &data)
+    let hash = calculate_hash_streaming(checksum_method, Path::new(&source_path))
         .await
         .map_err(|e| e.to_string())?;
 
@@ -295,10 +290,7 @@ pub async fn compare_file_or_dir_with_hash_impl(
     let checksum_method = get_checksum_method(state)
         .await
         .map_err(|e| e.to_string())?;
-    let data = read_file(Path::new(&path))
-        .await
-        .map_err(|e| e.to_string())?;
-    let calculated_hash = calculate_hash(checksum_method, &data)
+    let calculated_hash = calculate_hash_streaming(checksum_method, Path::new(&path))
         .await
         .map_err(|e| e.to_string())?;
 

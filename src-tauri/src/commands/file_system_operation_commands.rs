@@ -590,11 +590,11 @@ pub async fn move_to_trash(path: &str) -> Result<(), String> {
 /// Generates a unique destination path by appending a number if the path already exists.
 /// For example: "file.txt" -> "file (1).txt" -> "file (2).txt"
 /// For directories: "folder" -> "folder (1)" -> "folder (2)"
-fn generate_unique_path(original_path: &str) -> String {
+fn generate_unique_path(original_path: &str) -> Result<String, String> {
     let path = Path::new(original_path);
 
     if !path.exists() {
-        return original_path.to_string();
+        return Ok(original_path.to_string());
     }
 
     let parent = path.parent().unwrap_or_else(|| Path::new("."));
@@ -603,9 +603,7 @@ fn generate_unique_path(original_path: &str) -> String {
         .map(|n| n.to_string_lossy())
         .unwrap_or_else(|| "[invalid_name]".into());
 
-    // Check if it's a file with extension or a directory
     if let Some(extension) = path.extension() {
-        // It's a file with extension
         let stem = path
             .file_stem()
             .map(|s| s.to_string_lossy())
@@ -617,23 +615,25 @@ fn generate_unique_path(original_path: &str) -> String {
             let new_path = parent.join(&new_name);
 
             if !new_path.exists() {
-                return new_path.to_string_lossy().to_string();
+                return Ok(new_path.to_string_lossy().to_string());
             }
         }
     } else {
-        // It's a directory or file without extension
         for i in 1..=9999 {
             let new_name = format!("{} ({})", file_name, i);
             let new_path = parent.join(&new_name);
 
             if !new_path.exists() {
-                return new_path.to_string_lossy().to_string();
+                return Ok(new_path.to_string_lossy().to_string());
             }
         }
     }
 
-    // Fallback - this should rarely happen
-    original_path.to_string()
+    Err(Error::new(
+        ErrorCode::InternalError,
+        format!("Could not generate unique path for: {}", original_path),
+    )
+    .to_json())
 }
 
 /// Copies a file or directory from the source path to the destination path.
@@ -673,7 +673,7 @@ fn copy_file_or_dir_sync(source_path: &str, destination_path: &str) -> Result<u6
         .to_json());
     }
 
-    let final_destination_path = generate_unique_path(destination_path);
+    let final_destination_path = generate_unique_path(destination_path)?;
 
     if Path::new(source_path).is_dir() {
         let mut total_size = 0;
@@ -1099,7 +1099,7 @@ fn unzip_sync(zip_paths: Vec<String>, destination_path: Option<String>) -> Resul
             // For multiple files or directories, create subdirectory
             let extract_path_initial = dest_path.join(zip_name);
             let unique_extract_path_string =
-                generate_unique_path(&extract_path_initial.to_string_lossy());
+                generate_unique_path(&extract_path_initial.to_string_lossy())?;
             Path::new(&unique_extract_path_string).to_path_buf()
         };
 
@@ -1150,7 +1150,7 @@ fn unzip_sync(zip_paths: Vec<String>, destination_path: Option<String>) -> Resul
                 };
 
                 // Generate a unique path if the file already exists
-                let unique_outpath_string = generate_unique_path(&outpath.to_string_lossy());
+                let unique_outpath_string = generate_unique_path(&outpath.to_string_lossy())?;
                 let unique_outpath = Path::new(&unique_outpath_string);
 
                 if let Some(parent) = unique_outpath.parent() {

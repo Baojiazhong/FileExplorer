@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 
 /**
  * Single context menu item that can render both main menu items and submenu items
@@ -61,26 +61,32 @@ const ContextMenuItem = ({
         }
     }, [isSubmenuOpen, item.submenu]);
 
-    /**
-     * Handles mouse enter - opens submenu
-     */
+    const closeTimerRef = useRef(null);
+
     const handleMouseEnter = () => {
         if (item.submenu) {
+            if (closeTimerRef.current) {
+                clearTimeout(closeTimerRef.current);
+                closeTimerRef.current = null;
+            }
             onSubmenuOpen();
         }
     };
 
-    /**
-     * Handles mouse leave - closes submenu with a short delay
-     */
     const handleMouseLeave = () => {
         if (item.submenu) {
-            // Add delay to prevent submenu from closing immediately
-            setTimeout(() => {
+            closeTimerRef.current = setTimeout(() => {
                 onSubmenuClose();
+                closeTimerRef.current = null;
             }, 100);
         }
     };
+
+    useEffect(() => {
+        return () => {
+            if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+        };
+    }, []);
 
     /**
      * Handles click events on menu items

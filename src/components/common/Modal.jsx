@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useId } from 'react';
 import ReactDOM from 'react-dom';
 import Icon from './Icon';
 import { useI18n } from '../../i18n';
@@ -55,6 +55,7 @@ const Modal = ({
 }) => {
     const { t } = useI18n();
     const modalRef = useRef(null);
+    const titleId = useId();
 
     // Close modal when Escape key is pressed
     useEffect(() => {
@@ -188,14 +189,14 @@ const Modal = ({
                 tabIndex={-1}
                 role="dialog"
                 aria-modal="true"
-                aria-labelledby={title ? 'modal-title' : undefined}
+                aria-labelledby={title ? titleId : undefined}
                 {...rest}
             >
                 {/* Modal Header */}
                 {(title || showCloseButton) && (
                     <div className="modal-header">
                         {title && (
-                            <h2 className="modal-title" id="modal-title">
+                            <h2 className="modal-title" id={titleId}>
                                 {title}
                             </h2>
                         )}
