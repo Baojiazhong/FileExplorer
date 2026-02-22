@@ -27,7 +27,7 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
     const { t } = useI18n();
     const { selectedItems, selectItem, loadDirectory, clearSelection, focusedItem, setFocusedItem, openFile } = useFileSystem();
     const { settings } = useSettings();
-    const { openContextMenu } = useContextMenu();
+    const { openContextMenu, clipboard } = useContextMenu();
     const [sortConfig, setSortConfig] = useState(() => {
         const sortBy = settings?.sort_by;
         const sortDirection = settings?.sort_direction;
@@ -207,6 +207,8 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
     }, [data, sortConfig, t]);
 
     const selectedPathSet = useMemo(() => new Set(selectedItems.map(s => s.path)), [selectedItems]);
+
+    const cutPathSet = useMemo(() => clipboard.operation === 'cut' ? new Set(clipboard.items.map(i => i.path)) : new Set(), [clipboard]);
 
     /**
      * Handles click on the container (empty space)
@@ -665,6 +667,7 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
                             viewMode={viewMode}
                             isSelected={selectedPathSet.has(item.path)}
                             isFocused={focusedItem && focusedItem.path === item.path}
+                            isCut={cutPathSet.has(item.path)}
                             onClick={(e) => handleItemClick(item, index)}
                             onDoubleClick={() => handleItemClick(item, index, true)}
                             onContextMenu={handleContextMenu}

@@ -6,7 +6,6 @@ import { replaceFileName } from '../../utils/pathUtils.js';
 import { invoke } from '@tauri-apps/api/core';
 import { useFileSystem } from '../../providers/FileSystemProvider';
 import { useHistory } from '../../providers/HistoryProvider';
-import { useContextMenu } from '../../providers/ContextMenuProvider';
 import { showError, showConfirm } from '../../utils/NotificationSystem';
 import './fileItem.css';
 
@@ -27,6 +26,7 @@ const FileItem = ({
                       viewMode = 'grid',
                       isSelected = false,
                       isFocused = false,
+                      isCut = false,
                       onClick,
                       onDoubleClick,
                       onContextMenu
@@ -34,7 +34,6 @@ const FileItem = ({
     const { t } = useI18n();
     const { loadDirectory } = useFileSystem();
     const { currentPath } = useHistory();
-    const { clipboard } = useContextMenu();
 
     const isDirectory = item.isDirectory || 'sub_file_count' in item;
     const fileType = isDirectory ? t('details.folderType') : getFileType(item.name);
@@ -45,11 +44,6 @@ const FileItem = ({
         })
         : formatFileSize(item.size_in_bytes);
 
-    // Check if this item is cut (in clipboard with cut operation)
-    const isCut = clipboard.operation === 'cut' && 
-                  clipboard.items.some(clipItem => clipItem.path === item.path);
-
-    // Format modified date
     const modified = formatDate(item.last_modified);
 
     /**

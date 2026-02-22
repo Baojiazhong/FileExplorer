@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useTheme } from '../providers/ThemeProvider';
 import { useFileSystem } from '../providers/FileSystemProvider';
 import { useContextMenu } from '../providers/ContextMenuProvider';
@@ -132,13 +132,12 @@ const MainLayout = () => {
     const terminalHeight = settings.terminal_height || 240;
 
     // Get sorted data the same way FileList does (folders first + default sort from settings)
-    const getSortedData = useCallback(() => {
+    const sortedData = useMemo(() => {
         const data = searchResults || currentDirData;
         if (!data || (!data.directories?.length && !data.files?.length)) {
             return [];
         }
 
-        // Combine directories and files for sorting (same shape as FileList)
         const combinedItems = [
             ...(data.directories || []).map(dir => ({ ...dir, isDirectory: true })),
             ...(data.files || []).map(file => ({ ...file, isDirectory: false }))
@@ -163,13 +162,11 @@ const MainLayout = () => {
             }
         })();
 
-        // Always put directories first.
         return [...combinedItems].sort((a, b) => {
             if (a.isDirectory && !b.isDirectory) return -1;
             if (!a.isDirectory && b.isDirectory) return 1;
 
-            let aValue;
-            let bValue;
+            let aValue, bValue;
 
             if (key === 'size_in_bytes') {
                 aValue = a.isDirectory ? -1 : a.size_in_bytes || 0;
@@ -195,7 +192,7 @@ const MainLayout = () => {
             if (aValue > bValue) return direction === 'asc' ? 1 : -1;
             return 0;
         });
-    }, [searchResults, currentDirData, settings?.sort_by, settings?.sort_direction]);
+    }, [searchResults, currentDirData, settings?.sort_by, settings?.sort_direction, t]);
 
     // Initialize preview functionality
     const getFocusedItem = () => {
@@ -210,7 +207,7 @@ const MainLayout = () => {
     };
 
     const navigateUp = useCallback(() => {
-        const sortedItems = getSortedData();
+        const sortedItems = sortedData;
         if (!sortedItems.length) return null;
 
         const currentIndex = focusedItem ? sortedItems.findIndex(item => item.path === focusedItem.path) : -1;
@@ -237,10 +234,10 @@ const MainLayout = () => {
 
         setFocusedItem(nextItem);
         return nextItem;
-    }, [getSortedData, focusedItem, setFocusedItem, columnsPerRow]);
+    }, [sortedData, focusedItem, setFocusedItem, columnsPerRow]);
 
     const navigateDown = useCallback(() => {
-        const sortedItems = getSortedData();
+        const sortedItems = sortedData;
         if (!sortedItems.length) return null;
 
         const currentIndex = focusedItem ? sortedItems.findIndex(item => item.path === focusedItem.path) : -1;
@@ -264,10 +261,10 @@ const MainLayout = () => {
 
         setFocusedItem(nextItem);
         return nextItem;
-    }, [getSortedData, focusedItem, setFocusedItem, columnsPerRow]);
+    }, [sortedData, focusedItem, setFocusedItem, columnsPerRow]);
 
     const navigateLeft = useCallback(() => {
-        const sortedItems = getSortedData();
+        const sortedItems = sortedData;
         if (!sortedItems.length) return null;
 
         const currentIndex = focusedItem ? sortedItems.findIndex(item => item.path === focusedItem.path) : -1;
@@ -290,10 +287,10 @@ const MainLayout = () => {
 
         setFocusedItem(nextItem);
         return nextItem;
-    }, [getSortedData, focusedItem, setFocusedItem, columnsPerRow]);
+    }, [sortedData, focusedItem, setFocusedItem, columnsPerRow]);
 
     const navigateRight = useCallback(() => {
-        const sortedItems = getSortedData();
+        const sortedItems = sortedData;
         if (!sortedItems.length) return null;
 
         const currentIndex = focusedItem ? sortedItems.findIndex(item => item.path === focusedItem.path) : -1;
@@ -316,7 +313,7 @@ const MainLayout = () => {
 
         setFocusedItem(nextItem);
         return nextItem;
-    }, [getSortedData, focusedItem, setFocusedItem, columnsPerRow]);
+    }, [sortedData, focusedItem, setFocusedItem, columnsPerRow]);
 
     const overlayBlocksKeyboard =
         isGlobalSearchOpen ||
