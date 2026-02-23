@@ -53,6 +53,28 @@ export default function SftpProvider({ children }) {
         return () => window.removeEventListener('sftp-connections-updated', handler);
     }, [loadSftpConnections]);
 
+    const addSftpConnection = useCallback((conn) => {
+        try {
+            const existing = JSON.parse(localStorage.getItem('fileExplorerSftpConnections') || '[]');
+            const newConnections = [...existing, conn];
+            localStorage.setItem('fileExplorerSftpConnections', JSON.stringify(newConnections));
+            setSftpConnections(newConnections);
+            window.dispatchEvent(new CustomEvent('sftp-connections-updated'));
+            window.dispatchEvent(new StorageEvent('storage', { key: 'fileExplorerSftpConnections', newValue: JSON.stringify(newConnections) }));
+        } catch {}
+    }, []);
+
+    const removeSftpConnection = useCallback((name) => {
+        try {
+            const existing = JSON.parse(localStorage.getItem('fileExplorerSftpConnections') || '[]');
+            const newConnections = existing.filter(c => c.name !== name);
+            localStorage.setItem('fileExplorerSftpConnections', JSON.stringify(newConnections));
+            setSftpConnections(newConnections);
+            window.dispatchEvent(new CustomEvent('sftp-connections-updated'));
+            window.dispatchEvent(new StorageEvent('storage', { key: 'fileExplorerSftpConnections', newValue: JSON.stringify(newConnections) }));
+        } catch {}
+    }, []);
+
     // Check if a path is an SFTP path
     const isSftpPath = useCallback((path) => {
         return typeof path === 'string' && (path.startsWith('sftp://') || path.startsWith('sftp:'));
@@ -502,8 +524,10 @@ export default function SftpProvider({ children }) {
         navigateToSftpConnection,
         disconnectSftp,
         createSftpUrl,
-        createSftpPath
-    }), [sftpConnections, currentSftpConnection, currentSftpPath, loadSftpDirectory, createSftpFile, createSftpDirectory, deleteSftpItem, renameSftpItem, copySftpItem, moveSftpItem, openSftpFile, downloadAndOpenSftpFile, isSftpPath, parseSftpPath, navigateToSftpConnection, disconnectSftp, createSftpUrl, createSftpPath]);
+        createSftpPath,
+        addSftpConnection,
+        removeSftpConnection
+    }), [sftpConnections, currentSftpConnection, currentSftpPath, loadSftpDirectory, createSftpFile, createSftpDirectory, deleteSftpItem, renameSftpItem, copySftpItem, moveSftpItem, openSftpFile, downloadAndOpenSftpFile, isSftpPath, parseSftpPath, navigateToSftpConnection, disconnectSftp, createSftpUrl, createSftpPath, addSftpConnection, removeSftpConnection]);
 
     return (
         <SftpContext.Provider value={value}>

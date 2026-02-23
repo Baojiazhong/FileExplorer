@@ -29,15 +29,14 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
     const { volumes, loadDirectory, loadVolumes } = useFileSystem();
     const { currentPath, navigateTo } = useHistory();
     const { removeFromFavorites } = useContextMenu();
-    const { navigateToSftpConnection, createSftpUrl, isSftpPath, parseSftpPath, createSftpPath } = useSftp();
+    const { navigateToSftpConnection, createSftpUrl, isSftpPath, parseSftpPath, createSftpPath, sftpConnections, addSftpConnection: addSftpConn, removeSftpConnection: removeSftpConn } = useSftp();
 
     const [systemInfo, setSystemInfo] = useState(null);
     const [isAddSourceModalOpen, setIsAddSourceModalOpen] = useState(false);
     const [newSourcePath, setNewSourcePath] = useState('');
     const addSourceInputRef = useRef(null);
 
-    // SFTP Connections state
-    const [sftpConnections, setSftpConnections] = useState([]);
+    // SFTP modal state
     const [isAddSftpModalOpen, setIsAddSftpModalOpen] = useState(false);
     
     // Permission helper state
@@ -65,45 +64,9 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
             console.error(`Failed to browse to ${folderName}:`, error);
         }
     };
-    // Load SFTP connections from localStorage
-    const loadSftpConnections = React.useCallback(() => {
-        try {
-            const saved = JSON.parse(localStorage.getItem('fileExplorerSftpConnections') || '[]');
-            setSftpConnections(saved);
-        } catch (err) {
-            setSftpConnections([]);
-        }
-    }, []);
-
-    // Load on mount and on custom event
-    React.useEffect(() => {
-        loadSftpConnections();
-        const handler = () => loadSftpConnections();
-        const storageHandler = (e) => {
-            if (e.key === 'fileExplorerSftpConnections') loadSftpConnections();
-        };
-        window.addEventListener('sftp-connections-updated', handler);
-        window.addEventListener('storage', storageHandler);
-        return () => {
-            window.removeEventListener('sftp-connections-updated', handler);
-            window.removeEventListener('storage', storageHandler);
-        };
-    }, [loadSftpConnections]);
-
     // Add SFTP connection
     const addSftpConnection = (conn) => {
-        try {
-            const existing = JSON.parse(localStorage.getItem('fileExplorerSftpConnections') || '[]');
-            const newConnections = [...existing, conn];
-            localStorage.setItem('fileExplorerSftpConnections', JSON.stringify(newConnections));
-            window.dispatchEvent(new CustomEvent('sftp-connections-updated'));
-            window.dispatchEvent(new StorageEvent('storage', {
-                key: 'fileExplorerSftpConnections',
-                newValue: JSON.stringify(newConnections)
-            }));
-        } catch (err) {
-            // ignore
-        }
+        addSftpConn(conn);
         setIsAddSftpModalOpen(false);
     };
 
@@ -116,17 +79,10 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
         });
         if (!confirmRemove) return;
         try {
-            const existing = JSON.parse(localStorage.getItem('fileExplorerSftpConnections') || '[]');
-            const newConnections = existing.filter(c => c.name !== name);
-            localStorage.setItem('fileExplorerSftpConnections', JSON.stringify(newConnections));
-            window.dispatchEvent(new CustomEvent('sftp-connections-updated'));
-            window.dispatchEvent(new StorageEvent('storage', {
-                key: 'fileExplorerSftpConnections',
-                newValue: JSON.stringify(newConnections)
-            }));
-             showSuccess(t('sidebar.network.removeSuccess', { name }));
+            removeSftpConn(name);
+            showSuccess(t('sidebar.network.removeSuccess', { name }));
         } catch (err) {
-             showError(t('sidebar.network.removeFailed', { message: err.message || err }));
+            showError(t('sidebar.network.removeFailed', { message: err.message || err }));
         }
     };
 
