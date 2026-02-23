@@ -295,10 +295,10 @@ const PathBreadcrumb = ({ onCopyPath, isVisible = true, onSearch }) => {
     useEffect(() => {
         if (!isSearchVisible) return;
 
-        // Focus after the input mounts.
-        setTimeout(() => {
+        const timer = setTimeout(() => {
             focusLocalSearchInput();
         }, 0);
+        return () => clearTimeout(timer);
     }, [isSearchVisible]);
 
     // If local search is empty, clicking outside exits search mode.
