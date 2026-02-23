@@ -72,19 +72,9 @@ const QuickAccess = ({ isCollapsed = false, onItemClick, currentView, currentPat
         window.addEventListener('navigation-changed', handleNavigationChange);
         window.addEventListener('quick-access-updated', handleQuickAccessUpdate);
 
-        // Also listen for storage events in case history is updated from elsewhere
-        const handleStorageChange = (e) => {
-            if (e.key === 'fileExplorerHistory') {
-                loadRecentItems();
-            }
-        };
-
-        window.addEventListener('storage', handleStorageChange);
-
         return () => {
             window.removeEventListener('navigation-changed', handleNavigationChange);
             window.removeEventListener('quick-access-updated', handleQuickAccessUpdate);
-            window.removeEventListener('storage', handleStorageChange);
         };
     }, [loadRecentItems]);
 

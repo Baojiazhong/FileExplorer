@@ -780,12 +780,15 @@ const Terminal = ({ isOpen, onToggle }) => {
      * @param {string} command - The original command that generated the output
      * @returns {string} Formatted content with HTML-like structure
      */
+    const escapeHtml = (str) => str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
     const formatOutput = (content, command = '') => {
         if (!content || typeof content !== 'string') return content;
 
-        // Format ls/dir output to highlight directories and files differently
+        const escaped = escapeHtml(content);
+
         if (command.startsWith('ls') || command.startsWith('dir')) {
-            return content.split(/\s+/).map(item => {
+            return escaped.split(/\s+/).map(item => {
                 if (item.endsWith('/')) {
                     return `<span class="terminal-directory">${item}</span>`;
                 } else if (item.includes('.')) {
@@ -797,28 +800,19 @@ const Terminal = ({ isOpen, onToggle }) => {
             }).join('  ');
         }
 
-        // For simple outputs like version numbers and paths, don't apply complex formatting
-        // This prevents issues with version numbers like "11.5.0" and path formatting in pwd
-        const isSimpleOutput = content.trim().match(/^[\d\.]+$/) || 
-                              content.trim().match(/^v?[\d\.]+(-[\w\.]+)?$/) ||
-                              content.trim().match(/^\/[\w\-\.\/]+$/) || // Unix absolute paths
-                              content.trim().match(/^[A-Za-z]:[\\\w\-\.\\]+$/); // Windows paths
+        const isSimpleOutput = escaped.trim().match(/^[\d\.]+$/) || 
+                              escaped.trim().match(/^v?[\d\.]+(-[\w\.]+)?$/) ||
+                              escaped.trim().match(/^\/[\w\-\.\/]+$/) ||
+                              escaped.trim().match(/^[A-Za-z]:[\\\w\-\.\\]+$/);
         
         if (isSimpleOutput) {
-            return content;
+            return escaped;
         }
 
-        // Only apply formatting to more complex outputs
-        let formattedContent = content;
-        
-        // Format file paths (only if they look like actual paths in complex text)
+        let formattedContent = escaped;
         formattedContent = formattedContent.replace(/\b([\/\\][\w\-\.\/\\]{3,})\b/g, '<span class="terminal-path">$1</span>');
-        
-        // Format URLs
         formattedContent = formattedContent.replace(/(https?:\/\/[^\s]+)/g, '<span class="terminal-url">$1</span>');
-        
-        // Format quoted strings
-        formattedContent = formattedContent.replace(/["']([^"']+)["']/g, '<span class="terminal-string">"$1"</span>');
+        formattedContent = formattedContent.replace(/&quot;([^&]+)&quot;/g, '<span class="terminal-string">"$1"</span>');
         
         return formattedContent;
     };
@@ -1094,7 +1088,7 @@ const Terminal = ({ isOpen, onToggle }) => {
                                     dangerouslySetInnerHTML={{ 
                                         __html: entry.type === 'output' && entry.originalCommand 
                                             ? formatOutput(entry.content, entry.originalCommand) 
-                                            : entry.content 
+                                            : escapeHtml(entry.content || '')
                                     }}
                                 ></pre>
                             )}
