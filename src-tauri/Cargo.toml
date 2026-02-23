@@ -37,6 +37,7 @@ openssl = { version = "0.10", features = ["vendored"] }
 anyhow = "1.0.98"
 base64 = "0.22.1"
 chardetng = "0.1.17"
+encoding_rs = "0.8"
 bumpalo = "3.14"  # Arena allocation for temporary objects
 parking_lot = "0.12"  # Better RwLock implementation
 

@@ -1,5 +1,6 @@
 use crate::error_handling::{Error, ErrorCode};
 use crate::log_info;
+use chardetng::EncodingDetector;
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::path::Path;
@@ -7,6 +8,20 @@ use std::process::Stdio;
 use std::time::Duration;
 use tokio::process::Command as TokioCommand;
 use tokio::time::timeout;
+
+fn decode_output(bytes: &[u8]) -> String {
+    if bytes.is_empty() {
+        return String::new();
+    }
+    if let Ok(s) = std::str::from_utf8(bytes) {
+        return s.trim_end().to_string();
+    }
+    let mut detector = EncodingDetector::new();
+    detector.feed(bytes, true);
+    let encoding = detector.guess(None, true);
+    let (decoded, _, _) = encoding.decode(bytes);
+    decoded.trim_end().to_string()
+}
 
 #[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
 struct CommandResponse {
@@ -88,10 +103,15 @@ pub async fn execute_command(
         "-c"
     };
 
-    let mut cmd = TokioCommand::new(&shell_path);
-    cmd.arg(shell_arg).arg(&command);
+    let wrapped_command = if cfg!(target_os = "windows") {
+        format!("chcp 65001 >nul && {}", command)
+    } else {
+        command.clone()
+    };
 
-    // Set working directory if provided, with validation
+    let mut cmd = TokioCommand::new(&shell_path);
+    cmd.arg(shell_arg).arg(&wrapped_command);
+
     if let Some(ref wd) = working_directory {
         let path = Path::new(wd);
         if path.exists() && path.is_dir() {
@@ -138,15 +158,9 @@ pub async fn execute_command(
 
     let exec_time = start_time.elapsed().as_millis();
 
-    // Handle output with proper encoding
-    let stdout = String::from_utf8_lossy(&output.stdout)
-        .trim_end()
-        .to_string();
-    let stderr = String::from_utf8_lossy(&output.stderr)
-        .trim_end()
-        .to_string();
+    let stdout = decode_output(&output.stdout);
+    let stderr = decode_output(&output.stderr);
 
-    // Get proper exit code
     let status_code = if let Some(code) = output.status.code() {
         code
     } else {
@@ -224,10 +238,15 @@ pub async fn execute_command_improved(
         "-c"
     };
 
-    let mut cmd = TokioCommand::new(&shell_path);
-    cmd.arg(shell_arg).arg(&command);
+    let wrapped_command = if cfg!(target_os = "windows") {
+        format!("[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; {}", command)
+    } else {
+        command.clone()
+    };
 
-    // Set working directory with validation
+    let mut cmd = TokioCommand::new(&shell_path);
+    cmd.arg(shell_arg).arg(&wrapped_command);
+
     if let Some(ref wd) = working_directory {
         let path = Path::new(wd);
         if path.exists() && path.is_dir() {
@@ -240,7 +259,6 @@ pub async fn execute_command_improved(
         }
     }
 
-    // Set up proper environment
     cmd.env("TERM", "xterm-256color");
     cmd.env("COLORTERM", "truecolor");
 
@@ -253,7 +271,6 @@ pub async fn execute_command_improved(
         cmd.env("LANG", "en_US.UTF-8");
     }
 
-    // Configure stdio
     cmd.stdout(Stdio::piped());
     cmd.stderr(Stdio::piped());
 
@@ -278,13 +295,8 @@ pub async fn execute_command_improved(
 
     let exec_time = start_time.elapsed().as_millis();
 
-    // Handle output with proper encoding and cleanup
-    let stdout = String::from_utf8_lossy(&output.stdout)
-        .trim_end()
-        .to_string();
-    let stderr = String::from_utf8_lossy(&output.stderr)
-        .trim_end()
-        .to_string();
+    let stdout = decode_output(&output.stdout);
+    let stderr = decode_output(&output.stderr);
 
     // Get proper exit code with signal handling
     let status_code = if let Some(code) = output.status.code() {
@@ -376,8 +388,14 @@ pub async fn execute_command_with_timeout(
         "-c"
     };
 
+    let wrapped_command = if cfg!(target_os = "windows") {
+        format!("[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; {}", modified_command)
+    } else {
+        modified_command.clone()
+    };
+
     let mut cmd = TokioCommand::new(&shell_path);
-    cmd.arg(shell_arg).arg(&modified_command);
+    cmd.arg(shell_arg).arg(&wrapped_command);
 
     // Set working directory
     if let Some(ref wd) = working_directory {
@@ -431,12 +449,8 @@ pub async fn execute_command_with_timeout(
     };
 
     let exec_time = start_time.elapsed().as_millis();
-    let stdout = String::from_utf8_lossy(&output.stdout)
-        .trim_end()
-        .to_string();
-    let stderr = String::from_utf8_lossy(&output.stderr)
-        .trim_end()
-        .to_string();
+    let stdout = decode_output(&output.stdout);
+    let stderr = decode_output(&output.stderr);
     let status_code = output.status.code().unwrap_or(-1);
 
     let res = CommandResponse {
