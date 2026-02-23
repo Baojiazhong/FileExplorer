@@ -608,6 +608,17 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
         }
     };
 
+    const handleItemClickRef = useRef(handleItemClick);
+    handleItemClickRef.current = handleItemClick;
+
+    const stableOnClick = useCallback((item, index) => {
+        handleItemClickRef.current(item, index);
+    }, []);
+
+    const stableOnDoubleClick = useCallback((item, index) => {
+        handleItemClickRef.current(item, index, true);
+    }, []);
+
     return (
         <div className="file-list-wrapper">
             <div
@@ -664,12 +675,13 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
                         <FileItem
                             key={item.path}
                             item={item}
+                            index={index}
                             viewMode={viewMode}
                             isSelected={selectedPathSet.has(item.path)}
                             isFocused={focusedItem && focusedItem.path === item.path}
                             isCut={cutPathSet.has(item.path)}
-                            onClick={(e) => handleItemClick(item, index)}
-                            onDoubleClick={() => handleItemClick(item, index, true)}
+                            onClick={stableOnClick}
+                            onDoubleClick={stableOnDoubleClick}
                             onContextMenu={handleContextMenu}
                         />
                     ))}

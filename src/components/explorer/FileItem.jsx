@@ -23,6 +23,7 @@ import './fileItem.css';
  */
 const FileItem = ({
                       item,
+                      index,
                       viewMode = 'grid',
                       isSelected = false,
                       isFocused = false,
@@ -95,7 +96,7 @@ const FileItem = ({
      * @param {React.MouseEvent} e - The click event
      */
     const handleClick = (e) => {
-        if (onClick) onClick(e);
+        if (onClick) onClick(item, index);
     };
 
     /**
@@ -131,7 +132,7 @@ const FileItem = ({
             window.getSelection().removeAllRanges();
         }
         
-        if (onDoubleClick) onDoubleClick(e);
+        if (onDoubleClick) onDoubleClick(item, index);
     };
 
     /**

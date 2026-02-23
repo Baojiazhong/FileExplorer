@@ -79,12 +79,14 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
     React.useEffect(() => {
         loadSftpConnections();
         const handler = () => loadSftpConnections();
-        window.addEventListener('sftp-connections-updated', handler);
-        window.addEventListener('storage', (e) => {
+        const storageHandler = (e) => {
             if (e.key === 'fileExplorerSftpConnections') loadSftpConnections();
-        });
+        };
+        window.addEventListener('sftp-connections-updated', handler);
+        window.addEventListener('storage', storageHandler);
         return () => {
             window.removeEventListener('sftp-connections-updated', handler);
+            window.removeEventListener('storage', storageHandler);
         };
     }, [loadSftpConnections]);
 
