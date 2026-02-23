@@ -1,29 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useI18n } from '../../i18n';
-import { invoke } from '@tauri-apps/api/core';
 import { useHistory } from '../../providers/HistoryProvider';
 import { useFileSystem } from '../../providers/FileSystemProvider';
 import { useSettings } from '../../providers/SettingsProvider';
 import Icon from '../common/Icon';
+import useTerminalHistory from './useTerminalHistory';
+import useTerminalCommands from './useTerminalCommands';
 import './terminal.css';
 
-/**
- * Terminal component - Provides a command-line interface within the application
- * Supports built-in commands and passes through system commands
- *
- * @param {Object} props - Component props
- * @param {boolean} props.isOpen - Whether the terminal is currently open
- * @param {Function} props.onToggle - Callback function to toggle terminal visibility
- * @returns {React.ReactElement} Terminal component
- */
 const Terminal = ({ isOpen, onToggle }) => {
     const { t } = useI18n();
     const [commandHistory, setCommandHistory] = useState([]);
     const [currentCommand, setCurrentCommand] = useState('');
-    const [historyIndex, setHistoryIndex] = useState(-1);
-    const [persistentHistory, setPersistentHistory] = useState([]);
-    const [isExecuting, setIsExecuting] = useState(false);
-    const [abortController, setAbortController] = useState(null);
     const [isSearchMode, setIsSearchMode] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState([]);
@@ -34,874 +22,99 @@ const Terminal = ({ isOpen, onToggle }) => {
     const { setCurrentPath } = useFileSystem();
     const { settings } = useSettings();
 
-    /**
-     * Get terminal height from settings with fallback to default value
-     * @type {number}
-     */
     const terminalHeight = settings.terminal_height || 240;
 
-    /**
-     * Load persistent command history from localStorage on component mount
-     */
-    useEffect(() => {
-        try {
-            const savedHistory = localStorage.getItem('terminal-command-history');
-            if (savedHistory) {
-                const parsed = JSON.parse(savedHistory);
-                setPersistentHistory(parsed.slice(-50)); // Keep last 50 commands
-            }
-        } catch (error) {
-            console.error('Failed to load command history:', error);
-        }
-    }, []);
+    const history = useTerminalHistory();
+    const commands = useTerminalCommands({ currentPath, navigateTo, onToggle, t });
 
-    /**
-     * Initialize terminal with welcome message on first render
-     */
     useEffect(() => {
         if (commandHistory.length === 0) {
-            const welcomeMessage = {
+            setCommandHistory([{
                 type: 'system',
                 content: t('terminal.welcome', { path: currentPath || '/' }),
                 timestamp: new Date().toLocaleTimeString(),
-            };
-            setCommandHistory([welcomeMessage]);
+            }]);
         }
     }, []);
 
-    /**
-     * Save command history to localStorage whenever it changes
-     */
     useEffect(() => {
-        try {
-            if (persistentHistory.length > 0) {
-                localStorage.setItem('terminal-command-history', JSON.stringify(persistentHistory));
-            }
-        } catch (error) {
-            console.error('Failed to save command history:', error);
-        }
-    }, [persistentHistory]);
-
-    // Removed the useEffect that automatically adds directory change messages
-    // to prevent double messages when using the cd command
-
-    /**
-     * Focus input field when terminal opens
-     */
-    useEffect(() => {
-        if (isOpen && inputRef.current) {
-            inputRef.current.focus();
-        }
+        if (isOpen && inputRef.current) inputRef.current.focus();
     }, [isOpen]);
 
-    /**
-     * Automatically scroll to the bottom when command history updates
-     */
     useEffect(() => {
-        if (terminalRef.current) {
-            // Ensure proper scrolling without pushing content off screen
-            terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
-        }
+        if (terminalRef.current) terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
     }, [commandHistory]);
 
-
-    /**
-     * Cleanup running commands when component unmounts
-     */
-    useEffect(() => {
-        return () => {
-            if (abortController) {
-                abortController.abort();
-            }
-        };
-    }, [abortController]);
-
-    /**
-     * Generates the terminal prompt string with username, hostname and current path
-     * @returns {string} Formatted prompt string
-     */
     const getPrompt = () => {
-        const username = 'user';
-        const hostname = 'localhost';
         const pathDisplay = currentPath || '/';
-        // Truncate long paths for better display
-        const displayPath = pathDisplay.length > 50 
-            ? '...' + pathDisplay.slice(-47)
-            : pathDisplay;
-        return `${username}@${hostname}:${displayPath}$`;
+        const displayPath = pathDisplay.length > 50 ? '...' + pathDisplay.slice(-47) : pathDisplay;
+        return `user@localhost:${displayPath}$`;
     };
 
-    /**
-     * Executes a command using the Tauri backend
-     * Handles response parsing and error formatting
-     * Supports command cancellation via AbortController
-     *
-     * @param {string} command - The command to execute
-     * @returns {Object} Result object with type and content
-     * @async
-     */
-    const executeCommand = async (command) => {
-        const controller = new AbortController();
-        setAbortController(controller);
-        setIsExecuting(true);
+    const addMessage = (msg) => setCommandHistory(prev => [...prev, msg]);
 
-        try {
-            // Determine if this is a potentially long-running command
-            const longRunningCommands = ['ping', 'traceroute', 'curl', 'wget', 'tail -f', 'watch'];
-            const isLongRunning = longRunningCommands.some(cmd => command.toLowerCase().startsWith(cmd));
-            
-            // Use appropriate command execution method
-            const commandPromise = isLongRunning 
-                ? invoke('execute_command_with_timeout', { 
-                    command, 
-                    working_directory: currentPath,
-                    timeout_seconds: 30
-                })
-                : invoke('execute_command_improved', { 
-                    command, 
-                    working_directory: currentPath 
-                });
-            const cancelPromise = new Promise((_, reject) => {
-                controller.signal.addEventListener('abort', () => {
-                    reject(new Error('Command cancelled'));
-                });
-            });
-
-            const output = await Promise.race([commandPromise, cancelPromise]);
-
-            // Format the response properly
-            if (typeof output === 'string') {
-                try {
-                    // Check if it's JSON
-                    const parsedOutput = JSON.parse(output);
-
-                    // Handle empty results
-                    if (parsedOutput.stdout === "" && parsedOutput.stderr === "" && parsedOutput.status === 0) {
-                        return { type: 'output', content: '' };
-                    }
-
-                    // Handle status 1 with empty stdout/stderr (command not found)
-                    if (parsedOutput.status === 1) {
-                        if (parsedOutput.stdout === "" && parsedOutput.stderr === "") {
-                            return { type: 'error', content: t('terminal.errors.commandNotFound', { command: command.split(' ')[0] }) };
-                        } else if (parsedOutput.stderr) {
-                            return { type: 'error', content: parsedOutput.stderr.trim() };
-                        }
-                    }
-
-                    // Handle actual output
-                    if (parsedOutput.stdout && parsedOutput.stdout.trim()) {
-                        return { type: 'output', content: parsedOutput.stdout.trim() };
-                    }
-
-                    // Handle error output
-                    if (parsedOutput.stderr && parsedOutput.stderr.trim()) {
-                        return { type: 'error', content: parsedOutput.stderr.trim() };
-                    }
-
-                    // Handle other output based on status
-                    return {
-                        type: parsedOutput.status === 0 ? 'output' : 'error',
-                        content: parsedOutput.status === 0 ?
-                            (output || '') :
-                            t('terminal.errors.commandFailedWithStatus', { status: parsedOutput.status })
-                    };
-                } catch (e) {
-                    // Not JSON, return as is
-                    return { type: 'output', content: output || '' };
-                }
-            } else if (typeof output === 'object') {
-                // Handle object response
-                if (output.stdout === "" && output.stderr === "" && output.status === 0) {
-                    return { type: 'output', content: '' };
-                }
-
-                // Handle command not found
-                if (output.status === 1) {
-                    if (output.stdout === "" && output.stderr === "") {
-                        return { type: 'error', content: t('terminal.errors.commandNotFound', { command: command.split(' ')[0] }) };
-                    } else if (output.stderr) {
-                        return { type: 'error', content: output.stderr };
-                    }
-                }
-
-                if (output.stdout) {
-                    return { type: 'output', content: output.stdout };
-                }
-
-                // Empty response
-                return {
-                    type: output.status === 0 ? 'output' : 'error',
-                    content: output.status === 0 ? '' : t('terminal.errors.commandFailedWithStatus', { status: output.status })
-                };
-            }
-
-            return {
-                type: 'output',
-                content: output || '',
-            };
-        } catch (error) {
-            // Handle command cancellation
-            if (error.message === 'Command cancelled') {
-                return {
-                    type: 'system',
-                    content: t('terminal.system.commandCancelled'),
-                };
-            }
-
-            // Format error messages properly
-            let errorMessage = '';
-
-            try {
-                if (typeof error === 'string') {
-                    try {
-                        // Try to parse JSON error
-                        const parsedError = JSON.parse(error);
-                        errorMessage = parsedError.custom_message ||
-                            parsedError.message_from_code ||
-                            parsedError.message ||
-                            error;
-                    } catch {
-                        errorMessage = error;
-                    }
-                } else if (typeof error === 'object') {
-                    errorMessage = error.custom_message ||
-                        error.message_from_code ||
-                        error.message ||
-                        JSON.stringify(error);
-                } else {
-                    errorMessage = String(error);
-                }
-            } catch {
-                errorMessage = String(error);
-            }
-
-            return {
-                type: 'error',
-                content: t('terminal.errors.errorPrefix', { message: errorMessage }),
-            };
-        } finally {
-            setIsExecuting(false);
-            setAbortController(null);
-        }
-    };
-
-    /**
-     * Handles built-in terminal commands
-     * Provides functionality for commands like help, clear, ls, etc.
-     *
-     * @param {string} command - The command to handle
-     * @param {Array<string>} args - Command arguments
-     * @returns {Object|null} Command result object or null if not a built-in command
-     * @async
-     */
-    const handleBuiltinCommand = async (command, args) => {
-        switch (command) {
-            case 'help':
-                return {
-                    type: 'output',
-                    content: t('terminal.help.text'),
-                };
-
-            case 'clear':
-                if (args.length > 0 && args[0] === 'history') {
-                    // Clear persistent command history
-                    setPersistentHistory([]);
-                    localStorage.removeItem('terminal-command-history');
-                    return {
-                        type: 'system',
-                        content: t('terminal.system.historyCleared'),
-                    };
-                } else {
-                    // Clear terminal display
-                    setCommandHistory([]);
-                    return null;
-                }
-
-            case 'history':
-                if (persistentHistory.length === 0) {
-                    return {
-                        type: 'output',
-                        content: t('terminal.history.noHistory'),
-                    };
-                }
-
-                const recentCommands = persistentHistory.slice(-20).map((cmd, index) => {
-                    const lineNumber = persistentHistory.length - 20 + index + 1;
-                    return `${lineNumber.toString().padStart(3, ' ')}  ${cmd}`;
-                }).join('\n');
-
-                return {
-                    type: 'output',
-                    content: t('terminal.history.recentWithTip', { commands: recentCommands }),
-                };
-
-
-            case 'cd': {
-                try {
-                    if (args.length === 0) {
-                        // No argument provided - go to home directory
-                        try {
-                            const homeResult = await invoke('execute_command_improved', {
-                                command: process.platform === 'win32' ? 'echo %USERPROFILE%' : 'echo $HOME',
-                                working_directory: null
-                            });
-                            
-                            let homeDir;
-                            if (typeof homeResult === 'string') {
-                                const parsed = JSON.parse(homeResult);
-                                homeDir = parsed.stdout.trim();
-                            }
-                            
-                            if (homeDir) {
-                                await navigateTo(homeDir);
-                                return { type: 'output', content: '' }; // Silent success - empty content
-                            }
-                        } catch (error) {
-                            // Fallback to current path
-                            return {
-                                type: 'output',
-                                content: currentPath || '/',
-                            };
-                        }
-                    }
-
-                    let targetPath = args[0];
-                    let resolvedPath;
-                    // Handle special cases
-                    if (targetPath === '~') {
-                        // Handle home directory
-                        const homeResult = await invoke('execute_command_improved', {
-                            command: process.platform === 'win32' ? 'echo %USERPROFILE%' : 'echo $HOME',
-                            working_directory: null
-                        });
-                        if (typeof homeResult === 'string') {
-                            const parsed = JSON.parse(homeResult);
-                            resolvedPath = parsed.stdout.trim();
-                        }
-                    } else if (targetPath.startsWith('/') || targetPath.match(/^[A-Za-z]:/)) {
-                        // Absolute path - use as is
-                        resolvedPath = targetPath;
-                    } else {
-                        // Relative path - build from current path
-                        const basePath = currentPath || '/';
-                        if (basePath === '/') {
-                            resolvedPath = '/' + targetPath;
-                        } else {
-                            resolvedPath = basePath + '/' + targetPath;
-                        }
-                    }
-
-                    // Clean up path - remove trailing slashes except for root
-                    if (resolvedPath.endsWith('/') && resolvedPath.length > 1) {
-                        resolvedPath = resolvedPath.slice(0, -1);
-                    }
-
-                    // Resolve . and .. segments
-                    const parts = resolvedPath.split('/');
-                    const stack = [];
-                    for (let part of parts) {
-                        if (part === '' || part === '.') continue;
-                        if (part === '..') {
-                            if (stack.length > 0) stack.pop();
-                        } else {
-                            stack.push(part);
-                        }
-                    }
-                    
-                    // Final path construction
-                    const finalPath = stack.length > 0 ? '/' + stack.join('/') : '/';
-                    // Try to navigate directly - let the file explorer handle validation
-                    await navigateTo(finalPath);
-                    return { type: 'output', content: '' }; // Silent success - empty content
-
-                } catch (error) {
-                    console.error('[Terminal cd] Error in cd command:', error);
-                    return {
-                        type: 'error',
-                        content: t('terminal.errors.cdNoSuchFileOrDir', { path: args[0] || '' }),
-                    };
-                }
-            }
-
-            case 'pwd':
-                return {
-                    type: 'output',
-                    content: currentPath || '/',
-                };
-
-            case 'whoami':
-                return {
-                    type: 'output',
-                    content: 'user',
-                };
-
-            case 'date':
-                return {
-                    type: 'output',
-                    content: new Date().toString(),
-                };
-
-            case 'ls':
-            case 'dir':
-                try {
-                    const dirContent = await invoke('open_directory', { path: currentPath });
-                    const data = JSON.parse(dirContent);
-                    
-                    if (data.directories.length === 0 && data.files.length === 0) {
-                        return {
-                            type: 'output',
-                            content: t('terminal.ls.directoryEmpty'),
-                        };
-                    }
-                    
-                    // Format directories and files separately for better display
-                    const directories = data.directories.map(dir => `${dir.name}/`);
-                    const files = data.files.map(file => file.name);
-                    
-                    // Create formatted output with proper spacing
-                    const allItems = [...directories, ...files];
-                    const content = allItems.join('  ');
-                    
-                    return {
-                        type: 'output',
-                        content: content,
-                    };
-                } catch (error) {
-                    return {
-                        type: 'error',
-                        content: t('terminal.errors.cannotListDirectory', { message: error.message || error }),
-                    };
-                }
-
-            case 'tree':
-                try {
-                    const dirContent = await invoke('open_directory', { path: currentPath });
-                    const data = JSON.parse(dirContent);
-                    
-                    const pathParts = currentPath.split('/').filter(part => part);
-                    const folderName = pathParts[pathParts.length - 1] || t('terminal.tree.rootFolderName');
-                    
-                    let tree = `📁 ${folderName}/\n`;
-                    
-                    const totalItems = data.directories.length + data.files.length;
-                    if (totalItems === 0) {
-                        tree += `   ${t('terminal.tree.emptyDirectory')}\n`;
-                        return {
-                            type: 'output',
-                            content: tree,
-                        };
-                    }
-
-                    // Sort directories first, then files
-                    const sortedDirectories = data.directories.sort((a, b) => a.name.localeCompare(b.name));
-                    const sortedFiles = data.files.sort((a, b) => a.name.localeCompare(b.name));
-
-                    sortedDirectories.forEach((dir, index) => {
-                        const isLastDir = index === sortedDirectories.length - 1 && sortedFiles.length === 0;
-                        const connector = isLastDir ? '└── ' : '├── ';
-                        tree += `${connector}📁 ${dir.name}/\n`;
-                    });
-
-                    sortedFiles.forEach((file, index) => {
-                        const isLast = index === sortedFiles.length - 1;
-                        const connector = isLast ? '└── ' : '├── ';
-                        
-                        // Get file extension for icon
-                        const ext = file.name.split('.').pop()?.toLowerCase() || '';
-                        let icon = '📄';
-                        
-                        if (['js', 'jsx'].includes(ext)) icon = '🟨';
-                        else if (['ts', 'tsx'].includes(ext)) icon = '🔷';
-                        else if (ext === 'py') icon = '🐍';
-                        else if (ext === 'java') icon = '☕';
-                        else if (ext === 'rs') icon = '🦀';
-                        else if (['png', 'jpg', 'jpeg', 'gif', 'svg'].includes(ext)) icon = '🖼️';
-                        else if (ext === 'pdf') icon = '📕';
-                        else if (['zip', 'tar', 'gz'].includes(ext)) icon = '📦';
-                        else if (ext === 'md') icon = '📝';
-                        
-                        tree += `${connector}${icon} ${file.name}\n`;
-                    });
-
-                    tree += `\n📊 ${t('terminal.tree.summary', { directories: sortedDirectories.length, files: sortedFiles.length })}`;
-
-                    return {
-                        type: 'output',
-                        content: tree,
-                    };
-                } catch (error) {
-                    return {
-                        type: 'error',
-                        content: t('terminal.errors.cannotGenerateTree', { message: error.message || error }),
-                    };
-                }
-
-            case 'echo':
-                return {
-                    type: 'output',
-                    content: args.join(' '),
-                };
-
-            case 'mkdir':
-                if (args.length === 0) {
-                    return {
-                        type: 'error',
-                        content: t('terminal.mkdir.missingOperand'),
-                    };
-                }
-                try {
-                    await invoke('create_directory', {
-                        folder_path_abs: currentPath,
-                        directory_name: args[0]
-                    });
-                    return {
-                        type: 'output',
-                        content: t('terminal.mkdir.created', { name: args[0] }),
-                    };
-                } catch (error) {
-                    return {
-                        type: 'error',
-                        content: t('terminal.mkdir.failed', { message: error.message || error }),
-                    };
-                }
-
-            case 'touch':
-                if (args.length === 0) {
-                    return {
-                        type: 'error',
-                        content: t('terminal.touch.missingOperand'),
-                    };
-                }
-                try {
-                    await invoke('create_file', {
-                        folder_path_abs: currentPath,
-                        file_name: args[0]
-                    });
-                    return {
-                        type: 'output',
-                        content: t('terminal.touch.created', { name: args[0] }),
-                    };
-                } catch (error) {
-                    return {
-                        type: 'error',
-                        content: t('terminal.touch.failed', { message: error.message || error }),
-                    };
-                }
-
-            case 'cat':
-                if (args.length === 0) {
-                    return {
-                        type: 'error',
-                        content: t('terminal.cat.missingOperand'),
-                    };
-                }
-                try {
-                    const filePath = `${currentPath}/${args[0]}`;
-                    const content = await invoke('open_file', { file_path: filePath });
-                    return {
-                        type: 'output',
-                        content: content,
-                    };
-                } catch (error) {
-                    return {
-                        type: 'error',
-                        content: t('terminal.cat.failed', { message: error.message || error }),
-                    };
-                }
-
-            case 'find':
-                if (args.length === 0) {
-                    return {
-                        type: 'error',
-                        content: t('terminal.find.missingPattern'),
-                    };
-                }
-                
-                try {
-                    const pattern = args[0].toLowerCase();
-                    const dirContent = await invoke('open_directory', { path: currentPath });
-                    const data = JSON.parse(dirContent);
-                    
-                    const matches = [
-                        ...data.directories.filter(dir => 
-                            dir.name.toLowerCase().includes(pattern)
-                        ).map(dir => `📁 ${dir.name}/`),
-                        ...data.files.filter(file => 
-                            file.name.toLowerCase().includes(pattern)
-                        ).map(file => {
-                            const ext = file.name.split('.').pop()?.toLowerCase() || '';
-                            let icon = '📄';
-                            if (['js', 'jsx'].includes(ext)) icon = '🟨';
-                            else if (['ts', 'tsx'].includes(ext)) icon = '🔷';
-                            else if (ext === 'py') icon = '🐍';
-                            else if (['png', 'jpg', 'jpeg', 'gif', 'svg'].includes(ext)) icon = '🖼️';
-                            return `${icon} ${file.name}`;
-                        })
-                    ];
-                    
-                    if (matches.length === 0) {
-                        return {
-                            type: 'output',
-                            content: t('terminal.find.noMatches', { pattern: args[0] }),
-                        };
-                    }
-                    
-                    return {
-                        type: 'output',
-                        content: t('terminal.find.matches', { count: matches.length, pattern: args[0], matches: matches.join('\n') }),
-                    };
-                } catch (error) {
-                    return {
-                        type: 'error',
-                        content: t('terminal.find.failed', { message: error.message || error }),
-                    };
-                }
-
-            case 'which':
-                if (args.length === 0) {
-                    return {
-                        type: 'error',
-                        content: t('terminal.which.missingCommandName'),
-                    };
-                }
-                
-                const builtinCommands = ['help', 'clear', 'history', 'ls', 'dir', 'pwd', 'cd', 'mkdir', 'touch', 'cat', 'tree', 'echo', 'whoami', 'date', 'find', 'which', 'ping', 'exit'];
-                const searchCommand = args[0].toLowerCase();
-                
-                if (builtinCommands.includes(searchCommand)) {
-                    return {
-                        type: 'output',
-                        content: t('terminal.which.builtin', { command: searchCommand }),
-                    };
-                } else {
-                    // Check if it's a system command by trying to execute it with --version or --help
-                    try {
-                        const testResult = await invoke('execute_command_improved', { 
-                            command: `${searchCommand} --version`, 
-                            working_directory: currentPath 
-                        });
-                        return {
-                            type: 'output',
-                            content: t('terminal.which.system', { command: searchCommand }),
-                        };
-                    } catch {
-                        return {
-                            type: 'output',
-                            content: t('terminal.which.notFound', { command: searchCommand }),
-                        };
-                    }
-                }
-
-            case 'exit':
-                onToggle();
-                return {
-                    type: 'system',
-                    content: t('terminal.system.closed'),
-                };
-
-            default:
-                return null; // Not a built-in command
-        }
-    };
-
-    /**
-     * Handles form submission for the terminal input
-     * Processes the command and displays the result
-     *
-     * @param {React.FormEvent} e - Form submit event
-     * @async
-     */
     const handleSubmit = async (e) => {
         e.preventDefault();
-
-        if (!currentCommand.trim() || isExecuting) return;
+        if (!currentCommand.trim() || commands.isExecuting) return;
 
         const command = currentCommand.trim();
         const [cmd, ...args] = command.split(' ');
 
-        // Add command to history
-        const commandEntry = {
+        addMessage({
             type: 'command',
             prompt: getPrompt(),
             content: command,
             timestamp: new Date().toLocaleTimeString(),
-        };
-
-        setCommandHistory(prev => [...prev, commandEntry]);
-
-        // Save command to persistent history (avoid duplicates)
-        setPersistentHistory(prev => {
-            const filtered = prev.filter(cmd => cmd !== command);
-            return [...filtered, command].slice(-50); // Keep last 50 commands
         });
 
-        // Process command
+        history.addToHistory(command);
+
         let response;
-        // Check for built-in commands first
-        response = await handleBuiltinCommand(cmd.toLowerCase(), args);
-        // If not a built-in command, execute as system command
-        if (response === null && cmd.toLowerCase() !== 'clear') {
-            response = await executeCommand(command);
+
+        if (cmd.toLowerCase() === 'history') {
+            if (history.persistentHistory.length === 0) {
+                response = { type: 'output', content: t('terminal.history.noHistory') };
+            } else {
+                const recentCommands = history.persistentHistory.slice(-20).map((c, i) => {
+                    const lineNumber = history.persistentHistory.length - 20 + i + 1;
+                    return `${lineNumber.toString().padStart(3, ' ')}  ${c}`;
+                }).join('\n');
+                response = { type: 'output', content: t('terminal.history.recentWithTip', { commands: recentCommands }) };
+            }
+        } else {
+            response = await commands.handleBuiltinCommand(cmd.toLowerCase(), args, {
+                clearDisplay: () => setCommandHistory([]),
+                clearHistory: history.clearHistory,
+            });
         }
 
-        // Add response to history if there's content or it's a system message
+        if (response === null && cmd.toLowerCase() !== 'clear') {
+            response = await commands.executeSystemCommand(command);
+        }
+
         if (response && (response.content.trim() || response.type === 'system')) {
-            setCommandHistory(prev => [...prev, {
+            addMessage({
                 ...response,
                 originalCommand: response.type === 'output' ? command : undefined,
                 timestamp: new Date().toLocaleTimeString(),
-            }]);
+            });
         }
 
-        // Reset command input
         setCurrentCommand('');
-        setHistoryIndex(-1);
+        history.resetIndex();
     };
 
-    /**
-     * Handles input changes for the terminal command
-     * @param {React.ChangeEvent<HTMLInputElement>} e - Input change event
-     */
     const handleChange = (e) => {
-        const value = e.target.value;
-        
         if (isSearchMode) {
-            setSearchQuery(value);
-            handleHistorySearch(value);
+            setSearchQuery(e.target.value);
+            const results = history.searchHistory(e.target.value);
+            setSearchResults(results);
+            setSelectedSearchIndex(results.length > 0 ? 0 : -1);
         } else {
-            setCurrentCommand(value);
+            setCurrentCommand(e.target.value);
         }
     };
 
-    /**
-     * Formats terminal output with basic syntax highlighting and structure
-     * @param {string} content - Raw output content
-     * @param {string} command - The original command that generated the output
-     * @returns {string} Formatted content with HTML-like structure
-     */
-    const escapeHtml = (str) => str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-
-    const formatOutput = (content, command = '') => {
-        if (!content || typeof content !== 'string') return content;
-
-        const escaped = escapeHtml(content);
-
-        if (command.startsWith('ls') || command.startsWith('dir')) {
-            return escaped.split(/\s+/).map(item => {
-                if (item.endsWith('/')) {
-                    return `<span class="terminal-directory">${item}</span>`;
-                } else if (item.includes('.')) {
-                    const ext = item.split('.').pop().toLowerCase();
-                    return `<span class="terminal-file terminal-file-${ext}">${item}</span>`;
-                } else {
-                    return `<span class="terminal-file">${item}</span>`;
-                }
-            }).join('  ');
-        }
-
-        const isSimpleOutput = escaped.trim().match(/^[\d\.]+$/) || 
-                              escaped.trim().match(/^v?[\d\.]+(-[\w\.]+)?$/) ||
-                              escaped.trim().match(/^\/[\w\-\.\/]+$/) ||
-                              escaped.trim().match(/^[A-Za-z]:[\\\w\-\.\\]+$/);
-        
-        if (isSimpleOutput) {
-            return escaped;
-        }
-
-        let formattedContent = escaped;
-        formattedContent = formattedContent.replace(/\b([\/\\][\w\-\.\/\\]{3,})\b/g, '<span class="terminal-path">$1</span>');
-        formattedContent = formattedContent.replace(/(https?:\/\/[^\s]+)/g, '<span class="terminal-url">$1</span>');
-        formattedContent = formattedContent.replace(/&quot;([^&]+)&quot;/g, '<span class="terminal-string">"$1"</span>');
-        
-        return formattedContent;
-    };
-
-    /**
-     * Handles tab completion for commands and file paths
-     * Provides intelligent completion based on context
-     * @async
-     */
-    const handleTabCompletion = async () => {
-        if (!currentCommand.trim()) return;
-
-        const parts = currentCommand.split(' ');
-        const lastPart = parts[parts.length - 1];
-        const isFirstWord = parts.length === 1;
-
-        if (isFirstWord) {
-            // Complete command names
-            const commonCommands = ['help', 'clear', 'history', 'ls', 'dir', 'pwd', 'cd', 'mkdir', 'touch', 'cat', 'tree', 'find', 'which', 'echo', 'whoami', 'date', 'exit'];
-            const matches = commonCommands.filter(cmd => cmd.startsWith(lastPart.toLowerCase()));
-
-            if (matches.length === 1) {
-                setCurrentCommand(matches[0] + ' ');
-            } else if (matches.length > 1) {
-                // Show available options in terminal
-                const optionsMessage = {
-                    type: 'system',
-                    content: t('terminal.completion.availableCommands', { commands: matches.join(', ') }),
-                    timestamp: new Date().toLocaleTimeString(),
-                };
-                setCommandHistory(prev => [...prev, optionsMessage]);
-            }
-        } else {
-            // Complete file/directory paths
-            try {
-                const dirContent = await invoke('open_directory', { path: currentPath });
-                const data = JSON.parse(dirContent);
-                
-                const allItems = [
-                    ...data.directories.map(dir => dir.name + '/'),
-                    ...data.files.map(file => file.name)
-                ];
-
-                const matches = allItems.filter(item => item.toLowerCase().startsWith(lastPart.toLowerCase()));
-
-                if (matches.length === 1) {
-                    const completedParts = parts.slice(0, -1);
-                    completedParts.push(matches[0]);
-                    setCurrentCommand(completedParts.join(' '));
-                } else if (matches.length > 1) {
-                    // Show available files/directories
-                    const optionsMessage = {
-                        type: 'system',
-                        content: t('terminal.completion.availableItems', { items: matches.join(', ') }),
-                        timestamp: new Date().toLocaleTimeString(),
-                    };
-                    setCommandHistory(prev => [...prev, optionsMessage]);
-                }
-            } catch (error) {
-                // Silently ignore errors in tab completion
-            }
-        }
-    };
-
-    /**
-     * Searches through command history based on query
-     * @param {string} query - Search query
-     * @returns {string[]} Filtered commands
-     */
-    const searchHistory = (query) => {
-        if (!query.trim()) return [];
-        return persistentHistory.filter(cmd => 
-            cmd.toLowerCase().includes(query.toLowerCase())
-        ).slice(-10); // Show last 10 matches
-    };
-
-    /**
-     * Handles search mode toggle and functionality
-     * @param {string} query - Current search query
-     */
-    const handleHistorySearch = (query) => {
-        const results = searchHistory(query);
-        setSearchResults(results);
-        setSelectedSearchIndex(results.length > 0 ? 0 : -1);
-    };
-
-    /**
-     * Exits search mode and resets search state
-     */
     const exitSearchMode = () => {
         setIsSearchMode(false);
         setSearchQuery('');
@@ -909,15 +122,7 @@ const Terminal = ({ isOpen, onToggle }) => {
         setSelectedSearchIndex(-1);
     };
 
-    /**
-     * Handles keyboard navigation through command history and tab completion
-     * Supports arrow up/down for history navigation and tab for command completion
-     * Also handles Ctrl+C for command interruption and Ctrl+R for search
-     *
-     * @param {React.KeyboardEvent} e - Keyboard event
-     */
     const handleKeyDown = async (e) => {
-        // Handle Ctrl+R for reverse search
         if (e.ctrlKey && e.key === 'r') {
             e.preventDefault();
             if (!isSearchMode) {
@@ -928,14 +133,8 @@ const Terminal = ({ isOpen, onToggle }) => {
             return;
         }
 
-        // Handle search mode
         if (isSearchMode) {
-            if (e.key === 'Escape') {
-                e.preventDefault();
-                exitSearchMode();
-                return;
-            }
-
+            if (e.key === 'Escape') { e.preventDefault(); exitSearchMode(); return; }
             if (e.key === 'Enter') {
                 e.preventDefault();
                 if (selectedSearchIndex >= 0 && searchResults[selectedSearchIndex]) {
@@ -944,100 +143,77 @@ const Terminal = ({ isOpen, onToggle }) => {
                 }
                 return;
             }
-
             if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
                 e.preventDefault();
                 if (searchResults.length > 0) {
-                    let newIndex;
-                    if (e.key === 'ArrowUp') {
-                        newIndex = selectedSearchIndex > 0 ? selectedSearchIndex - 1 : searchResults.length - 1;
-                    } else {
-                        newIndex = selectedSearchIndex < searchResults.length - 1 ? selectedSearchIndex + 1 : 0;
-                    }
-                    setSelectedSearchIndex(newIndex);
+                    setSelectedSearchIndex(e.key === 'ArrowUp'
+                        ? (selectedSearchIndex > 0 ? selectedSearchIndex - 1 : searchResults.length - 1)
+                        : (selectedSearchIndex < searchResults.length - 1 ? selectedSearchIndex + 1 : 0));
                 }
                 return;
             }
-
-            return; // Let other keys be handled normally in search mode
+            return;
         }
 
-        // Handle Ctrl+C to interrupt command execution or clear current input
         if (e.ctrlKey && e.key === 'c') {
             e.preventDefault();
-            
-            if (isExecuting && abortController) {
-                // Interrupt running command
-                abortController.abort();
-                setIsExecuting(false);
-                setAbortController(null);
-                
-                // Add visual feedback that the command was interrupted
-                setCommandHistory(prev => [...prev, {
-                    type: 'error',
-                    content: t('terminal.system.commandInterrupted'),
-                    timestamp: new Date().toLocaleTimeString(),
-                }]);
-                
-                // Clear the current command line
+            if (commands.isExecuting) {
+                commands.abortExecution();
+                addMessage({ type: 'error', content: t('terminal.system.commandInterrupted'), timestamp: new Date().toLocaleTimeString() });
                 setCurrentCommand('');
-                setHistoryIndex(-1);
+                history.resetIndex();
                 return;
             } else if (currentCommand.trim()) {
-                // Clear current input and show ^C
-                const commandEntry = {
-                    type: 'command',
-                    prompt: getPrompt(),
-                    content: currentCommand + ' ^C',
-                    timestamp: new Date().toLocaleTimeString(),
-                };
-                setCommandHistory(prev => [...prev, commandEntry]);
+                addMessage({ type: 'command', prompt: getPrompt(), content: currentCommand + ' ^C', timestamp: new Date().toLocaleTimeString() });
                 setCurrentCommand('');
-                setHistoryIndex(-1);
+                history.resetIndex();
                 return;
             }
         }
 
-        if (isExecuting) return;
+        if (commands.isExecuting) return;
 
         if (e.key === 'ArrowUp') {
             e.preventDefault();
-            
-            if (persistentHistory.length > 0) {
-                const newIndex = historyIndex < persistentHistory.length - 1
-                    ? historyIndex + 1
-                    : historyIndex;
-
-                if (newIndex >= 0 && newIndex < persistentHistory.length) {
-                    setCurrentCommand(persistentHistory[persistentHistory.length - 1 - newIndex]);
-                    setHistoryIndex(newIndex);
-                }
-            }
+            const cmd = history.navigateUp();
+            if (cmd !== null) setCurrentCommand(cmd);
         } else if (e.key === 'ArrowDown') {
             e.preventDefault();
-
-            if (historyIndex > 0) {
-                const newIndex = historyIndex - 1;
-                setCurrentCommand(persistentHistory[persistentHistory.length - 1 - newIndex]);
-                setHistoryIndex(newIndex);
-            } else if (historyIndex === 0) {
-                setCurrentCommand('');
-                setHistoryIndex(-1);
-            }
+            const cmd = history.navigateDown();
+            if (cmd !== null) setCurrentCommand(cmd);
         } else if (e.key === 'Tab') {
             e.preventDefault();
-            await handleTabCompletion();
+            await commands.handleTabCompletion(currentCommand, setCurrentCommand, addMessage);
         }
     };
 
-    if (!isOpen) return null;
+    const escapeHtml = (str) => str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-    /**
-     * Handles clearing the terminal display
-     */
-    const handleClearTerminal = () => {
-        setCommandHistory([]);
+    const formatOutput = (content, command = '') => {
+        if (!content || typeof content !== 'string') return content;
+        const escaped = escapeHtml(content);
+
+        if (command.startsWith('ls') || command.startsWith('dir')) {
+            return escaped.split(/\s+/).map(item => {
+                if (item.endsWith('/')) return `<span class="terminal-directory">${item}</span>`;
+                if (item.includes('.')) return `<span class="terminal-file terminal-file-${item.split('.').pop().toLowerCase()}">${item}</span>`;
+                return `<span class="terminal-file">${item}</span>`;
+            }).join('  ');
+        }
+
+        if (escaped.trim().match(/^[\d\.]+$/) || escaped.trim().match(/^v?[\d\.]+(-[\w\.]+)?$/) ||
+            escaped.trim().match(/^\/[\w\-\.\/]+$/) || escaped.trim().match(/^[A-Za-z]:[\\\w\-\.\\]+$/)) {
+            return escaped;
+        }
+
+        let fmt = escaped;
+        fmt = fmt.replace(/\b([\/\\][\w\-\.\/\\]{3,})\b/g, '<span class="terminal-path">$1</span>');
+        fmt = fmt.replace(/(https?:\/\/[^\s]+)/g, '<span class="terminal-url">$1</span>');
+        fmt = fmt.replace(/&quot;([^&]+)&quot;/g, '<span class="terminal-string">"$1"</span>');
+        return fmt;
     };
+
+    if (!isOpen) return null;
 
     return (
         <div className="enhanced-terminal" style={{ height: `${terminalHeight}px` }}>
@@ -1046,15 +222,15 @@ const Terminal = ({ isOpen, onToggle }) => {
                     <span>{t('terminal.title')}</span>
                 </div>
                 <div className="terminal-controls">
-                    <button 
+                    <button
                         className="terminal-control terminal-clear"
-                        onClick={handleClearTerminal}
+                        onClick={() => setCommandHistory([])}
                         title={t('terminal.clearTitle')}
                         aria-label={t('terminal.clearAria')}
                     >
                         <Icon name="trash" size="small" className="terminal-icon" />
                     </button>
-                    <button 
+                    <button
                         className="terminal-control terminal-close"
                         onClick={onToggle}
                         title={t('terminal.closeTitle')}
@@ -1066,10 +242,7 @@ const Terminal = ({ isOpen, onToggle }) => {
             </div>
             <div className="terminal-content" ref={terminalRef}>
                 {commandHistory.map((entry, index) => (
-                    <div
-                        key={index}
-                        className={`terminal-line terminal-${entry.type}`}
-                    >
+                    <div key={index} className={`terminal-line terminal-${entry.type}`}>
                         <div className="terminal-entry">
                             {entry.type === 'command' && (
                                 <div className="terminal-command-line">
@@ -1083,11 +256,11 @@ const Terminal = ({ isOpen, onToggle }) => {
                                 </div>
                             )}
                             {entry.type !== 'command' && (
-                                <pre 
+                                <pre
                                     className="terminal-text"
-                                    dangerouslySetInnerHTML={{ 
-                                        __html: entry.type === 'output' && entry.originalCommand 
-                                            ? formatOutput(entry.content, entry.originalCommand) 
+                                    dangerouslySetInnerHTML={{
+                                        __html: entry.type === 'output' && entry.originalCommand
+                                            ? formatOutput(entry.content, entry.originalCommand)
                                             : escapeHtml(entry.content || '')
                                     }}
                                 ></pre>
@@ -1115,14 +288,14 @@ const Terminal = ({ isOpen, onToggle }) => {
                         value={isSearchMode ? searchQuery : currentCommand}
                         onChange={handleChange}
                         onKeyDown={handleKeyDown}
-                        disabled={isExecuting}
+                        disabled={commands.isExecuting}
                         autoFocus
                         spellCheck="false"
                         autoComplete="off"
                         autoCapitalize="off"
                         placeholder={isSearchMode ? t('terminal.searchPlaceholder') : ''}
                     />
-                    {!isSearchMode && isExecuting && (
+                    {!isSearchMode && commands.isExecuting && (
                         <span className="terminal-executing">
                             <span className="spinner-small"></span>
                             <span className="terminal-interrupt-hint">{t('terminal.system.runningHint')}</span>
@@ -1135,4 +308,3 @@ const Terminal = ({ isOpen, onToggle }) => {
 };
 
 export default Terminal;
-

@@ -54,6 +54,15 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
     const [columnsPerRow, setColumnsPerRow] = useState(4); // Dynamic column calculation
     const containerRef = useRef(null);
     const [lastSelectedIndex, setLastSelectedIndex] = useState(-1);
+    const handleItemClickRef = useRef(null);
+
+    const stableOnClick = useCallback((item, index) => {
+        handleItemClickRef.current(item, index);
+    }, []);
+
+    const stableOnDoubleClick = useCallback((item, index) => {
+        handleItemClickRef.current(item, index, true);
+    }, []);
 
     /**
      * Calculate columns per row based on container width and item size
@@ -608,16 +617,7 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
         }
     };
 
-    const handleItemClickRef = useRef(handleItemClick);
     handleItemClickRef.current = handleItemClick;
-
-    const stableOnClick = useCallback((item, index) => {
-        handleItemClickRef.current(item, index);
-    }, []);
-
-    const stableOnDoubleClick = useCallback((item, index) => {
-        handleItemClickRef.current(item, index, true);
-    }, []);
 
     return (
         <div className="file-list-wrapper">
